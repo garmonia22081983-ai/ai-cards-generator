@@ -225,7 +225,7 @@ if st.session_state.cards:
         anki_list = []
         for card in st.session_state.cards:
             encoded_w = urllib.parse.quote(card['word'])
-            image_url = f"https://loremflickr.com/320/240/{urllib.parse.quote(card['image_keyword'])}"
+            image_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(card['image_keyword'])}?width=320&height=240&nologo=true"
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                 f"<img src='{image_url}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
@@ -276,7 +276,7 @@ if st.session_state.cards:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
                 image_keyword_encoded = urllib.parse.quote(card['image_keyword'])
-                img_url = f"https://loremflickr.com/320/180/{image_keyword_encoded}"
+                img_url = f"https://image.pollinations.ai/prompt/{image_keyword_encoded}?width=320&height=180&nologo=true"
                 
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
