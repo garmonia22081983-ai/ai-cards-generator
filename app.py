@@ -3,191 +3,192 @@ import google.generativeai as genai
 import json
 import pandas as pd
 
-# 1. Настройка страницы и стилей для красивого визуала
-st.set_page_config(page_title="AI Card Generator", page_icon="⚡", layout="wide")
+# Инициализация API-ключа из Secrets
+if "GEMINI_API_KEY" in st.secrets:
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+else:
+    st.error("Ключ API не найден в настройках Secrets на Streamlit!")
 
-# Внедряем кастомные CSS-стили для создания премиального вида карточек
+st.set_page_config(page_title="Генератор карточек", layout="wide")
+
+# Подключение кастомных стилей для красивых карточек
 st.markdown("""
 <style>
-    .main-title {
-        font-size: 2.5rem;
-        font-weight: 800;
-        color: #1E3A8A;
-        text-align: center;
-        margin-bottom: 2rem;
-    }
-    .card-container {
-        background-color: #ffffff;
-        border: 1px solid #e2e8f0;
-        border-radius: 12px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
-        transition: transform 0.2s;
-    }
-    .card-container:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
-    }
-    .card-word {
-        color: #1E3A8A;
-        font-size: 1.4rem;
-        font-weight: 700;
-        margin-bottom: 5px;
-    }
-    .card-translation {
-        color: #10B981;
-        font-size: 1.1rem;
-        font-weight: 600;
-        margin-bottom: 12px;
-    }
-    .card-context {
-        color: #4B5563;
-        font-style: italic;
-        font-size: 0.95rem;
-        border-left: 3px solid #3B82F6;
-        padding-left: 10px;
-        margin-top: 8px;
-    }
+.card-front {
+    background-color: #f8f9fa;
+    border: 2px solid #dee2e6;
+    border-radius: 12px;
+    padding: 30px;
+    text-align: center;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.card-back {
+    background-color: #e8f4fd;
+    border: 2px solid #bbeeeb;
+    border-radius: 12px;
+    padding: 25px;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+}
+.print-row {
+    display: flex;
+    border: 1px dashed #ccc;
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+}
+.print-col {
+    width: 50%;
+    padding: 15px;
+    box-sizing: border-box;
+}
+.print-left {
+    border-right: 1px dashed #ccc;
+    text-align: center;
+    font-weight: bold;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown('<div class="main-title">⚡ AI-Конструктор карточек для преподавателей</div>', unsafe_allow_html=True)
+st.title("🎴 Умный Генератор Двусторонних Карточек")
 
-# 2. Инициализация API-ключа Gemini из секретов
-try:
-    api_key = st.secrets["GEMINI_API_KEY"]
-    genai.configure(api_key=api_key)
-except Exception:
-    st.error("Ошибка: API-ключ 'GEMINI_API_KEY' не найден в настройках Secrets вашего Space.")
-    st.stop()
+# Инициализация состояний в Session State (чтобы ничего не сбрасывалось)
+if "cards" not in st.session_state:
+    st.session_state.cards = []
+if "flipped" not in st.session_state:
+    st.session_state.flipped = {}
 
-# 3. Боковая панель с настройками (Sidebar)
-st.sidebar.header("⚙️ Настройки генерации")
+# Выбор модели
+model_option = st.selectbox("Использовать нейросеть:", ["gemini-1.5-flash-latest", "gemini-1.5-flash"])
 
-# Выбор уровня языка
-level = st.sidebar.selectbox(
-    "Выберите уровень языка (CEFR):",
-    ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficiency)"]
-)
+# Поле для ввода слов
+words_input = st.text_area("Введите слова или фразы (каждое с новой строки или через запятую):", 
+                           placeholder="bold, digital solution, perseverance")
 
-# НОВИНКА: Выбор модели ИИ для обхода региональных и аккаунтных ограничений
-model_name = st.sidebar.selectbox(
-    "Выберите модель ИИ:",
-    [
-        "gemini-1.5-flash-latest",
-        "gemini-3-flash-preview",
-        "gemini-1.5-flash",
-        "gemini-1.5-pro",
-        "gemini-2.5-flash"
-    ],
-    help="Если базовая модель выдает ошибку 404, переключитесь на другую. Для новых аккаунтов отлично подходят 'gemini-1.5-flash-latest' и 'gemini-3-flash-preview'."
-)
-
-# 4. Главная рабочая область
-user_text = st.text_area(
-    "Вставьте текст статьи, абзац или список предложений, из которых нужно извлечь лексику:",
-    height=200,
-    placeholder="Например: 'The mysterious forest was covered in a thick, heavy fog. Standing at the edge, Clara felt a sudden shiver...'"
-)
-
-# 5. Кнопка запуска генерации
 if st.button("Создать карточки", type="primary"):
-    if not user_text.strip():
-        st.warning("Пожалуйста, добавьте текст для анализа.")
+    if not words_input.strip():
+        st.warning("Пожалуйста, введите слова для генерации.")
     else:
-        with st.spinner("Профессиональный методист ИИ анализирует текст..."):
+        with st.spinner("Gemini генерирует карточки, перевод и контекст..."):
             try:
-                # Инициализация выбранной пользователем модели
-                model = genai.GenerativeModel(model_name)
-                
-                # Твой идеальный системный промпт
+                model = genai.GenerativeModel(model_option)
                 prompt = f"""
-                Ты — профессиональный методист английского языка. Твоя задача — проанализировать текст пользователя, 
-                извлечь из него 10 самых важных лексических единиц (слов или идиом), соответствующих уровню {level}, 
-                и перевести их на русский язык. Выдай ответ строго в формате JSON, без лишних слов, вступлений и разметки markdown. 
-                
-                Формат ответа:
-                [
-                  {{"word": "слово на английском", "translation": "перевод на русский", "context": "оригинальное предложение из текста, где это слово используется"}}
-                ]
-                
-                Текст для анализа:
-                {user_text}
+                Ты профессиональный методист английского языка. Создай карточки для следующих слов/фраз: {words_input}.
+                Для каждого слова верни строго валидный JSON-массив объектов со следующими ключами:
+                - "word": оригинальное слово на английском
+                - "translation": точный и красивый перевод на русский (можно несколько синонимов через запятую)
+                - "context": ОДНО интересное контекстное предложение на английском, в котором выделено или уместно использовано это слово. Предложение должно быть живым, современным и легким для понимания.
+
+                Верни ТОЛЬКО чистый JSON без разметки markdown (без ```json ... ```).
                 """
-                
                 response = model.generate_content(prompt)
                 
-                # Очистка ответа от возможной разметки markdown (```json ... ```)
-                response_text = response.text.strip()
-                if response_text.startswith("```json"):
-                    response_text = response_text[7:]
-                elif response_text.startswith("```"):
-                    response_text = response_text[3:]
-                if response_text.endswith("```"):
-                    response_text = response_text[:-3]
-                response_text = response_text.strip()
-                
-                # Парсинг результатов
-                cards_data = json.loads(response_text)
-                
-                # Сохраняем результат в сессию, чтобы он не пропадал при скачивании файлов
-                st.session_state['cards_data'] = cards_data
-                st.success("Карточки успешно созданы!")
-                
-            except Exception as e:
-                st.error(f"Произошла ошибка при генерации. Пожалуйста, выберите другую модель ИИ в боковой панели или попробуйте еще раз. Детали: {e}")
+                # Очистка ответа от возможных markdown-тегов
+                text_response = response.text.strip()
+                if text_response.startswith("```"):
+                    text_response = text_response.split("```")[1]
+                    if text_response.startswith("json"):
+                        text_response = text_response[4:]
+                text_response = text_response.strip()
 
-# 6. Отображение результатов и функции экспорта
-if 'cards_data' in st.session_state:
-    cards = st.session_state['cards_data']
+                cards_data = json.loads(text_response)
+                st.session_state.cards = cards_data
+                # Сбрасываем перевороты для новых карточек
+                st.session_state.flipped = {i: False for i in range(len(cards_data))}
+                st.success(f"Готово! Сгенерировано карточек: {len(cards_data)}")
+            except Exception as e:
+                st.error(f"Произошла ошибка: {e}. Попробуйте еще раз.")
+
+# Показываем блок работы с карточками, если они сгенерированы
+if st.session_state.cards:
+    st.write("---")
     
-    # Кнопки для экспорта
-    st.subheader("💾 Экспорт материалов")
-    col1, col2 = st.columns(2)
+    # ПАНЕЛЬ УПРАВЛЕНИЯ ЭКСПОРТОМ
+    col_exp1, col_exp2 = st.columns(2)
     
-    # Экспорт для Quizlet (Формат: Слово \t Перевод (Контекст))
-    quizlet_lines = []
-    for c in cards:
-        quizlet_lines.append(f"{c['word']}\t{c['translation']} | Context: {c['context']}")
-    quizlet_text = "\n".join(quizlet_lines)
-    
-    with col1:
+    with col_exp1:
+        # Экспорт для Anki (телефон)
+        df = pd.DataFrame([
+            {
+                "Front": card['word'],
+                "Back": f"<div style='text-align:center;'><h2 style='color:#2e6c9e; margin-bottom:10px;'>{card['translation']}</h2><p style='font-size:16px; color:#555;'><i>Context:</i> {card['context']}</p></div>"
+            } for card in st.session_state.cards
+        ])
+        # Кодируем в UTF-8 с BOM, чтобы Excel и Anki читали русский язык без кракозябр
+        csv = df.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+        
         st.download_button(
-            label="📥 Скачать файл для Quizlet",
-            data=quizlet_text,
-            file_name="quizlet_cards.txt",
+            label="📱 Скачать файл для Anki / Quizlet (TXT/CSV)",
+            data=csv,
+            file_name="gemini_anki_cards.txt",
             mime="text/plain",
-            help="Скопируйте содержимое этого файла и вставьте в поле импорта в Quizlet."
+            help="Импортируйте этот файл в приложение Anki на телефоне. Ссылка станет двусторонней автоматически!"
         )
         
-    # Экспорт в Excel / CSV (с поддержкой кириллицы UTF-8-SIG)
-    df = pd.DataFrame(cards)
-    csv_data = df.to_csv(index=False, encoding="utf-8-sig")
-    
-    with col2:
-        st.download_button(
-            label="📥 Скачать таблицу Excel (CSV)",
-            data=csv_data,
-            file_name="english_cards.csv",
-            mime="text/csv",
-            help="Откройте этот файл в Excel или Google Таблицах."
-        )
+    with col_exp2:
+        # Переключатель в режим печати
+        print_mode = st.checkbox("🖨️ Включить режим для печати на бумаге (Foldable Layout)")
+
+    # ЕСЛИ ВКЛЮЧЕН РЕЖИМ ПЕЧАТИ
+    if print_mode:
+        st.info("💡 **Как распечатать:** Нажмите Ctrl + P (или Cmd + P на Mac) прямо в браузере. В настройках печати выберите 'Сохранить в PDF' или отправьте на принтер. Сложите лист пополам по вертикальной линии, склейте половинки и разрежьте карточки!")
         
-    # Красивый вывод карточек на экран
-    st.subheader("👀 Готовые карточки:")
-    
-    # Выводим карточки красивой сеткой
-    for i in range(0, len(cards), 2):
-        row_cols = st.columns(2)
-        for j in range(2):
-            if i + j < len(cards):
-                card = cards[i + j]
-                with row_cols[j]:
+        for card in st.session_state.cards:
+            st.markdown(f"""
+            <div class="print-row">
+                <div class="print-col print-left">
+                    {card['word']}
+                </div>
+                <div class="print-col">
+                    <h4 style="color:#00c08b; margin-top:0; margin-bottom:5px;">{card['translation']}</h4>
+                    <p style="font-size: 13px; color:#555; margin:0;"><strong>Context:</strong> {card['context']}</p>
+                </div>
+            </div>
+            """, unsafe_allow_html=True)
+            
+    # ЕСЛИ ОБЫЧНЫЙ ИНТЕРАКТИВНЫЙ РЕЖИМ
+    else:
+        st.write("### 🎴 Интерактивный тренажер")
+        st.caption("Нажмите кнопку под карточкой, чтобы перевернуть её.")
+        
+        cols = st.columns(3)
+        for i, card in enumerate(st.session_state.cards):
+            col_idx = i % 3
+            with cols[col_idx]:
+                is_flipped = st.session_state.flipped.get(i, False)
+                
+                if not is_flipped:
+                    # Лицевая сторона (Английский)
                     st.markdown(f"""
-                    <div class="card-container">
-                        <div class="card-word">🇬🇧 {card['word']}</div>
-                        <div class="card-translation">🇷🇺 {card['translation']}</div>
-                        <div class="card-context"><b>Context:</b> {card['context']}</div>
+                    <div class="card-front">
+                        <span style="font-size: 26px; font-weight: bold; color: #1e3d59;">{card['word']}</span>
+                        <span style="font-size: 11px; color: #888; margin-top: 15px;">English</span>
                     </div>
                     """, unsafe_allow_html=True)
+                    if st.button("🔄 Перевернуть", key=f"flip_{i}", use_container_width=True):
+                        st.session_state.flipped[i] = True
+                        st.rerun()
+                else:
+                    # Оборотная сторона (Русский + Контекст)
+                    st.markdown(f"""
+                    <div class="card-back">
+                        <span style="font-size: 18px; font-weight: bold; color: #2e6c9e; margin-bottom:8px;">{card['translation']}</span>
+                        <div style="font-size: 13px; color: #555; line-height:1.4;">
+                            <strong>Context:</strong> <i>{card['context']}</i>
+                        </div>
+                    </div>
+                    """, "-")
+                    if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
+                        st.session_state.flipped[i] = False
+                        st.rerun()
