@@ -64,9 +64,24 @@ except Exception:
 
 # 3. Боковая панель с настройками (Sidebar)
 st.sidebar.header("⚙️ Настройки генерации")
+
+# Выбор уровня языка
 level = st.sidebar.selectbox(
     "Выберите уровень языка (CEFR):",
     ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficiency)"]
+)
+
+# НОВИНКА: Выбор модели ИИ для обхода региональных и аккаунтных ограничений
+model_name = st.sidebar.selectbox(
+    "Выберите модель ИИ:",
+    [
+        "gemini-1.5-flash-latest",
+        "gemini-3-flash-preview",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro",
+        "gemini-2.5-flash"
+    ],
+    help="Если базовая модель выдает ошибку 404, переключитесь на другую. Для новых аккаунтов отлично подходят 'gemini-1.5-flash-latest' и 'gemini-3-flash-preview'."
 )
 
 # 4. Главная рабочая область
@@ -83,8 +98,8 @@ if st.button("Создать карточки", type="primary"):
     else:
         with st.spinner("Профессиональный методист ИИ анализирует текст..."):
             try:
-                # Настройка модели Gemini 1.5 Flash (быстрая и бесплатная)
-                model = genai.GenerativeModel('gemini-1.5-flash')
+                # Инициализация выбранной пользователем модели
+                model = genai.GenerativeModel(model_name)
                 
                 # Твой идеальный системный промпт
                 prompt = f"""
@@ -121,7 +136,7 @@ if st.button("Создать карточки", type="primary"):
                 st.success("Карточки успешно созданы!")
                 
             except Exception as e:
-                st.error(f"Произошла ошибка при генерации. Пожалуйста, попробуйте еще раз. Детали: {e}")
+                st.error(f"Произошла ошибка при генерации. Пожалуйста, выберите другую модель ИИ в боковой панели или попробуйте еще раз. Детали: {e}")
 
 # 6. Отображение результатов и функции экспорта
 if 'cards_data' in st.session_state:
