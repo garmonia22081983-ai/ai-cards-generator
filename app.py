@@ -96,8 +96,17 @@ def extract_text_from_url(url):
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    # 1. Выбор модели
-    model_option = st.selectbox("Нейросеть:", ["gemini-1.5-flash-latest", "gemini-1.5-flash"])
+    # 1. Выбор модели (Добавили новые Gemini 3)
+    model_option = st.selectbox(
+        "Нейросеть:", 
+        [
+            "gemini-3.5-flash", 
+            "gemini-3-flash-preview", 
+            "gemini-1.5-flash-latest", 
+            "gemini-1.5-flash"
+        ],
+        index=0  # По умолчанию выберет самую новую gemini-3.5-flash
+    )
     
     # 2. Выбор источника
     source_type = st.radio(
