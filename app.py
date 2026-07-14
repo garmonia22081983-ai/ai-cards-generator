@@ -5,6 +5,7 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
+import textwrap  # Импортируем инструмент для очистки пробелов слева
 
 # Инициализация API-ключа из Secrets
 if "GEMINI_API_KEY" in st.secrets:
@@ -124,7 +125,7 @@ with st.sidebar:
     # 2. Выбор источника
     source_type = st.radio(
         "Что берем за основу?",
-        ["📝 Текст / Отрывок статьи / Транскрипт", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"]
+        ["📝 Текст / Отрывок статьи / Трэк субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"]
     )
     
     # 3. Выбор уровня студента
@@ -139,7 +140,7 @@ with st.sidebar:
 
 # ПОЛЕ ВВОДА НА ОСНОВНОМ ЭКРАНЕ
 user_input = ""
-if source_type == "📝 Текст / Отрывок статьи / Транскрипт":
+if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
     user_input = st.text_area("Вставьте сюда текст статьи или субтитры (транскрипт) видео:", height=200,
                               placeholder="Вставьте сюда английский текст, из которого нужно вытащить лексику...")
 elif source_type == "🔗 Ссылка на веб-статью":
@@ -166,7 +167,6 @@ if st.button("Создать карточки ✨", type="primary"):
 
                 model = genai.GenerativeModel(model_option)
                 
-                # Промпт теперь требует Explanation (дефиницию) и Image Keyword (ключевик для картинок)
                 if source_type == "✍️ Готовый список слов":
                     prompt = f"""
                     Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
@@ -215,7 +215,7 @@ if st.button("Создать карточки ✨", type="primary"):
                 st.session_state.flipped = {i: False for i in range(len(cards_data))}
                 st.success(f"Успешно! Создано карточек: {len(cards_data)} для уровня {student_level}")
             except Exception as e:
-                st.error(f"Произошла ошибка при генерации: {e}. Попросите Gemini еще раз.")
+                st.error(f"Произошла ошибка при генерации: {e}. Попробуйте еще раз.")
 
 # ВЫВОД КАРТОЧЕК И ЭКСПОРТ
 if st.session_state.cards:
@@ -223,7 +223,6 @@ if st.session_state.cards:
     col_exp1, col_exp2 = st.columns(2)
     
     with col_exp1:
-        # Улучшенный экспорт в Anki (с картинками, дефинициями и ссылками на аудио!)
         anki_list = []
         for card in st.session_state.cards:
             encoded_w = urllib.parse.quote(card['word'])
@@ -255,11 +254,11 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати на бумаге (Foldable Layout)")
 
-    # Режим печати (без аудио, чтобы экономить краску, но со всеми текстами)
     if print_mode:
         st.info("💡 **Как распечатать:** Нажмите Ctrl + P (или Cmd + P на Mac).")
         for card in st.session_state.cards:
-            st.markdown(f"""
+            # textwrap.dedent убирает пробелы слева, исправляя верстку
+            st.markdown(textwrap.dedent(f"""
             <div class="print-row">
                 <div class="print-col print-left">{card['word']}</div>
                 <div class="print-col">
@@ -268,9 +267,8 @@ if st.session_state.cards:
                     <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card['context']}</p>
                 </div>
             </div>
-            """, unsafe_allow_html=True)
+            """), unsafe_allow_html=True)
             
-    # Обычный интерактивный режим тренировки
     else:
         st.write("### 🎴 Интерактивный тренажер")
         cols = st.columns(3)
@@ -280,24 +278,20 @@ if st.session_state.cards:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
                 image_keyword_encoded = urllib.parse.quote(card['image_keyword'])
-                
-                # Динамическая ссылка на красивую картинку
                 img_url = f"https://loremflickr.com/320/180/{image_keyword_encoded}"
                 
-                if not_flipped := (not is_flipped):
-                    # Красивая лицевая сторона
-                    st.markdown(f"""
+                if not is_flipped:
+                    st.markdown(textwrap.dedent(f"""
                     <div class="card-front">
                         <span style="font-size: 28px; font-weight: bold; font-family: 'Georgia', serif; color: #1a365d;">{card['word']}</span>
                         <span style="font-size: 11px; color: #a0aec0; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px;">English Word</span>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """), unsafe_allow_html=True)
                     if st.button("🔄 Перевернуть", key=f"flip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    # Ультра-наполненная оборотная сторона
-                    st.markdown(f"""
+                    st.markdown(textwrap.dedent(f"""
                     <div class="card-back">
                         <div style="text-align: center; margin-bottom: 5px;">
                             <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
@@ -328,7 +322,7 @@ if st.session_state.cards:
                             </div>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
+                    """), unsafe_allow_html=True)
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
