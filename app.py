@@ -5,7 +5,6 @@ import pandas as pd
 import requests
 from bs4 import BeautifulSoup
 import urllib.parse
-import textwrap  # Импортируем инструмент для очистки пробелов слева
 
 # Инициализация API-ключа из Secrets
 if "GEMINI_API_KEY" in st.secrets:
@@ -257,17 +256,16 @@ if st.session_state.cards:
     if print_mode:
         st.info("💡 **Как распечатать:** Нажмите Ctrl + P (или Cmd + P на Mac).")
         for card in st.session_state.cards:
-            # textwrap.dedent убирает пробелы слева, исправляя верстку
-            st.markdown(textwrap.dedent(f"""
-            <div class="print-row">
-                <div class="print-col print-left">{card['word']}</div>
-                <div class="print-col">
-                    <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card['translation']}</h4>
-                    <p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card['explanation']}</p>
-                    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card['context']}</p>
-                </div>
-            </div>
-            """), unsafe_allow_html=True)
+            # Абсолютно плоская разметка без пробелов слева для предотвращения сбоев парсера
+            print_html = f"""<div class="print-row">
+<div class="print-col print-left">{card['word']}</div>
+<div class="print-col">
+<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card['translation']}</h4>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card['explanation']}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card['context']}</p>
+</div>
+</div>"""
+            st.markdown(print_html, unsafe_allow_html=True)
             
     else:
         st.write("### 🎴 Интерактивный тренажер")
@@ -281,48 +279,41 @@ if st.session_state.cards:
                 img_url = f"https://loremflickr.com/320/180/{image_keyword_encoded}"
                 
                 if not is_flipped:
-                    st.markdown(textwrap.dedent(f"""
-                    <div class="card-front">
-                        <span style="font-size: 28px; font-weight: bold; font-family: 'Georgia', serif; color: #1a365d;">{card['word']}</span>
-                        <span style="font-size: 11px; color: #a0aec0; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px;">English Word</span>
-                    </div>
-                    """), unsafe_allow_html=True)
+                    front_html = f"""<div class="card-front">
+<span style="font-size: 28px; font-weight: bold; font-family: 'Georgia', serif; color: #1a365d;">{card['word']}</span>
+<span style="font-size: 11px; color: #a0aec0; margin-top: 25px; text-transform: uppercase; letter-spacing: 1px;">English Word</span>
+</div>"""
+                    st.markdown(front_html, unsafe_allow_html=True)
                     if st.button("🔄 Перевернуть", key=f"flip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    st.markdown(textwrap.dedent(f"""
-                    <div class="card-back">
-                        <div style="text-align: center; margin-bottom: 5px;">
-                            <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
-                        </div>
-                        
-                        <img src="{img_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />
-                        
-                        <div style="margin-bottom: 6px;">
-                            <span style="font-size: 16px; font-weight: bold; color: #2e6c9e;">{card['translation']}</span>
-                        </div>
-                        
-                        <div style="font-size: 12px; color: #4a5568; margin-bottom: 4px; line-height: 1.3;">
-                            <b>Definition:</b> {card['explanation']}
-                        </div>
-                        
-                        <div style="font-size: 12px; color: #718096; line-height: 1.3; margin-bottom: 8px;">
-                            <b>Context:</b> <i>{card['context']}</i>
-                        </div>
-                        
-                        <div style="display: flex; justify-content: space-around; background: #f7fafc; padding: 6px; border-radius: 8px; align-items: center; border: 1px solid #edf2f7;">
-                            <div style="display: flex; align-items: center; gap: 4px;">
-                                <span style="font-size: 12px;">🇺🇸</span>
-                                <audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_word}" controls style="width: 75px; height: 22px;"></audio>
-                            </div>
-                            <div style="display: flex; align-items: center; gap: 4px;">
-                                <span style="font-size: 12px;">🇬🇧</span>
-                                <audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_word}" controls style="width: 75px; height: 22px;"></audio>
-                            </div>
-                        </div>
-                    </div>
-                    """), unsafe_allow_html=True)
+                    back_html = f"""<div class="card-back">
+<div style="text-align: center; margin-bottom: 5px;">
+<span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
+</div>
+<img src="{img_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />
+<div style="margin-bottom: 6px;">
+<span style="font-size: 16px; font-weight: bold; color: #2e6c9e;">{card['translation']}</span>
+</div>
+<div style="font-size: 12px; color: #4a5568; margin-bottom: 4px; line-height: 1.3;">
+<b>Definition:</b> {card['explanation']}
+</div>
+<div style="font-size: 12px; color: #718096; line-height: 1.3; margin-bottom: 8px;">
+<b>Context:</b> <i>{card['context']}</i>
+</div>
+<div style="display: flex; justify-content: space-around; background: #f7fafc; padding: 6px; border-radius: 8px; align-items: center; border: 1px solid #edf2f7;">
+<div style="display: flex; align-items: center; gap: 4px;">
+<span style="font-size: 12px;">🇺🇸</span>
+<audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_word}" controls style="width: 75px; height: 22px;"></audio>
+</div>
+<div style="display: flex; align-items: center; gap: 4px;">
+<span style="font-size: 12px;">🇬🇧</span>
+<audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_word}" controls style="width: 75px; height: 22px;"></audio>
+</div>
+</div>
+</div>"""
+                    st.markdown(back_html, unsafe_allow_html=True)
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
