@@ -29,7 +29,7 @@ st.markdown("""
     border-radius: 16px;
     padding: 40px 20px;
     text-align: center;
-    min-height: 380px;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -48,11 +48,19 @@ st.markdown("""
     border: 1px solid #e2e8f0;
     border-radius: 16px;
     padding: 22px;
-    min-height: 380px;
+    min-height: 400px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03), 0 2px 6px rgba(0,0,0,0.01);
+}
+
+/* Скрываем стандартные маркеры треугольников у раскрывающегося списка переводчика */
+summary::-webkit-details-marker {
+    display: none !important;
+}
+summary {
+    list-style: none !important;
 }
 
 /* Стили для печати */
@@ -225,7 +233,8 @@ if st.session_state.cards:
         anki_list = []
         for card in st.session_state.cards:
             encoded_w = urllib.parse.quote(card['word'])
-            image_url = f"https://image.pollinations.ai/prompt/{urllib.parse.quote(card['image_keyword'])}?width=320&height=240&nologo=true"
+            # Используем Picsum с уникальным seed на основе слова — грузится мгновенно без VPN!
+            image_url = f"https://picsum.photos/seed/{encoded_w}/320/240"
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                 f"<img src='{image_url}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
@@ -275,8 +284,9 @@ if st.session_state.cards:
             with cols[col_idx]:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
-                image_keyword_encoded = urllib.parse.quote(card['image_keyword'])
-                img_url = f"https://image.pollinations.ai/prompt/{image_keyword_encoded}?width=320&height=180&nologo=true"
+                
+                # Picsum гарантирует 100% отображение без прокси и VPN во всех регионах!
+                img_url = f"https://picsum.photos/seed/{encoded_word}/320/180"
                 
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
@@ -288,29 +298,38 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
+                    # Оборотная сторона карточки
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
 <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
 </div>
+
 <img src="{img_url}" style="width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 8px;" />
-<div style="margin-bottom: 6px;">
-<span style="font-size: 16px; font-weight: bold; color: #2e6c9e;">{card['translation']}</span>
-</div>
+
 <div style="font-size: 12px; color: #4a5568; margin-bottom: 4px; line-height: 1.3;">
 <b>Definition:</b> {card['explanation']}
 </div>
+
 <div style="font-size: 12px; color: #718096; line-height: 1.3; margin-bottom: 8px;">
 <b>Context:</b> <i>{card['context']}</i>
 </div>
+
+<!-- Раскрывающийся блок с скрытым переводом -->
+<details style="border: 1px solid #ebdcc5; border-radius: 8px; padding: 6px 12px; background: #fdfbf7; margin-bottom: 10px;">
+<summary style="font-size: 13px; font-weight: bold; color: #1a365d; cursor: pointer; list-style: none; text-align: center; outline: none; user-select: none;">💬 Показать перевод</summary>
+<div style="margin-top: 8px; font-size: 15px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 6px;">
+{card['translation']}
+</div>
+</details>
+
+<!-- Озвучка со значком динамика вместо плеера с тремя точками -->
 <div style="display: flex; justify-content: space-around; background: #f7fafc; padding: 6px; border-radius: 8px; align-items: center; border: 1px solid #edf2f7;">
-<div style="display: flex; align-items: center; gap: 4px;">
-<span style="font-size: 12px;">🇺🇸</span>
-<audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_word}" controls style="width: 75px; height: 22px;"></audio>
-</div>
-<div style="display: flex; align-items: center; gap: 4px;">
-<span style="font-size: 12px;">🇬🇧</span>
-<audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_word}" controls style="width: 75px; height: 22px;"></audio>
-</div>
+<button onclick="new Audio('https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_word}').play()" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #4a5568;">
+<span>🔊</span> US
+</button>
+<button onclick="new Audio('https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_word}').play()" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #4a5568;">
+<span>🔊</span> UK
+</button>
 </div>
 </div>"""
                     st.markdown(back_html, unsafe_allow_html=True)
