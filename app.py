@@ -23,4 +23,4 @@
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
-"""
+
