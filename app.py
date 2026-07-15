@@ -91,7 +91,7 @@ st.markdown(f"""
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 15px; /* Уменьшено с 22px */
-    min-height: 350px; /* Увеличено на 20px, чтобы комфортно вместить новые надежные аудиоплееры */
+    min-height: 350px; /* Достаточный размер, чтобы комфортно вместить аудио и картинку */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -203,7 +203,7 @@ else:
 # КНОПКА ЗАПУСКА
 if st.button("Создать карточки ✨", type="primary"):
     if not user_input.strip():
-        st.warning("Пожалуйста, вспомните и заполнити поле ввода!")
+        st.warning("Пожалуйста, вспомните и заполните поле ввода!")
     else:
         with st.spinner("ИИ подбирает слова, пишет дефиниции, примеры и ищет картинки..."):
             try:
@@ -278,6 +278,7 @@ if st.session_state.cards:
             encoded_w = urllib.parse.quote(card['word'])
             encoded_key = urllib.parse.quote(card.get('image_keyword', 'study'))
             image_url = f"https://loremflickr.com/320/240/{encoded_key}"
+            # Обновлено: звук в Anki тоже пойдет через стабильный Youdao
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                 f"<img src='{image_url}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
@@ -286,8 +287,8 @@ if st.session_state.cards:
                 f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card['context']}</p>"
                 f"<hr style='border:none; border-top:1px solid #eee; margin:10px 0;' />"
                 f"<div style='display:flex; gap:15px; justify-content:center;'>"
-                f"<a href='https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_w}' style='text-decoration:none; font-size:13px;'>🇺🇸 Play US</a>"
-                f"<a href='https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_w}' style='text-decoration:none; font-size:13px;'>🇬🇧 Play UK</a>"
+                f"<a href='https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2' style='text-decoration:none; font-size:13px;'>🇺🇸 Play US</a>"
+                f"<a href='https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1' style='text-decoration:none; font-size:13px;'>🇬🇧 Play UK</a>"
                 f"</div></div>"
             )
             anki_list.append({"Front": card['word'], "Back": anki_back})
@@ -341,7 +342,7 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    # Оборотная сторона карточки (УМЕНЬШЕННЫЙ РАЗМЕР ВНУТРЕННИХ ЭЛЕМЕНТОВ + НАДЕЖНОЕ НАТИВНОЕ АУДИО)
+                    # Оборотная сторона карточки с полностью надежными и компактными плеерами
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 3px;">
 <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
@@ -366,15 +367,15 @@ if st.session_state.cards:
 </div>
 </details>
 
-<!-- Абсолютно бесперебойное воспроизведение аудио через нативные медиа-плееры браузера (БЕЗ JS ОШИБОК И БЛОКИРОВОК) -->
+<!-- Абсолютно бесперебойное воспроизведение аудио через нативные медиа-плееры Youdao (БЕЗ JS ОШИБОК И БЛОКИРОВОК) -->
 <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #edf2f7;">
     <div style="display: flex; align-items: center; gap: 4px;">
         <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇺🇸</span>
-        <audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_word}" controls style="width: 85px; height: 25px; outline: none;"></audio>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 28px; outline: none;"></audio>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
         <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇬🇧</span>
-        <audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_word}" controls style="width: 85px; height: 25px; outline: none;"></audio>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 28px; outline: none;"></audio>
     </div>
 </div>
 </div>"""
