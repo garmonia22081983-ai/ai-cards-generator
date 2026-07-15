@@ -200,7 +200,7 @@ if st.button("Создать карточки ✨", type="primary"):
                 response = model.generate_content(prompt)
                 text_response = response.text.strip()
                 
-                # Защищенный разбор ответа от маркдаун-оберток без использования трех бэктэков в коде
+                # Защищенный разбор ответа от маркдаун-оберток
                 backtick_triple = chr(96) * 3
                 if backtick_triple in text_response:
                     chunks = text_response.split(backtick_triple)
@@ -226,20 +226,35 @@ if st.button("Создать карточки ✨", type="primary"):
                     
                     ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
                     encoded_prompt = urllib.parse.quote(ai_image_prompt)
-                    img_url = f"[https://image.pollinations.ai/p/](https://image.pollinations.ai/p/){encoded_prompt}?width=320&height=240&nologo=true"
+                    
+                    seed = int(time.time()) + idx
+                    img_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true&seed={seed}"
+                    
+                    # Создаем гарантированную красивую SVG-заглушку на случай сбоя сети
+                    svg_placeholder = f"""<svg xmlns="http://www.w3.org/2000/svg" width="110" height="70">
+                    <rect width="100%" height="100%" fill="%23fdfbf7" stroke="%23ebdcc5" stroke-width="1" rx="6"/>
+                    <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="%23718096">✨ {current_word}</text>
+                    </svg>"""
+                    fallback_src = f"data:image/svg+xml,{urllib.parse.quote(svg_placeholder)}"
                     
                     try:
-                        img_response = requests.get(img_url, timeout=15)
-                        if img_response.status_code == 200:
+                        # Защита: передаем реальные заголовки браузера, чтобы Cloudflare не блокировал Python!
+                        image_headers = {
+                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+                            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
+                        }
+                        img_response = requests.get(img_url, headers=image_headers, timeout=20)
+                        
+                        if img_response.status_code == 200 and len(img_response.content) > 500:
                             b64_img = base64.b64encode(img_response.content).decode()
                             card['image_b64'] = f"data:image/jpeg;base64,{b64_img}"
                         else:
-                            card['image_b64'] = ""
+                            card['image_b64'] = fallback_src
                     except Exception:
-                        card['image_b64'] = ""
+                        card['image_b64'] = fallback_src
                     
                     progress_bar.progress((idx + 1) / total_to_gen)
-                    time.sleep(0.2)
+                    time.sleep(0.4)
                 
                 status_text.empty()
                 progress_bar.empty()
@@ -269,8 +284,8 @@ if st.session_state.cards:
                 f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card['context']}</p>"
                 f"<hr style='border:none; border-top:1px solid #eee; margin:10px 0;' />"
                 f"<div style='display:flex; gap:15px; justify-content:center;'>"
-                f"<a href='[https://dict.youdao.com/dictvoice?audio=](https://dict.youdao.com/dictvoice?audio=){encoded_w}&type=2' style='text-decoration:none; font-size:13px;'>🇺🇸 Play US</a>"
-                f"<a href='[https://dict.youdao.com/dictvoice?audio=](https://dict.youdao.com/dictvoice?audio=){encoded_w}&type=1' style='text-decoration:none; font-size:13px;'>🇬🇧 Play UK</a>"
+                f"<a href='https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2' style='text-decoration:none; font-size:13px;'>🇺🇸 Play US</a>"
+                f"<a href='https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1' style='text-decoration:none; font-size:13px;'>🇬🇧 Play UK</a>"
                 f"</div></div>"
             )
             anki_list.append({"Front": card['word'], "Back": anki_back})
@@ -303,15 +318,7 @@ if st.session_state.cards:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
                 
-                svg_placeholder = f"""<svg xmlns='[http://www.w3.org/2000/svg](http://www.w3.org/2000/svg)' width='110' height='70'>
-                <rect width='100%' height='100%' fill='%23fdfbf7' stroke='%23ebdcc5' stroke-width='1' rx='6'/>
-                <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-family='Georgia, serif' font-size='10' font-weight='bold' fill='%23718096'>✨ {card['word'].upper()}</text>
-                </svg>"""
-                fallback_src = f"data:image/svg+xml,{urllib.parse.quote(svg_placeholder)}"
-                
                 img_src = card.get('image_b64', '')
-                if not img_src:
-                    img_src = fallback_src
                 
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
@@ -328,7 +335,7 @@ if st.session_state.cards:
 <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
 </div>
 
-<img src="{img_src}" onerror="this.onerror=null; this.src='{fallback_src}';" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
+<img src="{img_src}" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
 
 <div style="font-size: 11.5px; color: #4a5568; margin-bottom: 3px; line-height: 1.25;">
 <b>Definition:</b> {card['explanation']}
@@ -348,11 +355,11 @@ if st.session_state.cards:
 <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #edf2f7;">
     <div style="display: flex; align-items: center; gap: 4px;">
         <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇺🇸</span>
-        <audio src="[https://dict.youdao.com/dictvoice?audio=](https://dict.youdao.com/dictvoice?audio=){encoded_word}&type=2" controls style="width: 100px; height: 28px; outline: none;"></audio>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 28px; outline: none;"></audio>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
         <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇬🇧</span>
-        <audio src="[https://dict.youdao.com/dictvoice?audio=](https://dict.youdao.com/dictvoice?audio=){encoded_word}&type=1" controls style="width: 100px; height: 28px; outline: none;"></audio>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 28px; outline: none;"></audio>
     </div>
 </div>
 </div>"""
