@@ -7,7 +7,6 @@ from bs4 import BeautifulSoup
 import urllib.parse
 import os
 import base64
-import time
 
 # Инициализация API-ключа из Secrets
 if "GEMINI_API_KEY" in st.secrets:
@@ -48,10 +47,10 @@ st.markdown(f"""
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
-    padding: 20px 15px;
+    padding: 15px;
     text-align: center;
-    min-height: 260px;
-    max-height: 260px;
+    min-height: 180px;
+    max-height: 180px;
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -76,7 +75,7 @@ st.markdown(f"""
 .card-front-subtitle {{
     font-size: 10px;
     color: #704b4b;
-    margin-top: 15px;
+    margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
@@ -87,7 +86,7 @@ st.markdown(f"""
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 15px;
-    min-height: 350px;
+    min-height: 310px; /* Высота увеличена для комфортного размещения новых текстовых блоков */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
@@ -160,7 +159,7 @@ if st.button("Создать карточки ✨", type="primary"):
     if not user_input.strip():
         st.warning("Пожалуйста, заполните поле ввода!")
     else:
-        with st.spinner("ИИ подбирает слова, пишет дефиниции и примеры..."):
+        with st.spinner("Методист Gemini собирает лингвистические данные..."):
             try:
                 final_content = user_input
                 if source_type == "🔗 Ссылка на веб-статью":
@@ -175,25 +174,27 @@ if st.button("Создать карточки ✨", type="primary"):
                 if source_type == "✍️ Готовый список слов":
                     prompt = f"""
                     Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
-                    Создай карточки для следующих слов/фраз: {final_content}.
+                    Создай обучающие карточки для следующих слов/фраз: {final_content}.
                     Верни строго валидный JSON-массив объектов со следующими ключами:
                     - "word": оригинальное слово на английском
+                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] или [ˌekstrəlɪŋˈɡwɪstɪk])
                     - "translation": точный и красивый перевод на русский
                     - "explanation": дефиниция на английском языке под уровень {student_level}
+                    - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
                     - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                    - "image_keyword": ОДНО короткое конкретное существительное на английском, которое визуально и понятно описывает данное понятие (например, для 'slow' верни 'snail', для 'friendly' верни 'puppy', для 'letter' верни 'envelope').
                     Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                     """
                 else:
                     prompt = f"""
                     Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
-                    Выбери из текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
+                    Выбери из предоставленного текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
                     Верни строго валидный JSON-массив объектов со следующими ключами:
                     - "word": оригинальное слово на английском
+                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] или [ˌekstrəlɪŋˈɡwɪstɪk])
                     - "translation": точный и красивый перевод на русский
                     - "explanation": дефиниция на английском языке под уровень {student_level}
+                    - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
                     - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                    - "image_keyword": ОДНО короткое конкретное существительное на английском, которое визуально и понятно описывает данное понятие (например, для 'slow' верни 'snail', для 'friendly' верни 'puppy', для 'letter' верни 'envelope').
                     Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                     """
 
@@ -215,52 +216,6 @@ if st.button("Создать карточки ✨", type="primary"):
                 text_response = text_response.strip()
                 cards_data = json.loads(text_response)
                 
-                # ПОСЛЕДОВАТЕЛЬНАЯ ГЕНЕРАЦИЯ И ЗАКАЧКА КАРТИНОК НА БЭКЕНДЕ
-                status_text = st.empty()
-                progress_bar = st.progress(0)
-                total_to_gen = len(cards_data)
-                
-                for idx, card in enumerate(cards_data):
-                    current_word = card['word'].upper()
-                    status_text.write(f"🎨 Нейросеть рисует иллюстрацию для слова **{current_word}** ({idx+1}/{total_to_gen})...")
-                    
-                    # ИСПРАВЛЕНИЕ: Берем ассоциативное существительное ИИ вместо абстрактного слова!
-                    visual_keyword = card.get('image_keyword', card['word'])
-                    ai_image_prompt = f"A simple clear professional 3D render or photo of a {visual_keyword}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
-                    encoded_prompt = urllib.parse.quote(ai_image_prompt)
-                    
-                    seed = int(time.time()) + idx
-                    img_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true&seed={seed}"
-                    
-                    # Красивая SVG-заглушка в цвет темы на случай сбоя
-                    svg_placeholder = f"""<svg xmlns="http://www.w3.org/2000/svg" width="110" height="70">
-                    <rect width="100%" height="100%" fill="%23fdfbf7" stroke="%23ebdcc5" stroke-width="1" rx='6'/>
-                    <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="%23718096">✨ {current_word}</text>
-                    </svg>"""
-                    fallback_src = f"data:image/svg+xml,{urllib.parse.quote(svg_placeholder)}"
-                    
-                    try:
-                        image_headers = {
-                            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-                            'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
-                        }
-                        img_response = requests.get(img_url, headers=image_headers, timeout=20)
-                        
-                        # Если сервер вернул ошибку или картинку-заглушку (они обычно весят очень мало, меньше 4Кб)
-                        if img_response.status_code == 200 and len(img_response.content) > 4500:
-                            b64_img = base64.b64encode(img_response.content).decode()
-                            card['image_b64'] = f"data:image/jpeg;base64,{b64_img}"
-                        else:
-                            card['image_b64'] = fallback_src
-                    except Exception:
-                        card['image_b64'] = fallback_src
-                    
-                    progress_bar.progress((idx + 1) / total_to_gen)
-                    time.sleep(1.2) # Даем нейросети больше времени на передышку
-                
-                status_text.empty()
-                progress_bar.empty()
-                
                 st.session_state.cards = cards_data
                 st.session_state.flipped = {i: False for i in range(len(cards_data))}
                 st.success(f"Успешно! Создано карточек: {len(cards_data)}")
@@ -276,13 +231,13 @@ if st.session_state.cards:
         anki_list = []
         for card in st.session_state.cards:
             encoded_w = urllib.parse.quote(card['word'])
-            img_src = card.get('image_b64', '')
             
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                f"<img src='{img_src}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
-                f"<h2 style='color:#2e6c9e; margin-bottom:5px; margin-top:0;'>{card['translation']}</h2>"
+                f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card['translation']}</h2>"
+                f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{card.get('transcription', '')}</p>"
                 f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card['explanation']}</p>"
+                f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
                 f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card['context']}</p>"
                 f"<hr style='border:none; border-top:1px solid #eee; margin:10px 0;' />"
                 f"<div style='display:flex; gap:15px; justify-content:center;'>"
@@ -302,10 +257,14 @@ if st.session_state.cards:
     if print_mode:
         for card in st.session_state.cards:
             print_html = f"""<div class="print-row">
-<div class="print-col print-left">{card['word']}</div>
+<div class="print-col print-left">
+    {card['word']}<br/>
+    <span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span>
+</div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card['translation']}</h4>
 <p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card['explanation']}</p>
+<p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card['context']}</p>
 </div>
 </div>"""
@@ -320,8 +279,6 @@ if st.session_state.cards:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
                 
-                img_src = card.get('image_b64', '')
-                
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
 <span class="card-front-title">{card['word']}</span>
@@ -333,21 +290,24 @@ if st.session_state.cards:
                         st.rerun()
                 else:
                     back_html = f"""<div class="card-back">
-<div style="text-align: center; margin-bottom: 3px;">
-<span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
+<div style="text-align: center; margin-bottom: 5px;">
+<span style="font-size: 13px; font-weight: bold; color: #4a2e2e; text-transform: uppercase;">{card['word']}</span><br/>
+<span style="font-size: 11px; color: #718096; font-family: 'Arial', sans-serif;">{card.get('transcription', '')}</span>
 </div>
 
-<img src="{img_src}" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
-
-<div style="font-size: 11.5px; color: #4a5568; margin-bottom: 3px; line-height: 1.25;">
+<div style="font-size: 12px; color: #4a5568; margin-bottom: 5px; line-height: 1.3;">
 <b>Definition:</b> {card['explanation']}
 </div>
 
-<div style="font-size: 11.5px; color: #718096; line-height: 1.25; margin-bottom: 6px;">
+<div style="font-size: 12px; color: #2d3748; margin-bottom: 6px; line-height: 1.3;">
+<b>Collocations:</b> <span style="color: #2e6c9e; font-weight: 500;">{card.get('collocations', '')}</span>
+</div>
+
+<div style="font-size: 12px; color: #718096; line-height: 1.3; margin-bottom: 10px;">
 <b>Context:</b> <i>{card['context']}</i>
 </div>
 
-<details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 8px;">
+<details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; list-style: none; text-align: center; outline: none; user-select: none;">💬 Показать перевод</summary>
 <div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
 {card['translation']}
