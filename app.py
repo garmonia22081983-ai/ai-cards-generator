@@ -17,7 +17,7 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
-# Функция для转换 кастомной картинки в Base64
+# Функция для конвертации локальной картинки в Base64
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -94,8 +94,8 @@ st.markdown(f"""
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02), 0 1px 4px rgba(0,0,0,0.01);
 }}
 
-summary::-webkit-details-marker {{ display: none !important; }}
-summary {{ list-style: none !important; }}
+summary::-webkit-details-marker { display: none !important; }
+summary { list-style: none !important; }
 
 .print-row {{
     display: flex;
@@ -174,7 +174,7 @@ if st.button("Создать карточки ✨", type="primary"):
                 
                 if source_type == "✍️ Готовый список слов":
                     prompt = f"""
-                    Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
+                    Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
                     Создай карточки для следующих слов/фраз: {final_content}.
                     Верни строго валидный JSON-массив объектов со следующими ключами:
                     - "word": оригинальное слово на английском
@@ -212,7 +212,8 @@ if st.button("Создать карточки ✨", type="primary"):
                 total_to_gen = len(cards_data)
                 
                 for idx, card in enumerate(cards_data):
-                    status_text.write(f"🎨 Нейросеть рисует иллюстрацию для слова .upper()}** ({idx+1}/{total_to_gen})...")
+                    current_word = card['word'].upper()
+                    status_text.write(f"🎨 Нейросеть рисует иллюстрацию для слова **{current_word}** ({idx+1}/{total_to_gen})...")
                     
                     ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
                     encoded_prompt = urllib.parse.quote(ai_image_prompt)
