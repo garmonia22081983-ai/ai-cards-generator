@@ -332,6 +332,14 @@ if st.session_state.cards:
                 encoded_key = urllib.parse.quote(img_keyword)
                 img_url = f"https://loremflickr.com/320/240/{encoded_key}"
                 
+                # Генерируем 100% надежный локальный SVG-спасатель (fallback) прямо в браузере!
+                # Он нарисует красивую минималистичную плашку с рамкой и словом в цвет карточки
+                svg_placeholder = f"""<svg xmlns='http://www.w3.org/2000/svg' width='110' height='70'>
+                <rect width='100%' height='100%' fill='%23fdfbf7' stroke='%23ebdcc5' stroke-width='1' rx='6'/>
+                <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-family='Georgia, serif' font-size='10' font-weight='bold' fill='%23718096'>✨ {card['word'].upper()}</text>
+                </svg>"""
+                fallback_src = f"data:image/svg+xml,{urllib.parse.quote(svg_placeholder)}"
+                
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
 <span class="card-front-title">{card['word']}</span>
@@ -342,14 +350,14 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    # Оборотная сторона карточки с полностью надежными и компактными плеерами
+                    # Оборотная сторона карточки
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 3px;">
 <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
 </div>
 
-<!-- Изображение уменьшено до компактного размера 110x70px -->
-<img src="{img_url}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=150&auto=format&fit=crop';" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
+<!-- Изображение с вечной локальной SVG-заглушкой в onerror -->
+<img src="{img_url}" onerror="this.onerror=null; this.src='{fallback_src}';" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
 
 <div style="font-size: 11.5px; color: #4a5568; margin-bottom: 3px; line-height: 1.25;">
 <b>Definition:</b> {card['explanation']}
