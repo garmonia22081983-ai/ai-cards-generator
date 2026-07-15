@@ -181,7 +181,7 @@ if st.button("Создать карточки ✨", type="primary"):
                     - "translation": точный и красивый перевод на русский
                     - "explanation": дефиниция на английском языке под уровень {student_level}
                     - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                    - "image_keyword": ОДНО короткое ключевое слово на английском для ИИ-картинки.
+                    - "image_keyword": ОДНО короткое конкретное существительное на английском, которое визуально и понятно описывает данное понятие (например, для 'slow' верни 'snail', для 'friendly' верни 'puppy', для 'letter' верни 'envelope').
                     Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                     """
                 else:
@@ -193,7 +193,7 @@ if st.button("Создать карточки ✨", type="primary"):
                     - "translation": точный и красивый перевод на русский
                     - "explanation": дефиниция на английском языке под уровень {student_level}
                     - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                    - "image_keyword": ОДНО короткое ключевое слово на английском для ИИ-картинки.
+                    - "image_keyword": ОДНО короткое конкретное существительное на английском, которое визуально и понятно описывает данное понятие (например, для 'slow' верни 'snail', для 'friendly' верни 'puppy', для 'letter' верни 'envelope').
                     Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                     """
 
@@ -224,28 +224,30 @@ if st.button("Создать карточки ✨", type="primary"):
                     current_word = card['word'].upper()
                     status_text.write(f"🎨 Нейросеть рисует иллюстрацию для слова **{current_word}** ({idx+1}/{total_to_gen})...")
                     
-                    ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
+                    # ИСПРАВЛЕНИЕ: Берем ассоциативное существительное ИИ вместо абстрактного слова!
+                    visual_keyword = card.get('image_keyword', card['word'])
+                    ai_image_prompt = f"A simple clear professional 3D render or photo of a {visual_keyword}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
                     encoded_prompt = urllib.parse.quote(ai_image_prompt)
                     
                     seed = int(time.time()) + idx
                     img_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true&seed={seed}"
                     
-                    # Создаем гарантированную красивую SVG-заглушку на случай сбоя сети
+                    # Красивая SVG-заглушка в цвет темы на случай сбоя
                     svg_placeholder = f"""<svg xmlns="http://www.w3.org/2000/svg" width="110" height="70">
-                    <rect width="100%" height="100%" fill="%23fdfbf7" stroke="%23ebdcc5" stroke-width="1" rx="6"/>
+                    <rect width="100%" height="100%" fill="%23fdfbf7" stroke="%23ebdcc5" stroke-width="1" rx='6'/>
                     <text x="50%" y="52%" dominant-baseline="middle" text-anchor="middle" font-family="Georgia, serif" font-size="10" font-weight="bold" fill="%23718096">✨ {current_word}</text>
                     </svg>"""
                     fallback_src = f"data:image/svg+xml,{urllib.parse.quote(svg_placeholder)}"
                     
                     try:
-                        # Защита: передаем реальные заголовки браузера, чтобы Cloudflare не блокировал Python!
                         image_headers = {
                             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
                             'Accept': 'image/avif,image/webp,image/apng,image/svg+xml,image/*,*/*;q=0.8'
                         }
                         img_response = requests.get(img_url, headers=image_headers, timeout=20)
                         
-                        if img_response.status_code == 200 and len(img_response.content) > 500:
+                        # Если сервер вернул ошибку или картинку-заглушку (они обычно весят очень мало, меньше 4Кб)
+                        if img_response.status_code == 200 and len(img_response.content) > 4500:
                             b64_img = base64.b64encode(img_response.content).decode()
                             card['image_b64'] = f"data:image/jpeg;base64,{b64_img}"
                         else:
@@ -254,7 +256,7 @@ if st.button("Создать карточки ✨", type="primary"):
                         card['image_b64'] = fallback_src
                     
                     progress_bar.progress((idx + 1) / total_to_gen)
-                    time.sleep(0.4)
+                    time.sleep(1.2) # Даем нейросети больше времени на передышку
                 
                 status_text.empty()
                 progress_bar.empty()
