@@ -226,4 +226,152 @@ if st.button("Создать карточки ✨", type="primary"):
                     - "context": ОДНО контекстное предложение на английском, в котором выделено или уместно использовано это слово. Предложение и лексика в нем должны строго соответствовать уровню {student_level}.
                     - "image_keyword": ОДНО короткое ключевое слово на английском (существительное, например "mountain", "decision", "agreement"), которое лучше всего визуально описывает данное понятие для поиска картинки.
 
-                    Верни ТОЛЬКО чистый JSON без разметки markdown (без ```json ...
+                    Верни ТОЛЬКО чистый JSON без разметки markdown (без ```json ... ```).
+                    """
+                else:
+                    prompt = f"""
+                    Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
+                    Перед тобой учебный материал (текст/статья):
+                    ---
+                    {final_content}
+                    ---
+                    
+                    Твоя задача:
+                    1. Внимательно проанализируй этот текст и выбери из него ровно {num_cards} самых полезных, важных или интересных слов/коллокаций/фразовых глаголов, которые идеально подходят для изучения на уровне {student_level}.
+                    2. Для каждого выбранного слова создай карточку.
+                    
+                    Для каждого слова верни строго валидный JSON-массив объектов со следующими ключами:
+                    - "word": оригинальное слово на английском из предоставленного текста
+                    - "translation": точный и красивый перевод на русский (можно несколько синонимов через запятую)
+                    - "explanation": простое, понятное объяснение (дефиниция) этого слова на английском языке, адаптированное под уровень {student_level}
+                    - "context": ОДНО контекстное предложение на английском, в котором выделено или уместно использовано это слово. Предложение и лексика в нем должны строго соответствовать уровню {student_level}.
+                    - "image_keyword": ОДНО короткое ключевое слово на английском (существительное, например "mountain", "decision", "agreement"), которое лучше всего визуально описывает данное понятие для поиска картинки.
+
+                    Верни ТОЛЬКО чистый JSON без разметки markdown (без ```json ... ```).
+                    """
+
+                response = model.generate_content(prompt)
+                text_response = response.text.strip()
+                if text_response.startswith("```"):
+                    text_response = text_response.split("```")[1]
+                    if text_response.startswith("json"):
+                        text_response = text_response[4:]
+                text_response = text_response.strip()
+
+                cards_data = json.loads(text_response)
+                st.session_state.cards = cards_data
+                st.session_state.flipped = {i: False for i in range(len(cards_data))}
+                st.success(f"Успешно! Создано карточек: {len(cards_data)} для уровня {student_level}")
+            except Exception as e:
+                st.error(f"Произошла ошибка при генерации: {e}. Попробуйте еще раз.")
+
+# ВЫВОД КАРТОЧЕК И ЭКСПОРТ
+if st.session_state.cards:
+    st.write("---")
+    col_exp1, col_exp2 = st.columns(2)
+    
+    with col_exp1:
+        anki_list = []
+        for card in st.session_state.cards:
+            encoded_w = urllib.parse.quote(card['word'])
+            encoded_key = urllib.parse.quote(card.get('image_keyword', 'study'))
+            image_url = f"https://loremflickr.com/320/240/{encoded_key}"
+            anki_back = (
+                f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
+                f"<img src='{image_url}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
+                f"<h2 style='color:#2e6c9e; margin-bottom:5px; margin-top:0;'>{card['translation']}</h2>"
+                f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card['explanation']}</p>"
+                f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card['context']}</p>"
+                f"<hr style='border:none; border-top:1px solid #eee; margin:10px 0;' />"
+                f"<div style='display:flex; gap:15px; justify-content:center;'>"
+                f"<a href='https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_w}' style='text-decoration:none; font-size:13px;'>🇺🇸 Play US</a>"
+                f"<a href='https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_w}' style='text-decoration:none; font-size:13px;'>🇬🇧 Play UK</a>"
+                f"</div></div>"
+            )
+            anki_list.append({"Front": card['word'], "Back": anki_back})
+            
+        df = pd.DataFrame(anki_list)
+        csv = df.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+        
+        st.download_button(
+            label="📱 Скачать файл для Anki / Quizlet (С картинками и аудио!)",
+            data=csv,
+            file_name="gemini_anki_cards.txt",
+            mime="text/plain"
+        )
+        
+    with col_exp2:
+        print_mode = st.checkbox("🖨️ Включить режим для печати на бумаге (Foldable Layout)")
+
+    if print_mode:
+        st.info("💡 **Как распечатать:** Нажмите Ctrl + P (или Cmd + P на Mac).")
+        for card in st.session_state.cards:
+            print_html = f"""<div class="print-row">
+<div class="print-col print-left">{card['word']}</div>
+<div class="print-col">
+<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card['translation']}</h4>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card['explanation']}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card['context']}</p>
+</div>
+</div>"""
+            st.markdown(print_html, unsafe_allow_html=True)
+            
+    else:
+        st.write("### 🎴 Интерактивный тренажер")
+        cols = st.columns(3)
+        for i, card in enumerate(st.session_state.cards):
+            col_idx = i % 3
+            with cols[col_idx]:
+                is_flipped = st.session_state.flipped.get(i, False)
+                encoded_word = urllib.parse.quote(card['word'])
+                escaped_word = card['word'].replace("'", "\'").replace('"', '\"')
+                
+                img_keyword = card.get('image_keyword', 'study')
+                encoded_key = urllib.parse.quote(img_keyword)
+                img_url = f"https://loremflickr.com/320/240/{encoded_key}"
+                
+                if not is_flipped:
+                    front_html = f"""<div class="card-front">
+<span class="card-front-title">{card['word']}</span>
+<span class="card-front-subtitle">English Word</span>
+</div>"""
+                    st.markdown(front_html, unsafe_allow_html=True)
+                    if st.button("🔄 Перевернуть", key=f"flip_{i}", use_container_width=True):
+                        st.session_state.flipped[i] = True
+                        st.rerun()
+                else:
+                    back_html = f"""<div class="card-back">
+<div style="text-align: center; margin-bottom: 5px;">
+<span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
+</div>
+
+<img src="{img_url}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=150&auto=format&fit=crop';" style="width: 150px; height: 95px; object-fit: cover; border-radius: 8px; margin: 0 auto 12px auto; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.05);" />
+
+<div style="font-size: 12px; color: #4a5568; margin-bottom: 4px; line-height: 1.3;">
+<b>Definition:</b> {card['explanation']}
+</div>
+
+<div style="font-size: 12px; color: #718096; line-height: 1.3; margin-bottom: 8px;">
+<b>Context:</b> <i>{card['context']}</i>
+</div>
+
+<details style="border: 1px solid #ebdcc5; border-radius: 8px; padding: 6px 12px; background: #fdfbf7; margin-bottom: 10px;">
+<summary style="font-size: 13px; font-weight: bold; color: #1a365d; cursor: pointer; list-style: none; text-align: center; outline: none; user-select: none;">💬 Показать перевод</summary>
+<div style="margin-top: 8px; font-size: 15px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 6px;">
+{card['translation']}
+</div>
+</details>
+
+<div style="display: flex; justify-content: space-around; background: #f7fafc; padding: 6px; border-radius: 8px; align-items: center; border: 1px solid #edf2f7;">
+<button onclick="let u = new SpeechSynthesisUtterance('{escaped_word}'); u.lang='en-US'; window.speechSynthesis.speak(u);" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #4a5568;">
+<span>🔊</span> US
+</button>
+<button onclick="let u = new SpeechSynthesisUtterance('{escaped_word}'); u.lang='en-GB'; window.speechSynthesis.speak(u);" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #4a5568;">
+<span>🔊</span> UK
+</button>
+</div>
+</div>"""
+                    st.markdown(back_html, unsafe_allow_html=True)
+                    if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
+                        st.session_state.flipped[i] = False
+                        st.rerun()
