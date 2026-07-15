@@ -34,7 +34,7 @@ else:
     # Если файла еще нет, используем красивый мягкий цвет холста с вашей фотографии
     bg_css = "background-color: #f5f0e8 !important;"
 
-# Подключение кастомного премиум-дизайна
+# Подключение кастомного премиум-дизайна с уменьшенными карточками
 st.markdown(f"""
 <style>
 /* Фоновое оформление всего приложения */
@@ -45,55 +45,57 @@ st.markdown(f"""
     background-attachment: fixed !important;
 }}
 
-/* Лицевая сторона: в точном цвете пыльной розы */
+/* Лицевая сторона: в точном цвете пыльной розы (УМЕНЬШЕННЫЙ РАЗМЕР) */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
-    border-radius: 16px;
-    padding: 40px 20px;
+    border-radius: 12px;
+    padding: 20px 15px;
     text-align: center;
-    min-height: 400px;
+    min-height: 260px; /* Уменьшено с 400px */
+    max-height: 260px;
     display: flex;
     flex-direction: column;
     justify-content: center;
     align-items: center;
-    box-shadow: 0 12px 24px rgba(138, 105, 105, 0.15), 0 4px 10px rgba(0,0,0,0.03);
-    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12), 0 2px 6px rgba(0,0,0,0.02);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }}
 .card-front:hover {{
-    transform: translateY(-5px);
-    box-shadow: 0 20px 35px rgba(138, 105, 105, 0.25), 0 6px 12px rgba(0,0,0,0.05);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 24px rgba(138, 105, 105, 0.18), 0 4px 8px rgba(0,0,0,0.04);
 }}
 
-/* Элегантный глубокий винный/коричневый цвет для текста на лицевой стороне */
+/* Уменьшенный шрифт для названия на лицевой стороне */
 .card-front-title {{
-    font-size: 30px;
+    font-size: 22px; /* Уменьшено с 30px */
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
     text-shadow: 0 1px 1px rgba(255,255,255,0.3);
+    word-break: break-word;
 }}
 
 .card-front-subtitle {{
-    font-size: 11px;
+    font-size: 10px;
     color: #704b4b;
-    margin-top: 25px;
+    margin-top: 15px; /* Уменьшено с 25px */
     text-transform: uppercase;
-    letter-spacing: 1.5px;
+    letter-spacing: 1px;
     font-weight: 600;
 }}
 
-/* Оборотная сторона: чистый бумажный стиль с аккуратной версткой */
+/* Оборотная сторона: чистый бумажный стиль (УМЕНЬШЕННЫЙ РАЗМЕР) */
 .card-back {{
     background-color: #ffffff;
     border: 1px solid #ebdcc5;
-    border-radius: 16px;
-    padding: 22px;
-    min-height: 400px;
+    border-radius: 12px;
+    padding: 15px; /* Уменьшено с 22px */
+    min-height: 350px; /* Увеличено на 20px, чтобы комфортно вместить новые надежные аудиоплееры */
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.03), 0 2px 6px rgba(0,0,0,0.01);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02), 0 1px 4px rgba(0,0,0,0.01);
 }}
 
 /* Скрываем стандартные маркеры треугольников у раскрывающегося списка переводчика */
@@ -163,7 +165,7 @@ def extract_text_from_url(url):
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    # 1. Выбор модели (ВОЗВРАЩАЕМ GEMINI 3.5 И ДРУГИЕ МОДЕЛИ!)
+    # 1. Выбор модели
     model_option = st.selectbox(
         "Нейросеть:", 
         ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"],
@@ -201,7 +203,7 @@ else:
 # КНОПКА ЗАПУСКА
 if st.button("Создать карточки ✨", type="primary"):
     if not user_input.strip():
-        st.warning("Пожалуйста, вспомните и заполните поле ввода!")
+        st.warning("Пожалуйста, вспомните и заполнити поле ввода!")
     else:
         with st.spinner("ИИ подбирает слова, пишет дефиниции, примеры и ищет картинки..."):
             try:
@@ -324,7 +326,6 @@ if st.session_state.cards:
             with cols[col_idx]:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
-                escaped_word = card['word'].replace("'", "\'").replace('"', '\"')
                 
                 img_keyword = card.get('image_keyword', 'study')
                 encoded_key = urllib.parse.quote(img_keyword)
@@ -340,35 +341,41 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
+                    # Оборотная сторона карточки (УМЕНЬШЕННЫЙ РАЗМЕР ВНУТРЕННИХ ЭЛЕМЕНТОВ + НАДЕЖНОЕ НАТИВНОЕ АУДИО)
                     back_html = f"""<div class="card-back">
-<div style="text-align: center; margin-bottom: 5px;">
+<div style="text-align: center; margin-bottom: 3px;">
 <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
 </div>
 
-<img src="{img_url}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=150&auto=format&fit=crop';" style="width: 150px; height: 95px; object-fit: cover; border-radius: 8px; margin: 0 auto 12px auto; display: block; box-shadow: 0 4px 10px rgba(0,0,0,0.05);" />
+<!-- Изображение уменьшено до компактного размера 110x70px -->
+<img src="{img_url}" onerror="this.onerror=null; this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=150&auto=format&fit=crop';" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
 
-<div style="font-size: 12px; color: #4a5568; margin-bottom: 4px; line-height: 1.3;">
+<div style="font-size: 11.5px; color: #4a5568; margin-bottom: 3px; line-height: 1.25;">
 <b>Definition:</b> {card['explanation']}
 </div>
 
-<div style="font-size: 12px; color: #718096; line-height: 1.3; margin-bottom: 8px;">
+<div style="font-size: 11.5px; color: #718096; line-height: 1.25; margin-bottom: 6px;">
 <b>Context:</b> <i>{card['context']}</i>
 </div>
 
-<details style="border: 1px solid #ebdcc5; border-radius: 8px; padding: 6px 12px; background: #fdfbf7; margin-bottom: 10px;">
-<summary style="font-size: 13px; font-weight: bold; color: #1a365d; cursor: pointer; list-style: none; text-align: center; outline: none; user-select: none;">💬 Показать перевод</summary>
-<div style="margin-top: 8px; font-size: 15px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 6px;">
+<!-- Компактный раскрывающийся блок с скрытым переводом -->
+<details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 8px;">
+<summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; list-style: none; text-align: center; outline: none; user-select: none;">💬 Показать перевод</summary>
+<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
 {card['translation']}
 </div>
 </details>
 
-<div style="display: flex; justify-content: space-around; background: #f7fafc; padding: 6px; border-radius: 8px; align-items: center; border: 1px solid #edf2f7;">
-<button onclick="let u = new SpeechSynthesisUtterance('{escaped_word}'); u.lang='en-US'; window.speechSynthesis.speak(u);" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #4a5568;">
-<span>🔊</span> US
-</button>
-<button onclick="let u = new SpeechSynthesisUtterance('{escaped_word}'); u.lang='en-GB'; window.speechSynthesis.speak(u);" style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 6px; padding: 4px 12px; cursor: pointer; display: flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 500; color: #4a5568;">
-<span>🔊</span> UK
-</button>
+<!-- Абсолютно бесперебойное воспроизведение аудио через нативные медиа-плееры браузера (БЕЗ JS ОШИБОК И БЛОКИРОВОК) -->
+<div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #edf2f7;">
+    <div style="display: flex; align-items: center; gap: 4px;">
+        <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇺🇸</span>
+        <audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-US&client=tw-ob&q={encoded_word}" controls style="width: 85px; height: 25px; outline: none;"></audio>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+        <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇬🇧</span>
+        <audio src="https://translate.google.com/translate_tts?ie=UTF-8&tl=en-GB&client=tw-ob&q={encoded_word}" controls style="width: 85px; height: 25px; outline: none;"></audio>
+    </div>
 </div>
 </div>"""
                     st.markdown(back_html, unsafe_allow_html=True)
