@@ -7,6 +7,7 @@ from bs4 import BeautifulSoup
 import urllib.parse
 import os
 import base64
+import time
 
 # Инициализация API-ключа из Secrets
 if "GEMINI_API_KEY" in st.secrets:
@@ -16,28 +17,26 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
-# Функция для конвертации локальной картинки в Base64 (чтобы обойти любые блокировки сайтов)
+# Функция для转换 кастомной картинки в Base64
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
-# Проверяем, загрузила ли Наталья файл 'background.jpg' в свой репозиторий GitHub
+# Проверяем файл 'background.jpg'
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
         bin_str = get_base64_of_bin_file("background.jpg")
         bg_css = f"background-image: url('data:image/jpeg;base64,{bin_str}') !important;"
     except Exception:
-        bg_css = "background-color: #f5f0e8 !important;" # теплый льняной цвет-заглушка
+        bg_css = "background-color: #f5f0e8 !important;"
 else:
-    # Если файла еще нет, используем красивый мягкий цвет холста с вашей фотографии
     bg_css = "background-color: #f5f0e8 !important;"
 
-# Подключение кастомного премиум-дизайна с уменьшенными карточками
+# Подключение кастомного премиум-дизайна
 st.markdown(f"""
 <style>
-/* Фоновое оформление всего приложения */
 .stApp {{
     {bg_css}
     background-size: cover !important;
@@ -45,14 +44,13 @@ st.markdown(f"""
     background-attachment: fixed !important;
 }}
 
-/* Лицевая сторона: в точном цвете пыльной розы (УМЕНЬШЕННЫЙ РАЗМЕР) */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
     padding: 20px 15px;
     text-align: center;
-    min-height: 260px; /* Уменьшено с 400px */
+    min-height: 260px;
     max-height: 260px;
     display: flex;
     flex-direction: column;
@@ -66,9 +64,8 @@ st.markdown(f"""
     box-shadow: 0 12px 24px rgba(138, 105, 105, 0.18), 0 4px 8px rgba(0,0,0,0.04);
 }}
 
-/* Уменьшенный шрифт для названия на лицевой стороне */
 .card-front-title {{
-    font-size: 22px; /* Уменьшено с 30px */
+    font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
@@ -79,34 +76,27 @@ st.markdown(f"""
 .card-front-subtitle {{
     font-size: 10px;
     color: #704b4b;
-    margin-top: 15px; /* Уменьшено с 25px */
+    margin-top: 15px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
 }}
 
-/* Оборотная сторона: чистый бумажный стиль (УМЕНЬШЕННЫЙ РАЗМЕР) */
 .card-back {{
     background-color: #ffffff;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
-    padding: 15px; /* Уменьшено с 22px */
-    min-height: 350px; /* Достаточный размер, чтобы комфортно вместить аудио и картинку */
+    padding: 15px;
+    min-height: 350px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02), 0 1px 4px rgba(0,0,0,0.01);
 }}
 
-/* Скрываем стандартные маркеры треугольников у раскрывающегося списка переводчика */
-summary::-webkit-details-marker {{
-    display: none !important;
-}}
-summary {{
-    list-style: none !important;
-}}
+summary::-webkit-details-marker {{ display: none !important; }}
+summary {{ list-style: none !important; }}
 
-/* Стили для печати */
 .print-row {{
     display: flex;
     border: 1px dashed #ccc;
@@ -114,11 +104,7 @@ summary {{
     page-break-inside: avoid;
     background-color: #ffffff;
 }}
-.print-col {{
-    width: 50%;
-    padding: 15px;
-    box-sizing: border-box;
-}}
+.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
 .print-left {{
     border-right: 1px dashed #ccc;
     text-align: center;
@@ -134,78 +120,47 @@ summary {{
 """, unsafe_allow_html=True)
 
 st.title("🎴 Умный Генератор Двусторонних Карточек")
-st.write("Генерируйте профессиональные лексические карточки с озвучкой, картинками и дефинициями.")
 
-# Инициализация состояний в Session State
 if "cards" not in st.session_state:
     st.session_state.cards = []
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
-# ФУНКЦИЯ ДЛЯ СКАЧИВАНИЯ ТЕКСТА ИЗ СТАТЬИ
 def extract_text_from_url(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
         response = requests.get(url, headers=headers, timeout=10)
         if response.status_code == 200:
             soup = BeautifulSoup(response.text, 'html.parser')
-            for script in soup(["script", "style"]):
-                script.decompose()
+            for script in soup(["script", "style"]): script.decompose()
             text = soup.get_text()
             lines = (line.strip() for line in text.splitlines())
             chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            clean_text = '\n'.join(chunk for chunk in chunks if chunk)
-            return clean_text[:8000]
-        else:
-            return f"Ошибка загрузки сайта: Статус {response.status_code}"
+            return '\n'.join(chunk for chunk in chunks if chunk)[:8000]
+        return f"Ошибка загрузки сайта: Статус {response.status_code}"
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
-# ЛЕВАЯ ПАНЕЛЬ НАСТРОЕК
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
-    
-    # 1. Выбор модели
-    model_option = st.selectbox(
-        "Нейросеть:", 
-        ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"],
-        index=0
-    )
-    
-    # 2. Выбор источника
-    source_type = st.radio(
-        "Что берем за основу?",
-        ["📝 Текст / Отрывок статьи / Трэк субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"]
-    )
-    
-    # 3. Выбор уровня студента
-    student_level = st.selectbox(
-        "Уровень студента (CEFR):",
-        ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"],
-        index=2
-    )
-    
-    # 4. Количество карточек
+    model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
+    source_type = st.radio("Что берем за основу?", ["📝 Текст / Отрывок статьи / Трэк субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"])
+    student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
     num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
 
-# ПОЛЕ ВВОДА НА ОСНОВНОМ ЭКРАНЕ
 user_input = ""
 if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
-    user_input = st.text_area("Вставьте сюда текст статьи или субтитры (транскрипт) видео:", height=200,
-                              placeholder="Вставьте сюда английский текст, из которого нужно вытащить лексику...")
+    user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
 elif source_type == "🔗 Ссылка на веб-статью":
-    user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:", 
-                               placeholder="https://www.bbc.com/news/articles/...")
+    user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
 else:
-    user_input = st.text_area("Введите конкретные слова или фразы (через запятую или с новой строки):", height=120,
-                              placeholder="bold, digital solution, perseverance")
+    user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
 
-# КНОПКА ЗАПУСКА
 if st.button("Создать карточки ✨", type="primary"):
     if not user_input.strip():
-        st.warning("Пожалуйста, вспомните и заполните поле ввода!")
+        st.warning("Пожалуйста, заполните поле ввода!")
     else:
-        with st.spinner("ИИ подбирает слова, пишет дефиниции, примеры и генерирует иллюстрации..."):
+        with st.spinner("ИИ подбирает слова, пишет дефиниции и примеры..."):
             try:
                 final_content = user_input
                 if source_type == "🔗 Ссылка на веб-статью":
@@ -219,36 +174,26 @@ if st.button("Создать карточки ✨", type="primary"):
                 
                 if source_type == "✍️ Готовый список слов":
                     prompt = f"""
-                    Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
+                    Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
                     Создай карточки для следующих слов/фраз: {final_content}.
-                    Для каждого слова верни строго валидный JSON-массив объектов со следующими ключами:
+                    Верни строго валидный JSON-массив объектов со следующими ключами:
                     - "word": оригинальное слово на английском
-                    - "translation": точный и красивый перевод на русский (можно несколько синонимов через запятую)
-                    - "explanation": простое, понятное объяснение (дефиниция) этого слова на английском языке, адаптированное под уровень {student_level}
-                    - "context": ОДНО контекстное предложение на английском, в котором выделено или уместно использовано это слово. Предложение и лексика в нем должны строго соответствовать уровню {student_level}.
-                    - "image_keyword": ОДНО короткое ключевое слово на английском (существительное, например "mountain", "decision", "agreement"), которое лучше всего визуально описывает данное понятие для поиска картинки.
-
+                    - "translation": точный и красивый перевод на русский
+                    - "explanation": дефиниция на английском языке под уровень {student_level}
+                    - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
+                    - "image_keyword": ОДНО короткое ключевое слово на английском для ИИ-картинки.
                     Верни ТОЛЬКО чистый JSON без разметки markdown (без ```json ... ```).
                     """
                 else:
                     prompt = f"""
                     Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
-                    Перед тобой учебный материал (текст/статья):
-                    ---
-                    {final_content}
-                    ---
-                    
-                    Твоя задача:
-                    1. Внимательно проанализируй этот текст и выбери из него ровно {num_cards} самых полезных, важных или интересных слов/коллокаций/фразовых глаголов, которые идеально подходят для изучения на уровне {student_level}.
-                    2. Для каждого выбранного слова создай карточку.
-                    
-                    Для каждого слова верни строго валидный JSON-массив объектов со следующими ключами:
-                    - "word": оригинальное слово на английском из предоставленного текста
-                    - "translation": точный и красивый перевод на русский (можно несколько синонимов через запятую)
-                    - "explanation": простое, понятное объяснение (дефиниция) этого слова на английском языке, адаптированное под уровень {student_level}
-                    - "context": ОДНО контекстное предложение на английском, в котором выделено или уместно использовано это слово. Предложение и лексика в нем должны строго соответствовать уровню {student_level}.
-                    - "image_keyword": ОДНО короткое ключевое слово на английском (существительное, например "mountain", "decision", "agreement"), которое лучше всего визуально описывает данное понятие для поиска картинки.
-
+                    Выбери из текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
+                    Верни строго валидный JSON-массив объектов со следующими ключами:
+                    - "word": оригинальное слово на английском
+                    - "translation": точный и красивый перевод на русский
+                    - "explanation": дефиниция на английском языке под уровень {student_level}
+                    - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
+                    - "image_keyword": ОДНО короткое ключевое слово на английском для ИИ-картинки.
                     Верни ТОЛЬКО чистый JSON без разметки markdown (без ```json ... ```).
                     """
 
@@ -256,18 +201,46 @@ if st.button("Создать карточки ✨", type="primary"):
                 text_response = response.text.strip()
                 if text_response.startswith("```"):
                     text_response = text_response.split("```")[1]
-                    if text_response.startswith("json"):
-                        text_response = text_response[4:]
+                    if text_response.startswith("json"): text_response = text_response[4:]
                 text_response = text_response.strip()
 
                 cards_data = json.loads(text_response)
+                
+                # ПОСЛЕДОВАТЕЛЬНАЯ ГЕНЕРАЦИЯ И ЗАКАЧКА КАРТИНОК НА БЭКЕНДЕ
+                status_text = st.empty()
+                progress_bar = st.progress(0)
+                total_to_gen = len(cards_data)
+                
+                for idx, card in enumerate(cards_data):
+                    status_text.write(f"🎨 Нейросеть рисует иллюстрацию для слова .upper()}** ({idx+1}/{total_to_gen})...")
+                    
+                    ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
+                    encoded_prompt = urllib.parse.quote(ai_image_prompt)
+                    img_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true"
+                    
+                    try:
+                        img_response = requests.get(img_url, timeout=15)
+                        if img_response.status_code == 200:
+                            b64_img = base64.b64encode(img_response.content).decode()
+                            card['image_b64'] = f"data:image/jpeg;base64,{b64_img}"
+                        else:
+                            card['image_b64'] = ""
+                    except Exception:
+                        card['image_b64'] = ""
+                    
+                    progress_bar.progress((idx + 1) / total_to_gen)
+                    time.sleep(0.2)
+                
+                status_text.empty()
+                progress_bar.empty()
+                
                 st.session_state.cards = cards_data
                 st.session_state.flipped = {i: False for i in range(len(cards_data))}
-                st.success(f"Успешно! Создано карточек: {len(cards_data)} для уровня {student_level}")
+                st.success(f"Успешно! Создано карточек: {len(cards_data)}")
             except Exception as e:
-                st.error(f"Произошла ошибка при генерации: {e}. Попробуйте еще раз.")
+                st.error(f"Произошла ошибка при генерации: {e}.")
 
-# ВЫВОД КАРТОЧЕК И ЭКСПОРТ
+# ВЫВОД КАРТОЧЕК
 if st.session_state.cards:
     st.write("---")
     col_exp1, col_exp2 = st.columns(2)
@@ -276,15 +249,11 @@ if st.session_state.cards:
         anki_list = []
         for card in st.session_state.cards:
             encoded_w = urllib.parse.quote(card['word'])
-            
-            # Генерация 100% точной картинки ИИ для экспорта в Anki
-            ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
-            encoded_prompt = urllib.parse.quote(ai_image_prompt)
-            image_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true"
+            img_src = card.get('image_b64', '')
             
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                f"<img src='{image_url}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
+                f"<img src='{img_src}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
                 f"<h2 style='color:#2e6c9e; margin-bottom:5px; margin-top:0;'>{card['translation']}</h2>"
                 f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card['explanation']}</p>"
                 f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card['context']}</p>"
@@ -298,19 +267,12 @@ if st.session_state.cards:
             
         df = pd.DataFrame(anki_list)
         csv = df.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
-        
-        st.download_button(
-            label="📱 Скачать файл для Anki / Quizlet (С ИИ-картинками и аудио!)",
-            data=csv,
-            file_name="gemini_anki_cards.txt",
-            mime="text/plain"
-        )
+        st.download_button(label="📱 Скачать файл для Anki / Quizlet", data=csv, file_name="gemini_anki_cards.txt", mime="text/plain")
         
     with col_exp2:
-        print_mode = st.checkbox("🖨️ Включить режим для печати на бумаге (Foldable Layout)")
+        print_mode = st.checkbox("🖨️ Включить режим для печати")
 
     if print_mode:
-        st.info("💡 **Как распечатать:** Нажмите Ctrl + P (или Cmd + P на Mac).")
         for card in st.session_state.cards:
             print_html = f"""<div class="print-row">
 <div class="print-col print-left">{card['word']}</div>
@@ -331,18 +293,15 @@ if st.session_state.cards:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
                 
-                # Нейросетевой генератор картинок Pollinations AI
-                # Он нарисует чистый, понятный объект на белом фоне специально под это слово!
-                ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
-                encoded_prompt = urllib.parse.quote(ai_image_prompt)
-                img_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true"
-                
-                # Генерируем 100% надежный локальный SVG-спасатель (fallback) прямо в браузере!
                 svg_placeholder = f"""<svg xmlns='http://www.w3.org/2000/svg' width='110' height='70'>
                 <rect width='100%' height='100%' fill='%23fdfbf7' stroke='%23ebdcc5' stroke-width='1' rx='6'/>
                 <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-family='Georgia, serif' font-size='10' font-weight='bold' fill='%23718096'>✨ {card['word'].upper()}</text>
                 </svg>"""
                 fallback_src = f"data:image/svg+xml,{urllib.parse.quote(svg_placeholder)}"
+                
+                img_src = card.get('image_b64', '')
+                if not img_src:
+                    img_src = fallback_src
                 
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
@@ -354,14 +313,12 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    # Оборотная сторона карточки
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 3px;">
 <span style="font-size: 11px; font-weight: bold; color: #a0aec0; text-transform: uppercase;">{card['word']}</span>
 </div>
 
-<!-- Изображение с вечной локальной SVG-заглушкой в onerror -->
-<img src="{img_url}" onerror="this.onerror=null; this.src='{fallback_src}';" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
+<img src="{img_src}" onerror="this.onerror=null; this.src='{fallback_src}';" style="width: 110px; height: 70px; object-fit: cover; border-radius: 6px; margin: 0 auto 8px auto; display: block; box-shadow: 0 3px 6px rgba(0,0,0,0.04);" />
 
 <div style="font-size: 11.5px; color: #4a5568; margin-bottom: 3px; line-height: 1.25;">
 <b>Definition:</b> {card['explanation']}
@@ -371,7 +328,6 @@ if st.session_state.cards:
 <b>Context:</b> <i>{card['context']}</i>
 </div>
 
-<!-- Компактный раскрывающийся блок с скрытым переводом -->
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 8px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; list-style: none; text-align: center; outline: none; user-select: none;">💬 Показать перевод</summary>
 <div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
@@ -379,7 +335,6 @@ if st.session_state.cards:
 </div>
 </details>
 
-<!-- Абсолютно бесперебойное воспроизведение аудио через нативные медиа-плееры Youdao -->
 <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #edf2f7;">
     <div style="display: flex; align-items: center; gap: 4px;">
         <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇺🇸</span>
