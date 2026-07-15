@@ -199,5 +199,7 @@ if st.button("Создать карточки ✨", type="primary"):
 
                 response = model.generate_content(prompt)
                 text_response = response.text.strip()
-                if text_response.startswith("```"):
-                    text_response = text_response.split("
+                
+                # Защищенный разбор ответа от markdown-кавычек
+                if "```" in text_response:
+                    chunks = text_response.split("
