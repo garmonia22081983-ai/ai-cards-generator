@@ -205,7 +205,7 @@ if st.button("Создать карточки ✨", type="primary"):
     if not user_input.strip():
         st.warning("Пожалуйста, вспомните и заполните поле ввода!")
     else:
-        with st.spinner("ИИ подбирает слова, пишет дефиниции, примеры и ищет картинки..."):
+        with st.spinner("ИИ подбирает слова, пишет дефиниции, примеры и генерирует иллюстрации..."):
             try:
                 final_content = user_input
                 if source_type == "🔗 Ссылка на веб-статью":
@@ -276,9 +276,12 @@ if st.session_state.cards:
         anki_list = []
         for card in st.session_state.cards:
             encoded_w = urllib.parse.quote(card['word'])
-            encoded_key = urllib.parse.quote(card.get('image_keyword', 'study'))
-            image_url = f"https://loremflickr.com/320/240/{encoded_key}"
-            # Обновлено: звук в Anki тоже пойдет через стабильный Youdao
+            
+            # Генерация 100% точной картинки ИИ для экспорта в Anki
+            ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
+            encoded_prompt = urllib.parse.quote(ai_image_prompt)
+            image_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true"
+            
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                 f"<img src='{image_url}' style='width:100%; border-radius:8px; margin-bottom:12px;' />"
@@ -297,7 +300,7 @@ if st.session_state.cards:
         csv = df.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
         
         st.download_button(
-            label="📱 Скачать файл для Anki / Quizlet (С картинками и аудио!)",
+            label="📱 Скачать файл для Anki / Quizlet (С ИИ-картинками и аудио!)",
             data=csv,
             file_name="gemini_anki_cards.txt",
             mime="text/plain"
@@ -328,12 +331,13 @@ if st.session_state.cards:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(card['word'])
                 
-                img_keyword = card.get('image_keyword', 'study')
-                encoded_key = urllib.parse.quote(img_keyword)
-                img_url = f"https://loremflickr.com/320/240/{encoded_key}"
+                # Нейросетевой генератор картинок Pollinations AI
+                # Он нарисует чистый, понятный объект на белом фоне специально под это слово!
+                ai_image_prompt = f"A simple clear professional 3D render or photo of a {card['word']}, isolated on a clean white background, minimalist, highly recognizable visual flashcard style"
+                encoded_prompt = urllib.parse.quote(ai_image_prompt)
+                img_url = f"https://image.pollinations.ai/p/{encoded_prompt}?width=320&height=240&nologo=true"
                 
                 # Генерируем 100% надежный локальный SVG-спасатель (fallback) прямо в браузере!
-                # Он нарисует красивую минималистичную плашку с рамкой и словом в цвет карточки
                 svg_placeholder = f"""<svg xmlns='http://www.w3.org/2000/svg' width='110' height='70'>
                 <rect width='100%' height='100%' fill='%23fdfbf7' stroke='%23ebdcc5' stroke-width='1' rx='6'/>
                 <text x='50%' y='52%' dominant-baseline='middle' text-anchor='middle' font-family='Georgia, serif' font-size='10' font-weight='bold' fill='%23718096'>✨ {card['word'].upper()}</text>
@@ -375,7 +379,7 @@ if st.session_state.cards:
 </div>
 </details>
 
-<!-- Абсолютно бесперебойное воспроизведение аудио через нативные медиа-плееры Youdao (БЕЗ JS ОШИБОК И БЛОКИРОВОК) -->
+<!-- Абсолютно бесперебойное воспроизведение аудио через нативные медиа-плееры Youdao -->
 <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #edf2f7;">
     <div style="display: flex; align-items: center; gap: 4px;">
         <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇺🇸</span>
