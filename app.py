@@ -45,7 +45,7 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     color: #2d3748 !important;
 }}
 
-/* Принудительный темный цвет для всех стандартных текстов */
+/* Принудительный темный цвет для всех стандартных текстов в основном контейнере */
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
@@ -70,14 +70,27 @@ input::placeholder, textarea::placeholder {{
     opacity: 1 !important;
 }}
 
-/* Принудительный темный цвет для боковой панели (Sidebar) */
+/* --- БРОНИРОВАНИЕ БОКОВОЙ ПАНЕЛИ (SIDEBAR) ОТ ТЕМНОЙ ТЕМЫ --- */
+[data-testid="stSidebar"], 
+.stSidebar, 
+[data-testid="stSidebar"] > div, 
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+    background-color: #f5f0e8 !important;
+    background-image: none !important;
+}}
+
+/* Принудительный темный цвет для текстов боковой панели на её светлом фоне */
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3, 
 [data-testid="stSidebar"] p, 
 [data-testid="stSidebar"] label,
 [data-testid="stSidebar"] span,
-[data-testid="stSidebar"] div {{
+[data-testid="stSidebar"] div,
+[data-testid="stSidebar"] small,
+.stSidebar p,
+.stSidebar label,
+.stSidebar span {{
     color: #2d3748 !important;
 }}
 
