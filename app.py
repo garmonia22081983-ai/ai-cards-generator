@@ -50,6 +50,25 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
+/* --- КРАСИВАЯ ПРОЗРАЧНАЯ ВЕРХНЯЯ ПАНЕЛЬ (HEADER) --- */
+[data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}}
+
+/* Перекрашиваем белые иконки и кнопки в верхней панели в темные */
+[data-testid="stHeader"] svg, 
+[data-testid="stHeader"] button, 
+[data-testid="stHeader"] a,
+[data-testid="stHeader"] span,
+[data-testid="stHeader"] div,
+[data-testid="stSidebarCollapsedControl"] button svg,
+[data-testid="stSidebarCollapsedControl"] button {{
+    color: #2d3748 !important;
+    fill: #2d3748 !important;
+}}
+
 /* --- БРОНИРОВАНИЕ ПОЛЕЙ ВВОДА ОТ ПОТЕМНЕНИЯ ФОНА --- */
 input, textarea, select, 
 .stTextInput input, 
