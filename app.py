@@ -33,16 +33,41 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f5f0e8 !important;"
 
-# Подключение кастомного премиум-дизайна
+# Подключение кастомного премиум-дизайна с защитой от темной темы
 st.markdown(f"""
 <style>
-.stApp {{
+/* --- БЛОКИРОВКА ТЕМНОЙ ТЕМЫ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
+html, body, [data-testid="stAppViewContainer"], .stApp {{
     {bg_css}
     background-size: cover !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
+    color: #2d3748 !important;
 }}
 
+/* Принудительный темный цвет для всех стандартных текстов */
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
+    color: #2d3748 !important;
+}}
+
+/* Защита полей ввода на iOS Safari от побеления текста */
+input, textarea, select {{
+    color: #2d3748 !important;
+    -webkit-text-fill-color: #2d3748 !important;
+}}
+
+/* Принудительный темный цвет для боковой панели (Sidebar) */
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3, 
+[data-testid="stSidebar"] p, 
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] div {{
+    color: #2d3748 !important;
+}}
+
+/* --- СТИЛИ КАРТОЧЕК --- */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -74,7 +99,7 @@ st.markdown(f"""
 
 .card-front-subtitle {{
     font-size: 10px;
-    color: #704b4b;
+    color: #704b4b !important;
     margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
@@ -82,15 +107,38 @@ st.markdown(f"""
 }}
 
 .card-back {{
-    background-color: #ffffff;
+    background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 15px;
-    min-height: 310px; /* Высота увеличена для комфортного размещения новых текстовых блоков */
+    min-height: 310px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02), 0 1px 4px rgba(0,0,0,0.01);
+    color: #2d3748 !important;
+}}
+
+/* Принудительные цвета для элементов внутри обратной стороны карточки */
+.card-back div, 
+.card-back span, 
+.card-back p, 
+.card-back b, 
+.card-back i {{
+    color: #2d3748 !important;
+}}
+
+/* Специальные классы для транскрипции, словосочетаний и контекста */
+.card-back .transcription-text {{
+    color: #718096 !important;
+}}
+
+.card-back .collocations-text {{
+    color: #2e6c9e !important;
+}}
+
+.card-back i {{
+    color: #718096 !important;
 }}
 
 summary::-webkit-details-marker {{ display: none !important; }}
@@ -145,7 +193,12 @@ with st.sidebar:
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
     source_type = st.radio("Что берем за основу?", ["📝 Текст / Отрывок статьи / Трэк субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"])
     student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
-    num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
+    
+    # Умное скрытие слайдера количества слов в режиме "Готовый список слов"
+    if source_type != "✍️ Готовый список слов":
+        num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
+    else:
+        num_cards = 0
 
 user_input = ""
 if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
@@ -291,19 +344,19 @@ if st.session_state.cards:
                 else:
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
-<span style="font-size: 13px; font-weight: bold; color: #4a2e2e; text-transform: uppercase;">{card['word']}</span><br/>
-<span style="font-size: 11px; color: #718096; font-family: 'Arial', sans-serif;">{card.get('transcription', '')}</span>
+<span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card['word']}</span><br/>
+<span class="transcription-text" style="font-size: 11px; font-family: 'Arial', sans-serif;">{card.get('transcription', '')}</span>
 </div>
 
-<div style="font-size: 12px; color: #4a5568; margin-bottom: 5px; line-height: 1.3;">
+<div style="font-size: 12px; margin-bottom: 5px; line-height: 1.3;">
 <b>Definition:</b> {card['explanation']}
 </div>
 
-<div style="font-size: 12px; color: #2d3748; margin-bottom: 6px; line-height: 1.3;">
-<b>Collocations:</b> <span style="color: #2e6c9e; font-weight: 500;">{card.get('collocations', '')}</span>
+<div style="font-size: 12px; margin-bottom: 6px; line-height: 1.3;">
+<b>Collocations:</b> <span class="collocations-text" style="font-weight: 500;">{card.get('collocations', '')}</span>
 </div>
 
-<div style="font-size: 12px; color: #718096; line-height: 1.3; margin-bottom: 10px;">
+<div style="font-size: 12px; line-height: 1.3; margin-bottom: 10px;">
 <b>Context:</b> <i>{card['context']}</i>
 </div>
 
@@ -316,11 +369,11 @@ if st.session_state.cards:
 
 <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px; border: 1px solid #edf2f7;">
     <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇺🇸</span>
+        <span style="font-size: 11px; font-weight: bold;">🇺🇸</span>
         <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 28px; outline: none;"></audio>
     </div>
     <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold; color: #4a5568;">🇬🇧</span>
+        <span style="font-size: 11px; font-weight: bold;">🇬🇧</span>
         <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 28px; outline: none;"></audio>
     </div>
 </div>
