@@ -50,10 +50,24 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
-/* Защита полей ввода на iOS Safari от побеления текста */
-input, textarea, select {{
+/* --- БРОНИРОВАНИЕ ПОЛЕЙ ВВОДА ОТ ПОТЕМНЕНИЯ ФОНА --- */
+input, textarea, select, 
+.stTextInput input, 
+.stTextArea textarea,
+[data-baseweb="base-input"],
+[data-baseweb="textarea"],
+[data-baseweb="select"] > div {{
+    background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
+    border: 1px solid #cbd5e0 !important;
+}}
+
+/* Цвет подсказок (placeholder) внутри полей ввода */
+input::placeholder, textarea::placeholder {{
+    color: #a0aec0 !important;
+    -webkit-text-fill-color: #a0aec0 !important;
+    opacity: 1 !important;
 }}
 
 /* Принудительный темный цвет для боковой панели (Sidebar) */
