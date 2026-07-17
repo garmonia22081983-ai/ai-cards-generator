@@ -428,3 +428,36 @@ if st.session_state.cards:
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
+# ... ваш существующий код генератора карточек ...
+
+# --- ВРЕМЕННЫЙ ТЕСТ ДЛЯ ПРОВЕРКИ БАЗЫ ДАННЫХ ---
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime
+
+st.write("---") # Визуальная линия-разделитель
+st.subheader("🧪 Тестирование связи с Google Sheets")
+
+if st.button("Проверить соединение с таблицей"):
+    try:
+        # 1. Авторизация по нашему сохраненному ключу
+        scopes = [
+            "https://www.googleapis.com/auth/spreadsheets",
+            "https://www.googleapis.com/auth/drive"
+        ]
+        creds_info = st.secrets["gcp_service_account"]
+        creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+        gc = gspread.authorize(creds)
+        
+        # 2. Открываем таблицу по ее настоящему имени
+        sh = gc.open("Gemini Flashcards DB") # <-- Имя изменено на правильное!
+        
+        # 3. Пробуем записать тестовую строку на лист Logs
+        sheet = sh.worksheet("Logs")
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        sheet.append_row([now, "test_admin@test.ru", "Тестовый клик", "Связь установлена успешно!"])
+        
+        st.success("🎉 Ура! Связь работает идеально! Новая строчка записана в лист Logs. Проверьте вашу Google Таблицу!")
+        st.balloons()
+    except Exception as e:
+        st.error(f"Ошибка подключения: {e}")
