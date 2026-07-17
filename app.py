@@ -15,7 +15,109 @@ else:
     st.error("Ключ API не найден в настройках Secrets!")
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
+import streamlit as st
+import google.generativeai as genai
+import os
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime, timedelta
 
+# --- ОЧИСТКА И НАСТРОЙКА GEMINI (это у вас уже было вверху) ---
+if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
+    del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+
+api_key = st.secrets["GEMINI_API_KEY"]
+genai.configure(api_key=api_key)
+
+
+# --- НОВЫЙ БЛОК: ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ТАБЛИЦЕ ---
+def get_gsheets_client():
+    scopes = [
+        "https://www.googleapis.com/auth/spreadsheets",
+        "https://www.googleapis.com/auth/drive"
+    ]
+    creds_info = st.secrets["gcp_service_account"]
+    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
+    return gspread.authorize(creds)
+
+
+# --- НОВЫЙ БЛОК: ПРОВЕРКА ПОДПИСКИ (БЕЗ СДВИГА КОДА) ---
+if "user_email" not in st.session_state:
+    st.session_state.user_email = None
+
+if not st.session_state.user_email:
+    st.subheader("🔑 Доступ к Генератору Карточек")
+    st.write("Введите ваш Email для входа. Новым пользователям автоматически предоставляется 3 дня бесплатного доступа!")
+    
+    email_input = st.text_input("Ваш Email:")
+    if st.button("Войти"):
+        if "@" not in email_input or "." not in email_input:
+            st.error("Пожалуйста, введите корректный адрес электронной почты.")
+        else:
+            email = email_input.strip().lower()
+            try:
+                gc = get_gsheets_client()
+                sh = gc.open("Gemini Flashcards DB")
+                users_sheet = sh.worksheet("Users")
+                
+                rows = users_sheet.get_all_values()
+                if not rows:
+                    users_sheet.append_row(["Email", "Registration Date", "Status"])
+                    rows = [["Email", "Registration Date", "Status"]]
+                
+                user_row = None
+                for i, r in enumerate(rows[1:], start=2):
+                    if r[0].strip().lower() == email:
+                        user_row = (i, r)
+                        break
+                
+                if user_row:
+                    row_num, row_data = user_row
+                    reg_date_str = row_data[1]
+                    status = row_data[2] if len(row_data) > 2 else "active"
+                    
+                    if status == "blocked":
+                        st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
+                    else:
+                        reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
+                        expiration_date = reg_date + timedelta(days=3)
+                        
+                        if datetime.now() > expiration_date:
+                            # ⚠️ Вставьте ниже вашу ссылку на Telegram/WhatsApp вместо 'ваш_ник'
+                            st.error("⌛ Ваш 3-дневный пробный период истек. Для продления доступа [напишите мне в Telegram](https://t.me/ваш_ник).")
+                        else:
+                            st.session_state.user_email = email
+                            st.rerun()
+                else:
+                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    users_sheet.append_row([email, now_str, "active"])
+                    
+                    try:
+                        logs_sheet = sh.worksheet("Logs")
+                        logs_sheet.append_row([now_str, email, "Регистрация", "Новый пользователь начал пробный период"])
+                    except Exception:
+                        pass
+                    
+                    st.session_state.user_email = email
+                    st.rerun()
+                    
+            except Exception as e:
+                st.error(f"Ошибка базы данных: {e}")
+                
+    st.stop() # <-- ВОТ ОН, НАШ СПАСИТЕЛЬ! Он остановит код здесь, если вход не выполнен.
+
+
+# --- КНОПКА ВЫХОДА В БОКОВОЙ ПАНЕЛИ ---
+st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
+if st.sidebar.button("Выйти из аккаунта"):
+    st.session_state.user_email = None
+    st.rerun()
+
+# =========================================================================
+# ПРЯМО ОТСЮДА ДОЛЖЕН НАЧИНАТЬСЯ ВАШ СТАРЫЙ РАБОЧИЙ КОД ГЕНЕРАТОРА
+# (Например: st.title("Умный Генератор Двусторонних Карточек") и т.д.)
+# Все отступы у вашего старого кода остаются точно такими же, как и были!
+# =========================================================================
 # Функция для конвертации локальной картинки в Base64
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
@@ -428,36 +530,3 @@ if st.session_state.cards:
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
-# ... ваш существующий код генератора карточек ...
-
-# --- ВРЕМЕННЫЙ ТЕСТ ДЛЯ ПРОВЕРКИ БАЗЫ ДАННЫХ ---
-import gspread
-from google.oauth2.service_account import Credentials
-from datetime import datetime
-
-st.write("---") # Визуальная линия-разделитель
-st.subheader("🧪 Тестирование связи с Google Sheets")
-
-if st.button("Проверить соединение с таблицей"):
-    try:
-        # 1. Авторизация по нашему сохраненному ключу
-        scopes = [
-            "https://www.googleapis.com/auth/spreadsheets",
-            "https://www.googleapis.com/auth/drive"
-        ]
-        creds_info = st.secrets["gcp_service_account"]
-        creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-        gc = gspread.authorize(creds)
-        
-        # 2. Открываем таблицу по ее настоящему имени
-        sh = gc.open("Gemini Flashcards DB") # <-- Имя изменено на правильное!
-        
-        # 3. Пробуем записать тестовую строку на лист Logs
-        sheet = sh.worksheet("Logs")
-        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        sheet.append_row([now, "test_admin@test.ru", "Тестовый клик", "Связь установлена успешно!"])
-        
-        st.success("🎉 Ура! Связь работает идеально! Новая строчка записана в лист Logs. Проверьте вашу Google Таблицу!")
-        st.balloons()
-    except Exception as e:
-        st.error(f"Ошибка подключения: {e}")
