@@ -77,22 +77,22 @@ if not st.session_state.user_email:
                     status = row_data[2] if len(row_data) > 2 else "active"
                     
                     if status == "blocked":
-    st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
-elif status == "paid":
-    # 🌟 Если статус "paid" — пускаем мгновенно, игнорируя любые даты!
-    st.session_state.user_email = email
-    st.rerun()
-else:
-    # Если статус обычный (active) — проверяем 3 дня триала
-    reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-    expiration_date = reg_date + timedelta(days=3)
-    
-    if datetime.now() > expiration_date:
-        # ⚠️ Укажите вашу ссылку на Telegram или WhatsApp ниже:
-        st.error("⌛ Ваш 3-дневный пробный период истек. Для продления доступа [напишите мне в Telegram](https://t.me/ваш_ник).")
-    else:
-        st.session_state.user_email = email
-        st.rerun()
+                        st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
+                    elif status == "paid":
+                        # 🌟 Если статус "paid" — пускаем мгновенно, игнорируя любые даты!
+                        st.session_state.user_email = email
+                        st.rerun()
+                    else:
+                        # Если статус обычный (active) — проверяем 3 дня триала
+                        reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
+                        expiration_date = reg_date + timedelta(days=3)
+                        
+                        if datetime.now() > expiration_date:
+                            # ⚠️ Укажите вашу ссылку на Telegram или WhatsApp ниже:
+                            st.error("⌛ Ваш 3-дневный пробный период истек. Для продления доступа [напишите мне в Telegram](https://t.me/ваш_ник).")
+                        else:
+                            st.session_state.user_email = email
+                            st.rerun()
                 else:
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     users_sheet.append_row([email, now_str, "active"])
