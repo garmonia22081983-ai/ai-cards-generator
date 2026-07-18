@@ -7,22 +7,19 @@ from bs4 import BeautifulSoup
 import urllib.parse
 import os
 import base64
+import gspread
+from google.oauth2.service_account import Credentials
+from datetime import datetime, timedelta
+import uuid  # Библиотека для генерации уникальных ID карточек
 
-# Инициализация API-ключа из Secrets
+# --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
     st.error("Ключ API не найден в настройках Secrets!")
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
-import streamlit as st
-import google.generativeai as genai
-import os
-import gspread
-from google.oauth2.service_account import Credentials
-from datetime import datetime, timedelta
 
-# --- ОЧИСТКА И НАСТРОЙКА GEMINI (это у вас уже было вверху) ---
 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
     del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 
@@ -30,7 +27,7 @@ api_key = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=api_key)
 
 
-# --- НОВЫЙ БЛОК: ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ТАБЛИЦЕ ---
+# --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
 def get_gsheets_client():
     scopes = [
         "https://www.googleapis.com/auth/spreadsheets",
@@ -41,7 +38,7 @@ def get_gsheets_client():
     return gspread.authorize(creds)
 
 
-# --- НОВЫЙ БЛОК: ПРОВЕРКА ПОДПИСКИ (БЕЗ СДВИГА КОДА) ---
+# --- БЛОК АВТОРИЗАЦИИ И ПРОВЕРКИ ТРИАЛА ---
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 
@@ -79,16 +76,13 @@ if not st.session_state.user_email:
                     if status == "blocked":
                         st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
                     elif status == "paid":
-                        # 🌟 Если статус "paid" — пускаем мгновенно, игнорируя любые даты!
                         st.session_state.user_email = email
                         st.rerun()
                     else:
-                        # Если статус обычный (active) — проверяем 3 дня триала
                         reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
                         expiration_date = reg_date + timedelta(days=3)
                         
                         if datetime.now() > expiration_date:
-                            # ⚠️ Укажите вашу ссылку на Telegram или WhatsApp ниже:
                             st.error("⌛ Ваш 3-дневный пробный период истек. Для продления доступа [напишите мне в Telegram](https://t.me/ваш_ник).")
                         else:
                             st.session_state.user_email = email
@@ -109,7 +103,7 @@ if not st.session_state.user_email:
             except Exception as e:
                 st.error(f"Ошибка базы данных: {e}")
                 
-    st.stop() # <-- ВОТ ОН, НАШ СПАСИТЕЛЬ! Он остановит код здесь, если вход не выполнен.
+    st.stop()
 
 
 # --- КНОПКА ВЫХОДА В БОКОВОЙ ПАНЕЛИ ---
@@ -118,18 +112,13 @@ if st.sidebar.button("Выйти из аккаунта"):
     st.session_state.user_email = None
     st.rerun()
 
-# =========================================================================
-# ПРЯМО ОТСЮДА ДОЛЖЕН НАЧИНАТЬСЯ ВАШ СТАРЫЙ РАБОЧИЙ КОД ГЕНЕРАТОРА
-# (Например: st.title("Умный Генератор Двусторонних Карточек") и т.д.)
-# Все отступы у вашего старого кода остаются точно такими же, как и были!
-# =========================================================================
-# Функция для конвертации локальной картинки в Base64
+
+# --- НАСТРОЙКА ПРЕМИУМ-ДИЗАЙНА И СТИЛЕЙ КАРТОЧЕК ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
 
-# Проверяем файл 'background.jpg'
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -140,10 +129,8 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f5f0e8 !important;"
 
-# Подключение кастомного премиум-дизайна с защитой от темной темы
 st.markdown(f"""
 <style>
-/* --- БЛОКИРОВКА ТЕМНОЙ ТЕМЫ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ --- */
 html, body, [data-testid="stAppViewContainer"], .stApp {{
     {bg_css}
     background-size: cover !important;
@@ -152,19 +139,16 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     color: #2d3748 !important;
 }}
 
-/* Принудительный темный цвет для всех стандартных текстов в основном контейнере */
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
-/* --- КРАСИВАЯ ПРОЗРАЧНАЯ ВЕРХНЯЯ ПАНЕЛЬ (HEADER) --- */
 [data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
 }}
 
-/* Перекрашиваем белые иконки и кнопки в верхней панели в темные */
 [data-testid="stHeader"] svg, 
 [data-testid="stHeader"] button, 
 [data-testid="stHeader"] a,
@@ -176,7 +160,6 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     fill: #2d3748 !important;
 }}
 
-/* --- БРОНИРОВАНИЕ ПОЛЕЙ ВВОДА ОТ ПОТЕМНЕНИЯ ФОНА --- */
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
@@ -189,14 +172,12 @@ input, textarea, select,
     border: 1px solid #cbd5e0 !important;
 }}
 
-/* Цвет подсказок (placeholder) внутри полей ввода */
 input::placeholder, textarea::placeholder {{
     color: #a0aec0 !important;
     -webkit-text-fill-color: #a0aec0 !important;
     opacity: 1 !important;
 }}
 
-/* --- БРОНИРОВАНИЕ БОКОВОЙ ПАНЕЛИ (SIDEBAR) ОТ ТЕМНОЙ ТЕМЫ --- */
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
@@ -205,7 +186,6 @@ input::placeholder, textarea::placeholder {{
     background-image: none !important;
 }}
 
-/* Принудительный темный цвет для текстов боковой панели на её светлом фоне */
 [data-testid="stSidebar"] h1, 
 [data-testid="stSidebar"] h2, 
 [data-testid="stSidebar"] h3, 
@@ -220,7 +200,6 @@ input::placeholder, textarea::placeholder {{
     color: #2d3748 !important;
 }}
 
-/* --- СТИЛИ КАРТОЧЕК --- */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -272,7 +251,6 @@ input::placeholder, textarea::placeholder {{
     color: #2d3748 !important;
 }}
 
-/* Принудительные цвета для элементов внутри обратной стороны карточки */
 .card-back div, 
 .card-back span, 
 .card-back p, 
@@ -281,7 +259,6 @@ input::placeholder, textarea::placeholder {{
     color: #2d3748 !important;
 }}
 
-/* Специальные классы для транскрипции, словосочетаний и контекста */
 .card-back .transcription-text {{
     color: #718096 !important;
 }}
@@ -326,6 +303,8 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
+
+# --- ФУНКЦИЯ ПАРСИНГА СТАТЕЙ ПО ССЫЛКЕ ---
 def extract_text_from_url(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -341,18 +320,20 @@ def extract_text_from_url(url):
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
+
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
-    st.header("⚙️ Настройки генерации")
+    st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
     source_type = st.radio("Что берем за основу?", ["📝 Текст / Отрывок статьи / Трэк субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"])
     student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
     
-    # Умное скрытие слайдера количества слов в режиме "Готовый список слов"
     if source_type != "✍️ Готовый список слов":
         num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
     else:
         num_cards = 0
 
+# --- ПОЛЯ ВВОДА ---
 user_input = ""
 if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
     user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
@@ -361,6 +342,8 @@ elif source_type == "🔗 Ссылка на веб-статью":
 else:
     user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
 
+
+# --- КНОПКА ЗАПУСКА ГЕНЕРАЦИИ ГЛАВНАЯ ЛОГИКА ---
 if st.button("Создать карточки ✨", type="primary"):
     if not user_input.strip():
         st.warning("Пожалуйста, заполните поле ввода!")
@@ -379,7 +362,7 @@ if st.button("Создать карточки ✨", type="primary"):
                 
                 if source_type == "✍️ Готовый список слов":
                     prompt = f"""
-                    Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
+                    Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
                     Создай обучающие карточки для следующих слов/фраз: {final_content}.
                     Верни строго валидный JSON-массив объектов со следующими ключами:
                     - "word": оригинальное слово на английском
@@ -407,7 +390,6 @@ if st.button("Создать карточки ✨", type="primary"):
                 response = model.generate_content(prompt)
                 text_response = response.text.strip()
                 
-                # Защищенный разбор ответа от маркдаун-оберток
                 backtick_triple = chr(96) * 3
                 if backtick_triple in text_response:
                     chunks = text_response.split(backtick_triple)
@@ -424,11 +406,63 @@ if st.button("Создать карточки ✨", type="primary"):
                 
                 st.session_state.cards = cards_data
                 st.session_state.flipped = {i: False for i in range(len(cards_data))}
+                
+                # =========================================================================
+                # 🔥 АВТОМАТИЧЕСКАЯ ЗАПИСЬ РЕЗУЛЬТАТОВ В ГУГЛ-ТАБЛИЦУ (REQUESTS И CARDS)
+                # =========================================================================
+                try:
+                    gc_gen = get_gsheets_client()
+                    sh_gen = gc_gen.open("Gemini Flashcards DB")
+                    now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    
+                    # Генерируем ID запроса
+                    request_id = f"req-{int(datetime.now().timestamp())}"
+                    source_snippet = user_input[:200] + "..." if len(user_input) > 200 else user_input
+                    
+                    # Запись во вкладку Requests
+                    requests_sheet = sh_gen.worksheet("Requests")
+                    requests_sheet.append_row([
+                        request_id, 
+                        st.session_state.user_email, 
+                        source_snippet, 
+                        student_level, 
+                        num_cards, 
+                        "Completed", 
+                        now_gen_str
+                    ])
+                    
+                    # Запись во вкладку Cards
+                    cards_sheet = sh_gen.worksheet("Cards")
+                    
+                    for card in cards_data:
+                        card_id = str(uuid.uuid4())
+                        encoded_w = urllib.parse.quote(card['word'])
+                        
+                        audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
+                        audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
+                        
+                        cards_sheet.append_row([
+                            card_id,
+                            request_id,
+                            card['word'],
+                            card.get('transcription', ''),
+                            card['translation'],
+                            card['explanation'],
+                            card.get('collocations', ''),
+                            card['context'],
+                            audio_us,
+                            audio_uk,
+                            st.session_state.user_email
+                        ])
+                except Exception as sheets_err:
+                    st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в базу истории: {sheets_err}")
+                # =========================================================================
+                
                 st.success(f"Успешно! Создано карточек: {len(cards_data)}")
             except Exception as e:
                 st.error(f"Произошла ошибка при генерации: {e}.")
 
-# ВЫВОД КАРТОЧЕК
+# --- ОТРИСОВКА И ВЫВОД РЕЗУЛЬТАТОВ НА ЭКРАН ---
 if st.session_state.cards:
     st.write("---")
     col_exp1, col_exp2 = st.columns(2)
