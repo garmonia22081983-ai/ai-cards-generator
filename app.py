@@ -54,7 +54,7 @@ if not st.session_state.user_email:
             email = email_input.strip().lower()
             try:
                 gc = get_gsheets_client()
-                sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGojs8")
+                sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
                 users_sheet = sh.worksheet("Users")
                 
                 rows = users_sheet.get_all_values()
@@ -412,7 +412,7 @@ if st.button("Создать карточки ✨", type="primary"):
                 # =========================================================================
                 try:
                     gc_gen = get_gsheets_client()
-                    sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGojs8")
+                    sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
                     now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
                     # Генерируем ID запроса
