@@ -436,7 +436,7 @@ if st.button("Создать карточки ✨", type="primary"):
                 # =========================================================================
                 try:
                     gc_gen = get_gsheets_client()
-                    sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                    sh_gen = gc_gen.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
                     now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
                     # Генерируем ID запроса
