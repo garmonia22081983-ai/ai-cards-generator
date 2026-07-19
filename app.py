@@ -89,13 +89,37 @@ if not st.session_state.user_email:
                             st.rerun()
                 else:
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    users_sheet.append_row([email, now_str, "active"])
                     
+                    # --- ПРОВЕРКА НАЛИЧИЯ ОПЛАТЫ ВО ВКЛАДКЕ PAYMENTS ---
+                    has_paid = False
                     try:
-                        logs_sheet = sh.worksheet("Logs")
-                        logs_sheet.append_row([now_str, email, "Регистрация", "Новый пользователь начал пробный период"])
+                        payments_sheet = sh.worksheet("Payments")
+                        payments_rows = payments_sheet.get_all_values()
+                        
+                        # Ищем, фигурирует ли email в строках с оплатами
+                        for p_row in payments_rows:
+                            if any(item.strip().lower() == email for item in p_row):
+                                has_paid = True
+                                break
                     except Exception:
-                        pass
+                        pass # Если вкладки Payments еще нет, просто идем дальше
+                    
+                    if has_paid:
+                        # Если оплата найдена — регистрируем со статусом paid
+                        users_sheet.append_row([email, now_str, "paid"])
+                        try:
+                            logs_sheet = sh.worksheet("Logs")
+                            logs_sheet.append_row([now_str, email, "Авторизация", "Оплата найдена, предоставлен полный доступ"])
+                        except Exception:
+                            pass
+                    else:
+                        # Если оплаты нет — даем стандартный 3-дневный триал
+                        users_sheet.append_row([email, now_str, "active"])
+                        try:
+                            logs_sheet = sh.worksheet("Logs")
+                            logs_sheet.append_row([now_str, email, "Регистрация", "Новый пользователь начал пробный период"])
+                        except Exception:
+                            pass
                     
                     st.session_state.user_email = email
                     st.rerun()
