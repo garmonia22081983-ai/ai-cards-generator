@@ -43,6 +43,8 @@ if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
     st.session_state.user_name = "Преподаватель"
+if "trial_expired" not in st.session_state:
+    st.session_state.trial_expired = False
 
 if not st.session_state.user_email:
     st.subheader("🔑 Доступ к Генератору Карточек")
@@ -80,18 +82,21 @@ if not st.session_state.user_email:
                     
                     if status == "blocked":
                         st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
+                        st.stop()
                     elif status == "paid":
                         st.session_state.user_email = email
+                        st.session_state.trial_expired = False
                         st.rerun()
                     else:
                         reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
                         expiration_date = reg_date + timedelta(days=3)
                         
+                        st.session_state.user_email = email
                         if datetime.now() > expiration_date:
-                            st.error("⌛ Ваш 3-дневный пробный период истек. Для продления доступа, пожалуйста, оплатите тариф на сайте.")
+                            st.session_state.trial_expired = True
                         else:
-                            st.session_state.user_email = email
-                            st.rerun()
+                            st.session_state.trial_expired = False
+                        st.rerun()
                 else:
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
@@ -135,6 +140,8 @@ if not st.session_state.user_email:
                         # Регистрируем как платного и сохраняем имя
                         users_sheet.append_row([email, now_str, "paid", tilda_name])
                         st.session_state.user_name = tilda_name
+                        st.session_state.user_email = email
+                        st.session_state.trial_expired = False
                         try:
                             logs_sheet = sh.worksheet("Logs")
                             logs_sheet.append_row([now_str, email, "Авторизация", "Оплата найдена, предоставлен полный доступ"])
@@ -144,13 +151,20 @@ if not st.session_state.user_email:
                         # Регистрируем триал строго с даты отправки формы на Тильде
                         users_sheet.append_row([email, tilda_reg_date, "active", tilda_name])
                         st.session_state.user_name = tilda_name
+                        st.session_state.user_email = email
+                        
+                        reg_date = datetime.strptime(tilda_reg_date, "%Y-%m-%d %H:%M:%S")
+                        if datetime.now() > (reg_date + timedelta(days=3)):
+                            st.session_state.trial_expired = True
+                        else:
+                            st.session_state.trial_expired = False
+                            
                         try:
                             logs_sheet = sh.worksheet("Logs")
                             logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date}"])
                         except Exception:
                             pass
                     
-                    st.session_state.user_email = email
                     st.rerun()
                     
             except Exception as e:
@@ -176,6 +190,7 @@ if not st.session_state.user_email:
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
     st.session_state.user_email = None
+    st.session_state.trial_expired = False
     st.rerun()
 
 
@@ -364,6 +379,9 @@ summary {{ list-style: none !important; }}
 
 st.title("🎴 Умный Генератор Двусторонних Карточек")
 
+# Выводим персонализированное приветствие по Имени из Тильды
+st.write(f"👋 **Рада видеть вас, {st.session_state.get('user_name', 'Преподаватель')}!**")
+
 if "cards" not in st.session_state:
     st.session_state.cards = []
 if "flipped" not in st.session_state:
@@ -399,134 +417,140 @@ with st.sidebar:
     else:
         num_cards = 0
 
-# --- ПОЛЯ ВВОДА ---
-user_input = ""
-if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
-    user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
-elif source_type == "🔗 Ссылка на веб-статью":
-    user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
+
+# --- МЯГКАЯ ПРОВЕРКА ОКОНЧАНИЯ ТРИАЛА ---
+if st.session_state.get("trial_expired", False):
+    st.warning("🛑 **Срок действия вашего бесплатного тест-драйва (3 дня) окончен.**")
+    st.info("Вы можете изучать или экспортировать уже сгенерированные в этой сессии карточки ниже. Чтобы продолжить создавать новые уникальные колоды без ограничений, пожалуйста, выберите и оплатите тариф.")
+    st.link_button("💳 Посмотреть тарифы и оплатить", "https://flashcards-ai.ru/#tariffs", type="primary")
+
 else:
-    user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
-
-
-# --- КНОПКА ЗАПУСКА ГЕНЕРАЦИИ ГЛАВНАЯ ЛОГИКА ---
-if st.button("Создать карточки ✨", type="primary"):
-    if not user_input.strip():
-        st.warning("Пожалуйста, заполните поле ввода!")
+    # --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА (ДОСТУПЕН, ЕСЛИ ТРИАЛ АКТИВЕН ИЛИ ТАРИФ ОПЛАЧЕН) ---
+    if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
+        user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
+    elif source_type == "🔗 Ссылка на веб-статью":
+        user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
     else:
-        with st.spinner("Методист Gemini собирает лингвистические данные..."):
-            try:
-                final_content = user_input
-                if source_type == "🔗 Ссылка на веб-статью":
-                    scraped_text = extract_text_from_url(user_input)
-                    if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
-                        st.error(scraped_text)
-                        st.stop()
-                    final_content = scraped_text
+        user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
 
-                model = genai.GenerativeModel(model_option)
-                
-                if source_type == "✍️ Готовый список слов":
-                    prompt = f"""
-                    Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
-                    Создай обучающие карточки для следующих слов/фраз: {final_content}.
-                    Верни строго валидный JSON-массив объектов со следующими ключами:
-                    - "word": оригинальное слово на английском
-                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] or [ˌekstrəlɪŋˈɡwɪstɪk])
-                    - "translation": точный и красивый перевод на русский
-                    - "explanation": дефиниция на английском языке под уровень {student_level}
-                    - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
-                    - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                    Верни ТОЛЬКО чистый JSON без маркдаун оберток.
-                    """
-                else:
-                    prompt = f"""
-                    Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
-                    Выбери из предоставленного текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
-                    Верни строго валидный JSON-массив объектов со следующими ключами:
-                    - "word": оригинальное слово на английском
-                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] or [ˌekstrəlɪŋˈɡwɪstɪk])
-                    - "translation": точный и красивый перевод на русский
-                    - "explanation": дефиниция на английском языке под уровень {student_level}
-                    - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
-                    - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                    Верни ТОЛЬКО чистый JSON без маркдаун оберток.
-                    """
-
-                response = model.generate_content(prompt)
-                text_response = response.text.strip()
-                
-                backtick_triple = chr(96) * 3
-                if backtick_triple in text_response:
-                    chunks = text_response.split(backtick_triple)
-                    for chunk in chunks:
-                        clean_chunk = chunk.strip()
-                        if clean_chunk.startswith("json"):
-                            clean_chunk = clean_chunk[4:].strip()
-                        if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
-                            text_response = clean_chunk
-                            break
-
-                text_response = text_response.strip()
-                cards_data = json.loads(text_response)
-                
-                st.session_state.cards = cards_data
-                st.session_state.flipped = {i: False for i in range(len(cards_data))}
-                
-                # =========================================================================
-                # 🔥 АВТОМАТИЧЕСКАЯ ЗАПИСЬ РЕЗУЛЬТАТОВ В ГУГЛ-ТАБЛИЦУ (REQUESTS И CARDS)
-                # =========================================================================
+    # --- КНОПКА ЗАПУСКА ГЕНЕРАЦИИ ГЛАВНАЯ ЛОГИКА ---
+    if st.button("Создать карточки ✨", type="primary"):
+        if not user_input.strip():
+            st.warning("Пожалуйста, заполните поле ввода!")
+        else:
+            with st.spinner("Методист Gemini собирает лингвистические данные..."):
                 try:
-                    gc_gen = get_gsheets_client()
-                    sh_gen = gc_gen.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-                    now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    final_content = user_input
+                    if source_type == "🔗 Ссылка на веб-статью":
+                        scraped_text = extract_text_from_url(user_input)
+                        if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
+                            st.error(scraped_text)
+                            st.stop()
+                        final_content = scraped_text
+
+                    model = genai.GenerativeModel(model_option)
                     
-                    # Генерируем ID запроса
-                    request_id = f"req-{int(datetime.now().timestamp())}"
-                    source_snippet = user_input[:200] + "..." if len(user_input) > 200 else user_input
+                    if source_type == "✍️ Готовый список слов":
+                        prompt = f"""
+                        Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
+                        Создай обучающие карточки для следующих слов/фраз: {final_content}.
+                        Верни строго валидный JSON-массив объектов со следующими ключами:
+                        - "word": оригинальное слово на английском
+                        - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] or [ˌekstrəlɪŋˈɡwɪstɪk])
+                        - "translation": точный и красивый перевод на русский
+                        - "explanation": дефиниция на английском языке под уровень {student_level}
+                        - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
+                        - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
+                        Верни ТОЛЬКО чистый JSON без маркдаун оберток.
+                        """
+                    else:
+                        prompt = f"""
+                        Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
+                        Выбери из предоставленного текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
+                        Верни строго валидный JSON-массив объектов со следующими ключами:
+                        - "word": оригинальное слово на английском
+                        - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] or [ˌekstrəlɪŋˈɡwɪstɪk])
+                        - "translation": точный и красивый перевод на русский
+                        - "explanation": дефиниция на английском языке под уровень {student_level}
+                        - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
+                        - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
+                        Верни ТОЛЬКО чистый JSON без маркдаун оберток.
+                        """
+
+                    response = model.generate_content(prompt)
+                    text_response = response.text.strip()
                     
-                    # Запись во вкладку Requests
-                    requests_sheet = sh_gen.worksheet("Requests")
-                    requests_sheet.append_row([
-                        request_id, 
-                        st.session_state.user_email, 
-                        source_snippet, 
-                        student_level, 
-                        num_cards, 
-                        "Completed", 
-                        now_gen_str
-                    ])
+                    backtick_triple = chr(96) * 3
+                    if backtick_triple in text_response:
+                        chunks = text_response.split(backtick_triple)
+                        for chunk in chunks:
+                            clean_chunk = chunk.strip()
+                            if clean_chunk.startswith("json"):
+                                clean_chunk = clean_chunk[4:].strip()
+                            if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
+                                text_response = clean_chunk
+                                break
+
+                    text_response = text_response.strip()
+                    cards_data = json.loads(text_response)
                     
-                    # Запись во вкладку Cards
-                    cards_sheet = sh_gen.worksheet("Cards")
+                    st.session_state.cards = cards_data
+                    st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
-                    for card in cards_data:
-                        card_id = str(uuid.uuid4())
-                        encoded_w = urllib.parse.quote(card['word'])
+                    # =========================================================================
+                    # 🔥 АВТОМАТИЧЕСКАЯ ЗАПИСЬ РЕЗУЛЬТАТОВ В ГУГЛ-ТАБЛИЦУ (REQUESTS И CARDS)
+                    # =========================================================================
+                    try:
+                        gc_gen = get_gsheets_client()
+                        sh_gen = gc_gen.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                        now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
-                        audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
-                        audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
+                        # Генерируем ID запроса
+                        request_id = f"req-{int(datetime.now().timestamp())}"
+                        source_snippet = user_input[:200] + "..." if len(user_input) > 200 else user_input
                         
-                        cards_sheet.append_row([
-                            card_id,
-                            request_id,
-                            card['word'],
-                            card.get('transcription', ''),
-                            card['translation'],
-                            card['explanation'],
-                            card.get('collocations', ''),
-                            card['context'],
-                            audio_us,
-                            audio_uk,
-                            st.session_state.user_email
+                        # Запись во вкладку Requests
+                        requests_sheet = sh_gen.worksheet("Requests")
+                        requests_sheet.append_row([
+                            request_id, 
+                            st.session_state.user_email, 
+                            source_snippet, 
+                            student_level, 
+                            num_cards, 
+                            "Completed", 
+                            now_gen_str
                         ])
-                except Exception as sheets_err:
-                    st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в базу истории: {sheets_err}")
-                # =========================================================================
-                
-                st.success(f"Успешно! Создано карточек: {len(cards_data)}")
-            except Exception as e:
-                st.error(f"Произошла ошибка при генерации: {e}.")
+                        
+                        # Запись во вкладку Cards
+                        cards_sheet = sh_gen.worksheet("Cards")
+                        
+                        for card in cards_data:
+                            card_id = str(uuid.uuid4())
+                            encoded_w = urllib.parse.quote(card['word'])
+                            
+                            audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
+                            audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
+                            
+                            cards_sheet.append_row([
+                                card_id,
+                                request_id,
+                                card['word'],
+                                card.get('transcription', ''),
+                                card['translation'],
+                                card['explanation'],
+                                card.get('collocations', ''),
+                                card['context'],
+                                audio_us,
+                                audio_uk,
+                                st.session_state.user_email
+                            ])
+                    except Exception as sheets_err:
+                        st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в базу истории: {sheets_err}")
+                    # =========================================================================
+                    
+                    st.success(f"Успешно! Создано карточек: {len(cards_data)}")
+                except Exception as e:
+                    st.error(f"Произошла ошибка при генерации: {e}.")
 
 # --- ОТРИСОВКА И ВЫВОД РЕЗУЛЬТАТОВ НА ЭКРАН ---
 if st.session_state.cards:
