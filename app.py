@@ -38,6 +38,12 @@ device_id = st_javascript("""
     id;
 """)
 
+# Безопасное приведение отпечатка к строке с фолбеком на случай задержки JS
+if not device_id or device_id == 0 or device_id == "0":
+    device_id_clean = "unknown"
+else:
+    device_id_clean = str(device_id).strip()
+
 
 # --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
 def get_gsheets_client():
@@ -64,11 +70,6 @@ if not st.session_state.user_email:
     
     email_input = st.text_input("Ваш Email:")
     if st.button("Войти"):
-        # --- 🔥 ЗАЩИТА ОТ АСИНХРОННОГО НУЛЯ ---
-        if not device_id or device_id == 0 or device_id == "0":
-            st.warning("🔒 Секунду, система определяет цифровой отпечаток вашего устройства для защиты тест-драйва. Пожалуйста, нажмите кнопку «Войти» ещё раз.")
-            st.rerun()
-            
         if "@" not in email_input or "." not in email_input:
             st.error("Пожалуйста, введите корректный адрес электронной почты.")
         else:
@@ -100,7 +101,7 @@ if not st.session_state.user_email:
                         st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
                         st.stop()
                         
-                    # --- 🔥 УМНЫЙ АПГРЕЙД: ЕСЛИ БЫЛ ТРИАЛ, НО ПОЯВИЛАСЬ ОПЛАТА ---
+                    # --- УМНЫЙ АПГРЕЙД: ЕСЛИ БЫЛ ТРИАЛ, НО ПОЯВИЛАСЬ ОПЛАТА ---
                     if status == "active":
                         has_paid = False
                         try:
@@ -131,7 +132,6 @@ if not st.session_state.user_email:
                                 logs_sheet.append_row([now_str, email, "Апгрейд", "Пользователь успешно перешел с тест-драйва на платный тариф!"])
                             except Exception:
                                 pass
-                    # --- КОНЕЦ БЛОКА АПГРЕЙДА ---
 
                     if status == "paid":
                         st.session_state.user_email = email
@@ -183,8 +183,8 @@ if not st.session_state.user_email:
                         pass
                     
                     if has_paid:
-                        # Платящих пускаем без проверки ограничений на устройство
-                        users_sheet.append_row([email, now_str, "paid", tilda_name, str(device_id)])
+                        # Платящих пускаем без жестких проверок устройства
+                        users_sheet.append_row([email, now_str, "paid", tilda_name, device_id_clean])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         st.session_state.trial_expired = False
@@ -196,9 +196,9 @@ if not st.session_state.user_email:
                     else:
                         # --- АНТИ-ФРОД ПРОВЕРКА УСТРОЙСТВА ДЛЯ ТЕСТ-ДРАЙВА ---
                         device_already_used = False
-                        if device_id and device_id != 0:
+                        if device_id_clean != "unknown":
                             for r in rows[1:]:
-                                if len(r) > 4 and r[4].strip() == str(device_id):
+                                if len(r) > 4 and r[4].strip() == device_id_clean:
                                     device_already_used = True
                                     break
                         
@@ -206,8 +206,8 @@ if not st.session_state.user_email:
                             st.error("🚫 С этого устройства уже запрашивался бесплатный тест-драйв для другого аккаунта. Пожалуйста, войдите под вашей первой почтой или выберите платный тариф на сайте.")
                             st.stop()
                         
-                        # Если устройство чистое — регистрируем триал
-                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, str(device_id)])
+                        # Если всё чисто — регистрируем триал
+                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, device_id_clean])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         
@@ -219,7 +219,7 @@ if not st.session_state.user_email:
                             
                         try:
                             logs_sheet = sh.worksheet("Logs")
-                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date} (ID устройства: {device_id})"])
+                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date} (ID устройства: {device_id_clean})"])
                         except Exception:
                             pass
                     
@@ -489,7 +489,7 @@ else:
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
     else:
-        user_input = st.text_area("Введите конкретные слова or фразы:", height=120)
+        user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
 
     # --- КНОПКА ЗАПУСКА ГЕНЕРАЦИИ ГЛАВНАЯ ЛОГИКА ---
     if st.button("Создать карточки ✨", type="primary"):
