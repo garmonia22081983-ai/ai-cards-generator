@@ -41,6 +41,8 @@ def get_gsheets_client():
 # --- БЛОК АВТОРИЗАЦИИ И ПРОВЕРКИ ТРИАЛА ---
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
+if "user_name" not in st.session_state:
+    st.session_state.user_name = "Преподаватель"
 
 if not st.session_state.user_email:
     st.subheader("🔑 Доступ к Генератору Карточек")
@@ -58,9 +60,10 @@ if not st.session_state.user_email:
                 users_sheet = sh.worksheet("Users")
                 
                 rows = users_sheet.get_all_values()
+                # Добавляем колонку Name в шапку, если таблица пустая
                 if not rows:
-                    users_sheet.append_row(["Email", "Registration Date", "Status"])
-                    rows = [["Email", "Registration Date", "Status"]]
+                    users_sheet.append_row(["Email", "Registration Date", "Status", "Name"])
+                    rows = [["Email", "Registration Date", "Status", "Name"]]
                 
                 user_row = None
                 for i, r in enumerate(rows[1:], start=2):
@@ -72,6 +75,8 @@ if not st.session_state.user_email:
                     row_num, row_data = user_row
                     reg_date_str = row_data[1]
                     status = row_data[2] if len(row_data) > 2 else "active"
+                    # Подгружаем имя в сессию из базы пользователей
+                    st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
                     
                     if status == "blocked":
                         st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
@@ -83,41 +88,65 @@ if not st.session_state.user_email:
                         expiration_date = reg_date + timedelta(days=3)
                         
                         if datetime.now() > expiration_date:
-                            st.error("⌛ Ваш 3-дневный пробный период истек. Для продления доступа [напишите мне в Telegram](https://t.me/ваш_ник).")
+                            st.error("⌛ Ваш 3-дневный пробный период истек. Для продления доступа, пожалуйста, оплатите тариф на сайте.")
                         else:
                             st.session_state.user_email = email
                             st.rerun()
                 else:
                     now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                     
-                    # --- ПРОВЕРКА НАЛИЧИЯ ОПЛАТЫ ВО ВКЛАДКЕ PAYMENTS ---
+                    # --- УМНАЯ ПРОВЕРКА ТАНДЕМА С ТИЛЬДОЙ ---
                     has_paid = False
+                    tilda_name = "Преподаватель"
+                    tilda_reg_date = now_str
+                    
                     try:
                         payments_sheet = sh.worksheet("Payments")
                         payments_rows = payments_sheet.get_all_values()
                         
-                        # Ищем, фигурирует ли email в строках с оплатами
-                        for p_row in payments_rows:
-                            if any(item.strip().lower() == email for item in p_row):
-                                has_paid = True
-                                break
+                        for p_row in payments_rows[1:]: # Пропускаем шапку таблицы
+                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                # Забираем Имя из колонки А (индекс 0)
+                                if p_row[0].strip():
+                                    tilda_name = p_row[0].strip()
+                                
+                                # Проверяем реальную оплату: колонка G (индекс 6 - price) или D (индекс 3 - orderid)
+                                has_price = len(p_row) > 6 and p_row[6].strip()
+                                has_order = len(p_row) > 3 and p_row[3].strip()
+                                
+                                if has_price or has_order:
+                                    has_paid = True
+                                    break # Нашли факт оплаты, прерываем цикл
+                                else:
+                                    # Это тест-драйв. Берем дату отправки формы из колонки L (индекс 11 - sent)
+                                    if len(p_row) > 11 and p_row[11].strip():
+                                        raw_date = p_row[11].strip()
+                                        # Приводим формат даты Тильды к стандарту базы данных
+                                        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                                            try:
+                                                tilda_reg_date = datetime.strptime(raw_date, fmt).strftime("%Y-%m-%d %H:%M:%S")
+                                                break
+                                            except ValueError:
+                                                continue
                     except Exception:
-                        pass # Если вкладки Payments еще нет, просто идем дальше
+                        pass # Если вкладки Payments еще нет, сработает дефолтная логика триала
                     
                     if has_paid:
-                        # Если оплата найдена — регистрируем со статусом paid
-                        users_sheet.append_row([email, now_str, "paid"])
+                        # Регистрируем как платного и сохраняем имя
+                        users_sheet.append_row([email, now_str, "paid", tilda_name])
+                        st.session_state.user_name = tilda_name
                         try:
                             logs_sheet = sh.worksheet("Logs")
                             logs_sheet.append_row([now_str, email, "Авторизация", "Оплата найдена, предоставлен полный доступ"])
                         except Exception:
                             pass
                     else:
-                        # Если оплаты нет — даем стандартный 3-дневный триал
-                        users_sheet.append_row([email, now_str, "active"])
+                        # Регистрируем триал строго с даты отправки формы на Тильде
+                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name])
+                        st.session_state.user_name = tilda_name
                         try:
                             logs_sheet = sh.worksheet("Logs")
-                            logs_sheet.append_row([now_str, email, "Регистрация", "Новый пользователь начал пробный период"])
+                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date}"])
                         except Exception:
                             pass
                     
