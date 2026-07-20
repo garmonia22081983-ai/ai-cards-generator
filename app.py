@@ -38,11 +38,10 @@ device_id = st_javascript("""
     id;
 """)
 
-# Безопасное приведение отпечатка к строке с фолбеком на случай задержки JS
-if not device_id or device_id == 0 or device_id == "0":
-    device_id_clean = "unknown"
-else:
-    device_id_clean = str(device_id).strip()
+# Проверяем, готов ли отпечаток устройства (не равен ли он 0 или None)
+device_ready = False
+if device_id and device_id != 0 and device_id != "0":
+    device_ready = True
 
 
 # --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
@@ -68,8 +67,16 @@ if not st.session_state.user_email:
     st.subheader("🔑 Доступ к Генератору Карточек")
     st.write("Введите ваш Email для входа. Новым пользователям автоматически предоставляется 3 дня бесплатного доступа!")
     
-    email_input = st.text_input("Ваш Email:")
-    if st.button("Войти"):
+    email_input = st.text_input("Ваш Email:", key="login_email_field")
+    
+    # --- УМНАЯ АКТИВАЦИЯ КНОПКИ ПОД ГОТОВНОСТЬ JS ---
+    if device_ready:
+        login_clicked = st.button("Войти", type="primary")
+    else:
+        st.button("🔒 Настройка защищенного соединения...", disabled=True)
+        login_clicked = False
+
+    if login_clicked:
         if "@" not in email_input or "." not in email_input:
             st.error("Пожалуйста, введите корректный адрес электронной почты.")
         else:
@@ -184,7 +191,7 @@ if not st.session_state.user_email:
                     
                     if has_paid:
                         # Платящих пускаем без жестких проверок устройства
-                        users_sheet.append_row([email, now_str, "paid", tilda_name, device_id_clean])
+                        users_sheet.append_row([email, now_str, "paid", tilda_name, str(device_id).strip()])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         st.session_state.trial_expired = False
@@ -196,18 +203,19 @@ if not st.session_state.user_email:
                     else:
                         # --- АНТИ-ФРОД ПРОВЕРКА УСТРОЙСТВА ДЛЯ ТЕСТ-ДРАЙВА ---
                         device_already_used = False
-                        if device_id_clean != "unknown":
-                            for r in rows[1:]:
-                                if len(r) > 4 and r[4].strip() == device_id_clean:
-                                    device_already_used = True
-                                    break
+                        current_device_str = str(device_id).strip()
+                        
+                        for r in rows[1:]:
+                            if len(r) > 4 and r[4].strip() == current_device_str:
+                                device_already_used = True
+                                break
                         
                         if device_already_used:
                             st.error("🚫 С этого устройства уже запрашивался бесплатный тест-драйв для другого аккаунта. Пожалуйста, войдите под вашей первой почтой или выберите платный тариф на сайте.")
                             st.stop()
                         
-                        # Если всё чисто — регистрируем триал
-                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, device_id_clean])
+                        # Если всё чисто — регистрируем триал с честным ID устройства
+                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, current_device_str])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         
@@ -219,7 +227,7 @@ if not st.session_state.user_email:
                             
                         try:
                             logs_sheet = sh.worksheet("Logs")
-                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date} (ID устройства: {device_id_clean})"])
+                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date} (ID устройства: {current_device_str})"])
                         except Exception:
                             pass
                     
@@ -458,7 +466,7 @@ def extract_text_from_url(url):
             lines = (line.strip() for line in text.splitlines())
             chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
             return '\n'.join(chunk for chunk in chunks if chunk)[:8000]
-        return f"Ошибка загрузки сайта: Статус {response.status_code}"
+        return f"Ошибка загрузки сайта: Status {response.status_code}"
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
