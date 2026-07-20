@@ -64,7 +64,12 @@ if not st.session_state.user_email:
     st.write("Введите ваш Email для входа. Новым пользователям автоматически предоставляется 3 дня бесплатного доступа!")
     
     email_input = st.text_input("Ваш Email:")
-    if st.button("Войти"):
+   if st.button("Войти"):
+        # --- 🔥 ЗАЩИТА ОТ АСИНХРОННОГО НУЛЯ ---
+        if not device_id or device_id == 0 or device_id == "0":
+            st.warning("🔒 Секунду, система определяет цифровой отпечаток вашего устройства для защиты тест-драйва. Пожалуйста, нажмите кнопку «Войти» ещё раз.")
+            st.rerun()
+            
         if "@" not in email_input or "." not in email_input:
             st.error("Пожалуйста, введите корректный адрес электронной почты.")
         else:
