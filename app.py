@@ -11,6 +11,7 @@ import gspread
 from google.oauth2.service_account import Credentials
 from datetime import datetime, timedelta
 import uuid  # Библиотека для генерации уникальных ID карточек
+from streamlit_javascript import st_javascript  # Для работы с LocalStorage
 
 # --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -25,6 +26,21 @@ if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
 
 api_key = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=api_key)
+
+
+# --- ТЕХНИЧЕСКИЙ ОТПЕЧАТОК УСТРОЙСТВА (LOCALSTORAGE) ---
+device_id = st_javascript("""
+    let id = localStorage.getItem('gemini_flashcards_device_id');
+    if (!id) {
+        id = 'dev-' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        localStorage.setItem('gemini_flashcards_device_id', id);
+    }
+    id;
+""")
+
+# Ждем, пока JavaScript вернет отпечаток браузера
+if not device_id or device_id == 0:
+    st.stop()
 
 
 # --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
@@ -62,10 +78,10 @@ if not st.session_state.user_email:
                 users_sheet = sh.worksheet("Users")
                 
                 rows = users_sheet.get_all_values()
-                # Добавляем колонку Name в шапку, если таблица пустая
+                # Добавляем Name и Device ID в шапку, если таблица пустая
                 if not rows:
-                    users_sheet.append_row(["Email", "Registration Date", "Status", "Name"])
-                    rows = [["Email", "Registration Date", "Status", "Name"]]
+                    users_sheet.append_row(["Email", "Registration Date", "Status", "Name", "Device ID"])
+                    rows = [["Email", "Registration Date", "Status", "Name", "Device ID"]]
                 
                 user_row = None
                 for i, r in enumerate(rows[1:], start=2):
@@ -77,13 +93,46 @@ if not st.session_state.user_email:
                     row_num, row_data = user_row
                     reg_date_str = row_data[1]
                     status = row_data[2] if len(row_data) > 2 else "active"
-                    # Подгружаем имя в сессию из базы пользователей
                     st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
                     
                     if status == "blocked":
                         st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
                         st.stop()
-                    elif status == "paid":
+                        
+                    # --- 🔥 УМНЫЙ АПГРЕЙД: ЕСЛИ БЫЛ ТРИАЛ, НО ПОЯВИЛАСЬ ОПЛАТА ---
+                    if status == "active":
+                        has_paid = False
+                        try:
+                            payments_sheet = sh.worksheet("Payments")
+                            payments_rows = payments_sheet.get_all_values()
+                            
+                            for p_row in payments_rows[1:]:
+                                if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                    has_price = len(p_row) > 6 and p_row[6].strip()
+                                    has_order = len(p_row) > 3 and p_row[3].strip()
+                                    
+                                    if has_price or has_order:
+                                        has_paid = True
+                                        if p_row[0].strip():
+                                            st.session_state.user_name = p_row[0].strip()
+                                        break
+                        except Exception:
+                            pass
+                        
+                        # Если нашли оплату — меняем статус в базе прямо в текущей строке!
+                        if has_paid:
+                            status = "paid"
+                            users_sheet.update_cell(row_num, 3, "paid")  # Столбец C (Status)
+                            users_sheet.update_cell(row_num, 4, st.session_state.user_name)  # Столбец D (Name)
+                            try:
+                                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                logs_sheet = sh.worksheet("Logs")
+                                logs_sheet.append_row([now_str, email, "Апгрейд", "Пользователь успешно перешел с тест-драйва на платный тариф!"])
+                            except Exception:
+                                pass
+                    # --- КОНЕЦ БЛОКА АПГРЕЙДА ---
+
+                    if status == "paid":
                         st.session_state.user_email = email
                         st.session_state.trial_expired = False
                         st.rerun()
@@ -109,24 +158,20 @@ if not st.session_state.user_email:
                         payments_sheet = sh.worksheet("Payments")
                         payments_rows = payments_sheet.get_all_values()
                         
-                        for p_row in payments_rows[1:]: # Пропускаем шапку таблицы
+                        for p_row in payments_rows[1:]:
                             if len(p_row) > 1 and p_row[1].strip().lower() == email:
-                                # Забираем Имя из колонки А (индекс 0)
                                 if p_row[0].strip():
                                     tilda_name = p_row[0].strip()
                                 
-                                # Проверяем реальную оплату: колонка G (индекс 6 - price) или D (индекс 3 - orderid)
                                 has_price = len(p_row) > 6 and p_row[6].strip()
                                 has_order = len(p_row) > 3 and p_row[3].strip()
                                 
                                 if has_price or has_order:
                                     has_paid = True
-                                    break # Нашли факт оплаты, прерываем цикл
+                                    break
                                 else:
-                                    # Это тест-драйв. Берем дату отправки формы из колонки L (индекс 11 - sent)
                                     if len(p_row) > 11 and p_row[11].strip():
                                         raw_date = p_row[11].strip()
-                                        # Приводим формат даты Тильды к стандарту базы данных
                                         for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
                                             try:
                                                 tilda_reg_date = datetime.strptime(raw_date, fmt).strftime("%Y-%m-%d %H:%M:%S")
@@ -134,11 +179,11 @@ if not st.session_state.user_email:
                                             except ValueError:
                                                 continue
                     except Exception:
-                        pass # Если вкладки Payments еще нет, сработает дефолтная логика триала
+                        pass
                     
                     if has_paid:
-                        # Регистрируем как платного и сохраняем имя
-                        users_sheet.append_row([email, now_str, "paid", tilda_name])
+                        # Платящих пускаем без проверки ограничений на устройство
+                        users_sheet.append_row([email, now_str, "paid", tilda_name, device_id])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         st.session_state.trial_expired = False
@@ -148,8 +193,19 @@ if not st.session_state.user_email:
                         except Exception:
                             pass
                     else:
-                        # Регистрируем триал строго с даты отправки формы на Тильде
-                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name])
+                        # --- АНТИ-ФРОД ПРОВЕРКА УСТРОЙСТВА ДЛЯ ТЕСТ-ДРАЙВА ---
+                        device_already_used = False
+                        for r in rows[1:]:
+                            if len(r) > 4 and r[4].strip() == device_id:
+                                device_already_used = True
+                                break
+                        
+                        if device_already_used:
+                            st.error("🚫 С этого устройства уже запрашивался бесплатный тест-драйв для другого аккаунта. Пожалуйста, войдите под вашей первой почтой или выберите платный тариф на сайте.")
+                            st.stop()
+                        
+                        # Если устройство чистое — регистрируем триал
+                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, device_id])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         
@@ -161,7 +217,7 @@ if not st.session_state.user_email:
                             
                         try:
                             logs_sheet = sh.worksheet("Logs")
-                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date}"])
+                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date} (ID устройства: {device_id})"])
                         except Exception:
                             pass
                     
@@ -505,11 +561,9 @@ else:
                         sh_gen = gc_gen.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         
-                        # Генерируем ID запроса
                         request_id = f"req-{int(datetime.now().timestamp())}"
                         source_snippet = user_input[:200] + "..." if len(user_input) > 200 else user_input
                         
-                        # Запись во вкладку Requests
                         requests_sheet = sh_gen.worksheet("Requests")
                         requests_sheet.append_row([
                             request_id, 
@@ -521,7 +575,6 @@ else:
                             now_gen_str
                         ])
                         
-                        # Запись во вкладку Cards
                         cards_sheet = sh_gen.worksheet("Cards")
                         
                         for card in cards_data:
