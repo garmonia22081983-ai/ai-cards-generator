@@ -29,6 +29,7 @@ genai.configure(api_key=api_key)
 
 
 # --- ТЕХНИЧЕСКИЙ ОТПЕЧАТОК УСТРОЙСТВА (LOCALSTORAGE) ---
+# Загружается незаметно в фоновом режиме
 device_id = st_javascript("""
     let id = localStorage.getItem('gemini_flashcards_device_id');
     if (!id) {
@@ -37,10 +38,6 @@ device_id = st_javascript("""
     }
     id;
 """)
-
-# Ждем, пока JavaScript вернет отпечаток браузера
-if not device_id or device_id == 0:
-    st.stop()
 
 
 # --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
@@ -183,7 +180,7 @@ if not st.session_state.user_email:
                     
                     if has_paid:
                         # Платящих пускаем без проверки ограничений на устройство
-                        users_sheet.append_row([email, now_str, "paid", tilda_name, device_id])
+                        users_sheet.append_row([email, now_str, "paid", tilda_name, str(device_id)])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         st.session_state.trial_expired = False
@@ -195,17 +192,18 @@ if not st.session_state.user_email:
                     else:
                         # --- АНТИ-ФРОД ПРОВЕРКА УСТРОЙСТВА ДЛЯ ТЕСТ-ДРАЙВА ---
                         device_already_used = False
-                        for r in rows[1:]:
-                            if len(r) > 4 and r[4].strip() == device_id:
-                                device_already_used = True
-                                break
+                        if device_id and device_id != 0:
+                            for r in rows[1:]:
+                                if len(r) > 4 and r[4].strip() == str(device_id):
+                                    device_already_used = True
+                                    break
                         
                         if device_already_used:
                             st.error("🚫 С этого устройства уже запрашивался бесплатный тест-драйв для другого аккаунта. Пожалуйста, войдите под вашей первой почтой или выберите платный тариф на сайте.")
                             st.stop()
                         
                         # Если устройство чистое — регистрируем триал
-                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, device_id])
+                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, str(device_id)])
                         st.session_state.user_name = tilda_name
                         st.session_state.user_email = email
                         
