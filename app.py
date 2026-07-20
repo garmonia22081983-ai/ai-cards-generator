@@ -127,6 +127,19 @@ if not st.session_state.user_email:
             except Exception as e:
                 st.error(f"Ошибка базы данных: {e}")
                 
+    # --- ЮРИДИЧЕСКИЙ БЛОК СОГЛАСИЯ ПОД КНОПКОЙ ---
+    st.markdown(
+        """
+        <div style="margin-top: 15px; padding-top: 10px; border-top: 1px dashed #cbd5e0;">
+            <small style="color: #718096; font-family: Arial, sans-serif; line-height: 1.4; display: block;">
+            Нажимая кнопку «Войти», вы даете согласие на обработку персональных данных 
+            в соответствии с <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e; text-decoration: underline;">Политикой конфиденциальности</a> 
+            и соглашаетесь с условиями <a href="https://flashcards-ai.ru/oferta" target="_blank" style="color: #2e6c9e; text-decoration: underline;">Публичной оферты</a>.
+            </small>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
     st.stop()
 
 
@@ -390,7 +403,7 @@ if st.button("Создать карточки ✨", type="primary"):
                     Создай обучающие карточки для следующих слов/фраз: {final_content}.
                     Верни строго валидный JSON-массив объектов со следующими ключами:
                     - "word": оригинальное слово на английском
-                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] или [ˌekstrəlɪŋˈɡwɪstɪk])
+                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] or [ˌekstrəlɪŋˈɡwɪstɪk])
                     - "translation": точный и красивый перевод на русский
                     - "explanation": дефиниция на английском языке под уровень {student_level}
                     - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
@@ -403,7 +416,7 @@ if st.button("Создать карточки ✨", type="primary"):
                     Выбери из предоставленного текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
                     Верни строго валидный JSON-массив объектов со следующими ключами:
                     - "word": оригинальное слово на английском
-                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] или [ˌekstrəlɪŋˈɡwɪstɪk])
+                    - "transcription": фонетическая транскрипция в IPA (например, [ˈlɛt.ər] or [ˌekstrəlɪŋˈɡwɪstɪk])
                     - "translation": точный и красивый перевод на русский
                     - "explanation": дефиниция на английском языке под уровень {student_level}
                     - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую (например, 'write a letter, capital letter')
