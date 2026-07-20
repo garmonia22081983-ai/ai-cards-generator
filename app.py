@@ -29,7 +29,6 @@ genai.configure(api_key=api_key)
 
 
 # --- ТЕХНИЧЕСКИЙ ОТПЕЧАТОК УСТРОЙСТВА (LOCALSTORAGE) ---
-# Загружается незаметно в фоновом режиме
 device_id = st_javascript("""
     let id = localStorage.getItem('gemini_flashcards_device_id');
     if (!id) {
@@ -64,7 +63,7 @@ if not st.session_state.user_email:
     st.write("Введите ваш Email для входа. Новым пользователям автоматически предоставляется 3 дня бесплатного доступа!")
     
     email_input = st.text_input("Ваш Email:")
-   if st.button("Войти"):
+    if st.button("Войти"):
         # --- 🔥 ЗАЩИТА ОТ АСИНХРОННОГО НУЛЯ ---
         if not device_id or device_id == 0 or device_id == "0":
             st.warning("🔒 Секунду, система определяет цифровой отпечаток вашего устройства для защиты тест-драйва. Пожалуйста, нажмите кнопку «Войти» ещё раз.")
@@ -490,7 +489,7 @@ else:
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
     else:
-        user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
+        user_input = st.text_area("Введите конкретные слова or фразы:", height=120)
 
     # --- КНОПКА ЗАПУСКА ГЕНЕРАЦИИ ГЛАВНАЯ ЛОГИКА ---
     if st.button("Создать карточки ✨", type="primary"):
