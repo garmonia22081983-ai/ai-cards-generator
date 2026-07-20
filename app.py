@@ -29,6 +29,7 @@ genai.configure(api_key=api_key)
 
 
 # --- ТЕХНИЧЕСКИЙ ОТПЕЧАТОК УСТРОЙСТВА (LOCALSTORAGE) ---
+# Запускается незаметно в фоне и не блокирует интерфейс
 device_id = st_javascript("""
     let id = localStorage.getItem('gemini_flashcards_device_id');
     if (!id) {
@@ -37,11 +38,6 @@ device_id = st_javascript("""
     }
     id;
 """)
-
-# Проверяем, готов ли отпечаток устройства (не равен ли он 0 или None)
-device_ready = False
-if device_id and device_id != 0 and device_id != "0":
-    device_ready = True
 
 
 # --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
@@ -62,179 +58,195 @@ if "user_name" not in st.session_state:
     st.session_state.user_name = "Преподаватель"
 if "trial_expired" not in st.session_state:
     st.session_state.trial_expired = False
+if "login_pending" not in st.session_state:
+    st.session_state.login_pending = False
+if "saved_email" not in st.session_state:
+    st.session_state.saved_email = ""
+if "js_attempts" not in st.session_state:
+    st.session_state.js_attempts = 0
 
 if not st.session_state.user_email:
     st.subheader("🔑 Доступ к Генератору Карточек")
     st.write("Введите ваш Email для входа. Новым пользователям автоматически предоставляется 3 дня бесплатного доступа!")
     
-    email_input = st.text_input("Ваш Email:", key="login_email_field")
+    email_input = st.text_input("Ваш Email:", value=st.session_state.saved_email)
     
-    # --- УМНАЯ АКТИВАЦИЯ КНОПКИ ПОД ГОТОВНОСТЬ JS ---
-    if device_ready:
-        login_clicked = st.button("Войти", type="primary")
-    else:
-        st.button("🔒 Настройка защищенного соединения...", disabled=True)
-        login_clicked = False
-
-    if login_clicked:
-        if "@" not in email_input or "." not in email_input:
-            st.error("Пожалуйста, введите корректный адрес электронной почты.")
+    # Кнопка всегда активна и доступна мгновенно
+    if st.button("Войти", type="primary") or st.session_state.login_pending:
+        st.session_state.login_pending = True
+        st.session_state.saved_email = email_input
+        
+        # Проверяем, успел ли подгрузиться фоновый скрипт устройства
+        device_ready = bool(device_id and device_id != 0 and device_id != "0")
+        
+        # Если пользователь кликнул слишком быстро — даем JS долю секунды на подгрузку
+        if not device_ready and st.session_state.js_attempts < 3:
+            st.session_state.js_attempts += 1
+            with st.spinner("🔒 Проверка безопасности..."):
+                import time
+                time.sleep(0.4)
+                st.rerun()
         else:
-            email = email_input.strip().lower()
-            try:
-                gc = get_gsheets_client()
-                sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-                users_sheet = sh.worksheet("Users")
-                
-                rows = users_sheet.get_all_values()
-                # Добавляем Name и Device ID в шапку, если таблица пустая
-                if not rows:
-                    users_sheet.append_row(["Email", "Registration Date", "Status", "Name", "Device ID"])
-                    rows = [["Email", "Registration Date", "Status", "Name", "Device ID"]]
-                
-                user_row = None
-                for i, r in enumerate(rows[1:], start=2):
-                    if r[0].strip().lower() == email:
-                        user_row = (i, r)
-                        break
-                
-                if user_row:
-                    row_num, row_data = user_row
-                    reg_date_str = row_data[1]
-                    status = row_data[2] if len(row_data) > 2 else "active"
-                    st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+            # Сбрасываем флаги ожидания, так как ID получен или сработал таймаут
+            st.session_state.login_pending = False
+            st.session_state.js_attempts = 0
+            
+            device_id_clean = str(device_id).strip() if device_ready else "unknown"
+            
+            if "@" not in email_input or "." not in email_input:
+                st.error("Пожалуйста, введите корректный адрес электронной почты.")
+            else:
+                email = email_input.strip().lower()
+                try:
+                    gc = get_gsheets_client()
+                    sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                    users_sheet = sh.worksheet("Users")
                     
-                    if status == "blocked":
-                        st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
-                        st.stop()
+                    rows = users_sheet.get_all_values()
+                    if not rows:
+                        users_sheet.append_row(["Email", "Registration Date", "Status", "Name", "Device ID"])
+                        rows = [["Email", "Registration Date", "Status", "Name", "Device ID"]]
+                    
+                    user_row = None
+                    for i, r in enumerate(rows[1:], start=2):
+                        if r[0].strip().lower() == email:
+                            user_row = (i, r)
+                            break
+                    
+                    if user_row:
+                        row_num, row_data = user_row
+                        reg_date_str = row_data[1]
+                        status = row_data[2] if len(row_data) > 2 else "active"
+                        st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
                         
-                    # --- УМНЫЙ АПГРЕЙД: ЕСЛИ БЫЛ ТРИАЛ, НО ПОЯВИЛАСЬ ОПЛАТА ---
-                    if status == "active":
+                        if status == "blocked":
+                            st.error("🚫 Ваш доступ заблокирован. Пожалуйста, обратитесь к администратору.")
+                            st.stop()
+                            
+                        # --- УМНЫЙ АПГРЕЙД: ЕСЛИ БЫЛ ТРИАЛ, НО ПОЯВИЛАСЬ ОПЛАТА ---
+                        if status == "active":
+                            has_paid = False
+                            try:
+                                payments_sheet = sh.worksheet("Payments")
+                                payments_rows = payments_sheet.get_all_values()
+                                
+                                for p_row in payments_rows[1:]:
+                                    if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                        has_price = len(p_row) > 6 and p_row[6].strip()
+                                        has_order = len(p_row) > 3 and p_row[3].strip()
+                                        
+                                        if has_price or has_order:
+                                            has_paid = True
+                                            if p_row[0].strip():
+                                                st.session_state.user_name = p_row[0].strip()
+                                            break
+                            except Exception:
+                                pass
+                            
+                            if has_paid:
+                                status = "paid"
+                                users_sheet.update_cell(row_num, 3, "paid")
+                                users_sheet.update_cell(row_num, 4, st.session_state.user_name)
+                                try:
+                                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    logs_sheet = sh.worksheet("Logs")
+                                    logs_sheet.append_row([now_str, email, "Апгрейд", "Пользователь успешно перешел с тест-драйва на платный тариф!"])
+                                except Exception:
+                                    pass
+
+                        if status == "paid":
+                            st.session_state.user_email = email
+                            st.session_state.trial_expired = False
+                            st.rerun()
+                        else:
+                            reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
+                            expiration_date = reg_date + timedelta(days=3)
+                            
+                            st.session_state.user_email = email
+                            if datetime.now() > expiration_date:
+                                st.session_state.trial_expired = True
+                            else:
+                                st.session_state.trial_expired = False
+                            st.rerun()
+                    else:
+                        now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                        
+                        # --- УМНАЯ ПРОВЕРКА ТАНДЕМА С ТИЛЬДОЙ ---
                         has_paid = False
+                        tilda_name = "Преподаватель"
+                        tilda_reg_date = now_str
+                        
                         try:
                             payments_sheet = sh.worksheet("Payments")
                             payments_rows = payments_sheet.get_all_values()
                             
                             for p_row in payments_rows[1:]:
                                 if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                    if p_row[0].strip():
+                                        tilda_name = p_row[0].strip()
+                                    
                                     has_price = len(p_row) > 6 and p_row[6].strip()
                                     has_order = len(p_row) > 3 and p_row[3].strip()
                                     
                                     if has_price or has_order:
                                         has_paid = True
-                                        if p_row[0].strip():
-                                            st.session_state.user_name = p_row[0].strip()
                                         break
+                                    else:
+                                        if len(p_row) > 11 and p_row[11].strip():
+                                            raw_date = p_row[11].strip()
+                                            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                                                try:
+                                                    tilda_reg_date = datetime.strptime(raw_date, fmt).strftime("%Y-%m-%d %H:%M:%S")
+                                                    break
+                                                except ValueError:
+                                                    continue
                         except Exception:
                             pass
                         
-                        # Если нашли оплату — меняем статус в базе прямо в текущей строке!
                         if has_paid:
-                            status = "paid"
-                            users_sheet.update_cell(row_num, 3, "paid")  # Столбец C (Status)
-                            users_sheet.update_cell(row_num, 4, st.session_state.user_name)  # Столбец D (Name)
+                            users_sheet.append_row([email, now_str, "paid", tilda_name, device_id_clean])
+                            st.session_state.user_name = tilda_name
+                            st.session_state.user_email = email
+                            st.session_state.trial_expired = False
                             try:
-                                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 logs_sheet = sh.worksheet("Logs")
-                                logs_sheet.append_row([now_str, email, "Апгрейд", "Пользователь успешно перешел с тест-драйва на платный тариф!"])
+                                logs_sheet.append_row([now_str, email, "Авторизация", "Оплата найдена, предоставлен полный доступ"])
                             except Exception:
                                 pass
-
-                    if status == "paid":
-                        st.session_state.user_email = email
-                        st.session_state.trial_expired = False
-                        st.rerun()
-                    else:
-                        reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-                        expiration_date = reg_date + timedelta(days=3)
-                        
-                        st.session_state.user_email = email
-                        if datetime.now() > expiration_date:
-                            st.session_state.trial_expired = True
                         else:
-                            st.session_state.trial_expired = False
-                        st.rerun()
-                else:
-                    now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                    
-                    # --- УМНАЯ ПРОВЕРКА ТАНДЕМА С ТИЛЬДОЙ ---
-                    has_paid = False
-                    tilda_name = "Преподаватель"
-                    tilda_reg_date = now_str
-                    
-                    try:
-                        payments_sheet = sh.worksheet("Payments")
-                        payments_rows = payments_sheet.get_all_values()
-                        
-                        for p_row in payments_rows[1:]:
-                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
-                                if p_row[0].strip():
-                                    tilda_name = p_row[0].strip()
-                                
-                                has_price = len(p_row) > 6 and p_row[6].strip()
-                                has_order = len(p_row) > 3 and p_row[3].strip()
-                                
-                                if has_price or has_order:
-                                    has_paid = True
-                                    break
-                                else:
-                                    if len(p_row) > 11 and p_row[11].strip():
-                                        raw_date = p_row[11].strip()
-                                        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
-                                            try:
-                                                tilda_reg_date = datetime.strptime(raw_date, fmt).strftime("%Y-%m-%d %H:%M:%S")
-                                                break
-                                            except ValueError:
-                                                continue
-                    except Exception:
-                        pass
-                    
-                    if has_paid:
-                        # Платящих пускаем без жестких проверок устройства
-                        users_sheet.append_row([email, now_str, "paid", tilda_name, str(device_id).strip()])
-                        st.session_state.user_name = tilda_name
-                        st.session_state.user_email = email
-                        st.session_state.trial_expired = False
-                        try:
-                            logs_sheet = sh.worksheet("Logs")
-                            logs_sheet.append_row([now_str, email, "Авторизация", "Оплата найдена, предоставлен полный доступ"])
-                        except Exception:
-                            pass
-                    else:
-                        # --- АНТИ-ФРОД ПРОВЕРКА УСТРОЙСТВА ДЛЯ ТЕСТ-ДРАЙВА ---
-                        device_already_used = False
-                        current_device_str = str(device_id).strip()
-                        
-                        for r in rows[1:]:
-                            if len(r) > 4 and r[4].strip() == current_device_str:
-                                device_already_used = True
-                                break
-                        
-                        if device_already_used:
-                            st.error("🚫 С этого устройства уже запрашивался бесплатный тест-драйв для другого аккаунта. Пожалуйста, войдите под вашей первой почтой или выберите платный тариф на сайте.")
-                            st.stop()
-                        
-                        # Если всё чисто — регистрируем триал с честным ID устройства
-                        users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, current_device_str])
-                        st.session_state.user_name = tilda_name
-                        st.session_state.user_email = email
-                        
-                        reg_date = datetime.strptime(tilda_reg_date, "%Y-%m-%d %H:%M:%S")
-                        if datetime.now() > (reg_date + timedelta(days=3)):
-                            st.session_state.trial_expired = True
-                        else:
-                            st.session_state.trial_expired = False
+                            # --- АНТИ-ФРОД ПРОВЕРКА УСТРОЙСТВА ДЛЯ ТЕСТ-ДРАЙВА ---
+                            device_already_used = False
+                            if device_id_clean != "unknown":
+                                for r in rows[1:]:
+                                    if len(r) > 4 and r[4].strip() == device_id_clean:
+                                        device_already_used = True
+                                        break
                             
-                        try:
-                            logs_sheet = sh.worksheet("Logs")
-                            logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date} (ID устройства: {current_device_str})"])
-                        except Exception:
-                            pass
-                    
-                    st.rerun()
-                    
-            except Exception as e:
-                st.error(f"Ошибка базы данных: {e}")
+                            if device_already_used:
+                                st.error("🚫 С этого устройства уже запрашивался бесплатный тест-драйв для другого аккаунта. Пожалуйста, войдите под вашей первой почтой или выберите платный тариф на сайте.")
+                                st.stop()
+                            
+                            # Регистрируем триал
+                            users_sheet.append_row([email, tilda_reg_date, "active", tilda_name, device_id_clean])
+                            st.session_state.user_name = tilda_name
+                            st.session_state.user_email = email
+                            
+                            reg_date = datetime.strptime(tilda_reg_date, "%Y-%m-%d %H:%M:%S")
+                            if datetime.now() > (reg_date + timedelta(days=3)):
+                                st.session_state.trial_expired = True
+                            else:
+                                st.session_state.trial_expired = False
+                                
+                            try:
+                                logs_sheet = sh.worksheet("Logs")
+                                logs_sheet.append_row([now_str, email, "Регистрация", f"Новый пользователь начал пробный период от {tilda_reg_date} (ID устройства: {device_id_clean})"])
+                            except Exception:
+                                pass
+                        
+                        st.rerun()
+                        
+                except Exception as e:
+                    st.error(f"Ошибка базы данных: {e}")
                 
     # --- ЮРИДИЧЕСКИЙ БЛОК СОГЛАСИЯ ПОД КНОПКОЙ ---
     st.markdown(
@@ -466,7 +478,7 @@ def extract_text_from_url(url):
             lines = (line.strip() for line in text.splitlines())
             chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
             return '\n'.join(chunk for chunk in chunks if chunk)[:8000]
-        return f"Ошибка загрузки сайта: Status {response.status_code}"
+        return f"Ошибка загрузки сайта: Статус {response.status_code}"
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
