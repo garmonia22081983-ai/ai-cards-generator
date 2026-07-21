@@ -346,27 +346,66 @@ if student_deck_id:
         st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
         st.caption(f"Всего карточек: {len(cards_data)}")
         
-        if "student_flipped" not in st.session_state:
-            st.session_state.student_flipped = {}
-            
-        cols = st.columns(3)
-        for i, card in enumerate(cards_data):
-            col_idx = i % 3
-            with cols[col_idx]:
-                is_flipped = st.session_state.student_flipped.get(i, False)
-                encoded_word = urllib.parse.quote(str(card.get('word', '')))
+        # --- КНОПКИ ЭКСПОРТА И ПЕЧАТИ ДЛЯ УЧЕНИКА ---
+        col_s_exp1, col_s_exp2 = st.columns(2)
+        with col_s_exp1:
+            anki_list_student = []
+            for card in cards_data:
+                encoded_w = urllib.parse.quote(str(card.get('word', '')))
+                anki_back = (
+                    f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
+                    f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
+                    f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{card.get('transcription', '')}</p>"
+                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card.get('explanation', '')}</p>"
+                    f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
+                    f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
+                    f"</div>"
+                )
+                anki_list_student.append({"Front": card.get('word', ''), "Back": anki_back})
                 
-                if not is_flipped:
-                    front_html = f"""<div class="card-front">
+            df_s = pd.DataFrame(anki_list_student)
+            csv_s = df_s.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+            st.download_button(label="📱 Скачать файл для Anki / Quizlet", data=csv_s, file_name=f"{deck_name}_anki.txt", mime="text/plain", key="s_anki_btn")
+            
+        with col_s_exp2:
+            student_print_mode = st.checkbox("🖨️ Включить режим для печати", key="s_print_mode")
+
+        st.write("---")
+
+        if student_print_mode:
+            for card in cards_data:
+                print_html = f"""<div class="print-row">
+<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
+<div class="print-col">
+<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+<p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
+</div>
+</div>"""
+                st.markdown(print_html, unsafe_allow_html=True)
+        else:
+            if "student_flipped" not in st.session_state:
+                st.session_state.student_flipped = {}
+                
+            cols = st.columns(3)
+            for i, card in enumerate(cards_data):
+                col_idx = i % 3
+                with cols[col_idx]:
+                    is_flipped = st.session_state.student_flipped.get(i, False)
+                    encoded_word = urllib.parse.quote(str(card.get('word', '')))
+                    
+                    if not is_flipped:
+                        front_html = f"""<div class="card-front">
 <span class="card-front-title">{card.get('word', '')}</span>
 <span class="card-front-subtitle">English Word</span>
 </div>"""
-                    st.markdown(front_html, unsafe_allow_html=True)
-                    if st.button("🔄 Перевернуть", key=f"s_flip_{i}", use_container_width=True):
-                        st.session_state.student_flipped[i] = True
-                        st.rerun()
-                else:
-                    back_html = f"""<div class="card-back">
+                        st.markdown(front_html, unsafe_allow_html=True)
+                        if st.button("🔄 Перевернуть", key=f"s_flip_{i}", use_container_width=True):
+                            st.session_state.student_flipped[i] = True
+                            st.rerun()
+                    else:
+                        back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
 <span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
 <span style="color: #718096; font-size: 11px;">{card.get('transcription', '')}</span>
@@ -391,10 +430,10 @@ if student_deck_id:
     </div>
 </div>
 </div>"""
-                    st.markdown(back_html, unsafe_allow_html=True)
-                    if st.button("👈 Показать слово", key=f"s_unflip_{i}", use_container_width=True):
-                        st.session_state.student_flipped[i] = False
-                        st.rerun()
+                        st.markdown(back_html, unsafe_allow_html=True)
+                        if st.button("👈 Показать слово", key=f"s_unflip_{i}", use_container_width=True):
+                            st.session_state.student_flipped[i] = False
+                            st.rerun()
 
     except Exception as e:
         st.error(f"Ошибка загрузки колоды: {e}")
@@ -722,7 +761,7 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК С МОИМИ КОЛОДАМИ ---
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК С ОПТИМИЗИРОВАННЫМИ МОИМИ КОЛОДАМИ ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
@@ -744,23 +783,45 @@ with st.sidebar:
             if not my_decks:
                 st.caption("У вас пока нет сохраненных колод.")
             else:
-                for d in reversed(my_decks):
+                # Фильтр и поиск по колодам для масштабируемости (даже если 50+ колод)
+                search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
+                show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
+                
+                all_my_decks_rev = list(reversed(my_decks))
+                
+                if search_q:
+                    filtered_decks = [d for d in all_my_decks_rev if search_q in d[2].lower()]
+                else:
+                    filtered_decks = all_my_decks_rev
+                    
+                display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
+                
+                if not search_q and len(my_decks) > 5 and not show_all:
+                    st.caption(f"Показано последние 5 из {len(my_decks)}. Включите галочку выше для всего списка.")
+                
+                for d in display_decks:
                     d_id = d[0]
                     d_name = d[2]
                     d_level = d[3]
                     d_cards_json = d[5]
                     
                     st.write(f"**{d_name}** ({d_level})")
+                    
+                    # Две кнопки на ОДНОМ уровне
                     c1, c2 = st.columns(2)
                     with c1:
-                        if st.button("👁️ Открыть", key=f"open_{d_id}"):
+                        if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
                             st.session_state.cards = json.loads(d_cards_json)
                             st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
                             st.rerun()
                     with c2:
+                        if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
+                            st.session_state[f"show_link_{d_id}"] = not st.session_state.get(f"show_link_{d_id}", False)
+                            
+                    if st.session_state.get(f"show_link_{d_id}", False):
                         student_link = f"{APP_URL}?deck={d_id}"
-                        st.caption("Ссылка для ученика:")
                         st.code(student_link, language=None)
+                        
                     st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
         except Exception:
             st.caption("Не удалось загрузить список колод.")
