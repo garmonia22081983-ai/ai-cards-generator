@@ -98,12 +98,17 @@ if "generated_otp" not in st.session_state:
     st.session_state.generated_otp = None
 if "pending_email" not in st.session_state:
     st.session_state.pending_email = None
+if "logout_requested" not in st.session_state:
+    st.session_state.logout_requested = False
 
 
 # --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 saved_email = cookie_manager.get(cookie="auth_email")
 
-if saved_email and not st.session_state.user_email:
+if not saved_email:
+    st.session_state.logout_requested = False
+
+if saved_email and not st.session_state.user_email and not st.session_state.logout_requested:
     email = str(saved_email).strip().lower()
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     
@@ -116,12 +121,14 @@ if saved_email and not st.session_state.user_email:
         try:
             gc = get_gsheets_client()
             sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+            
+            # 1. Проверяем вкладку Users
             users_sheet = sh.worksheet("Users")
             rows = users_sheet.get_all_values()
             
             user_row = None
             for i, r in enumerate(rows[1:], start=2):
-                if r[0].strip().lower() == email:
+                if len(r) > 0 and r[0].strip().lower() == email:
                     user_row = (i, r)
                     break
             
@@ -131,26 +138,6 @@ if saved_email and not st.session_state.user_email:
                 status = row_data[2] if len(row_data) > 2 else "active"
                 st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
                 
-                if status == "active":
-                    has_paid = False
-                    try:
-                        payments_sheet = sh.worksheet("Payments")
-                        payments_rows = payments_sheet.get_all_values()
-                        for p_row in payments_rows[1:]:
-                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
-                                if len(p_row) > 6 and p_row[6].strip() or len(p_row) > 3 and p_row[3].strip():
-                                    has_paid = True
-                                    if p_row[0].strip():
-                                        st.session_state.user_name = p_row[0].strip()
-                                    break
-                    except Exception:
-                        pass
-                    
-                    if has_paid:
-                        status = "paid"
-                        users_sheet.update_cell(row_num, 3, "paid")
-                        users_sheet.update_cell(row_num, 4, st.session_state.user_name)
-                
                 if status == "paid":
                     last_pay_date = datetime.now()
                     try:
@@ -159,7 +146,7 @@ if saved_email and not st.session_state.user_email:
                         for p_row in reversed(payments_rows[1:]):
                             if len(p_row) > 1 and p_row[1].strip().lower() == email:
                                 raw_d = p_row[11].strip() if len(p_row) > 11 else ""
-                                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S"):
+                                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
                                     try:
                                         last_pay_date = datetime.strptime(raw_d, fmt)
                                         break
@@ -256,30 +243,66 @@ if not st.session_state.user_email:
                     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
                     
                     st.session_state.user_email = email
+                    st.session_state.logout_requested = False
                     
-                    # 1. АДМИНИСТРАТОР (Записываем куки и плавно обновляем)
+                    # 1. АДМИНИСТРАТОР
                     if email in clean_admin_emails:
                         cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
                         st.session_state.user_name = "Администратор"
                         st.session_state.trial_expired = False
-                        st.success("Успешный вход! Сохранение авторизации...")
-                        time.sleep(0.5)
+                        st.success("Успешный вход!")
+                        time.sleep(0.3)
                         st.rerun()
                     
-                    # 2. ОБЫЧНЫЙ ПОЛЬЗОВАТЕЛЬ
+                    # 2. ОБЫЧНЫЙ ПОЛЬЗОВАТЕЛЬ (ИЛИ НОВЫЙ ИЗ PAYMENTS)
                     try:
                         gc = get_gsheets_client()
                         sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                        
                         users_sheet = sh.worksheet("Users")
                         rows = users_sheet.get_all_values()
                         
                         user_row = None
                         for i, r in enumerate(rows[1:], start=2):
-                            if r[0].strip().lower() == email:
+                            if len(r) > 0 and r[0].strip().lower() == email:
                                 user_row = (i, r)
                                 break
                         
-                        if user_row:
+                        # Если пользователя ЕЩЕ НЕТ в Users (первый вход после формы на сайте):
+                        if not user_row:
+                            payments_sheet = sh.worksheet("Payments")
+                            p_rows = payments_sheet.get_all_values()
+                            
+                            found_p = None
+                            for p in reversed(p_rows[1:]):
+                                if len(p) > 1 and p[1].strip().lower() == email:
+                                    found_p = p
+                                    break
+                            
+                            if found_p:
+                                user_name = found_p[0].strip() if found_p[0].strip() else "Преподаватель"
+                                product_name = found_p[5].strip() if len(found_p) > 5 else ""
+                                price_val = found_p[6].strip() if len(found_p) > 6 else ""
+                                reg_time_str = found_p[11].strip() if len(found_p) > 11 else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                
+                                # Определяем статус: если есть цена или товар — paid, иначе active
+                                new_status = "paid" if (product_name or price_val) else "active"
+                                
+                                # Записываем пользователя в Users
+                                users_sheet.append_row([email, reg_time_str, new_status, user_name])
+                                
+                                st.session_state.user_name = user_name
+                                if new_status == "paid":
+                                    exp_date = datetime.now() + timedelta(days=30)
+                                    st.session_state.trial_expired = False
+                                else:
+                                    exp_date = datetime.now() + timedelta(days=3)
+                                    st.session_state.trial_expired = False
+                                
+                                cookie_manager.set("auth_email", email, expires_at=exp_date)
+                        
+                        # Если пользователь УЖЕ ЕСТЬ в Users:
+                        else:
                             row_num, row_data = user_row
                             reg_date_str = row_data[1]
                             status = row_data[2] if len(row_data) > 2 else "active"
@@ -289,26 +312,6 @@ if not st.session_state.user_email:
                                 st.error("🚫 Ваш доступ заблокирован.")
                                 st.stop()
                                 
-                            if status == "active":
-                                has_paid = False
-                                try:
-                                    payments_sheet = sh.worksheet("Payments")
-                                    payments_rows = payments_sheet.get_all_values()
-                                    for p_row in payments_rows[1:]:
-                                        if len(p_row) > 1 and p_row[1].strip().lower() == email:
-                                            if len(p_row) > 6 and p_row[6].strip() or len(p_row) > 3 and p_row[3].strip():
-                                                has_paid = True
-                                                if p_row[0].strip():
-                                                    st.session_state.user_name = p_row[0].strip()
-                                                break
-                                except Exception:
-                                    pass
-                                
-                                if has_paid:
-                                    status = "paid"
-                                    users_sheet.update_cell(row_num, 3, "paid")
-                                    users_sheet.update_cell(row_num, 4, st.session_state.user_name)
-                            
                             if status == "paid":
                                 last_pay_date = datetime.now()
                                 try:
@@ -317,7 +320,7 @@ if not st.session_state.user_email:
                                     for p_row in reversed(payments_rows[1:]):
                                         if len(p_row) > 1 and p_row[1].strip().lower() == email:
                                             raw_d = p_row[11].strip() if len(p_row) > 11 else ""
-                                            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S"):
+                                            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
                                                 try:
                                                     last_pay_date = datetime.strptime(raw_d, fmt)
                                                     break
@@ -342,8 +345,8 @@ if not st.session_state.user_email:
                                     st.session_state.trial_expired = False
                                     cookie_manager.set("auth_email", email, expires_at=exp_date)
                                     
-                        st.success("Успешный вход! Сохранение авторизации...")
-                        time.sleep(0.5)
+                        st.success("Успешный вход!")
+                        time.sleep(0.3)
                         st.rerun()
                     except Exception as e:
                         st.error(f"Ошибка авторизации: {e}")
@@ -378,7 +381,8 @@ if st.sidebar.button("Выйти из аккаунта"):
     st.session_state.user_email = None
     st.session_state.otp_sent = False
     st.session_state.trial_expired = False
-    time.sleep(0.5)
+    st.session_state.logout_requested = True
+    time.sleep(0.3)
     st.rerun()
 
 
