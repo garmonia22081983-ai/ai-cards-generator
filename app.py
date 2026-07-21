@@ -18,6 +18,9 @@ import random
 import extra_streamlit_components as stx
 import time
 
+# --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ ---
+APP_URL = "https://ai-cards-generator.streamlit.app"
+
 # --- СПИСОК EMAIL АДМИНИСТРАТОРОВ (БЕЗ ОГРАНИЧЕНИЙ) ---
 ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"  # Твой админский адрес
@@ -386,7 +389,7 @@ if student_deck_id:
     except Exception as e:
         st.error(f"Ошибка загрузки колоды: {e}")
 
-    st.stop()  # Блокируем показ интерфейса учителя для ученика
+    st.stop()
 
 
 # ==============================================================================
@@ -745,7 +748,7 @@ with st.sidebar:
                             st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
                             st.rerun()
                     with c2:
-                        student_link = f"https://flashcards-ai.streamlit.app/?deck={d_id}"
+                        student_link = f"{APP_URL}/?deck={d_id}"
                         st.text_input("Ссылка для ученика:", value=student_link, key=f"link_{d_id}")
                     st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
         except Exception:
@@ -976,7 +979,7 @@ if st.session_state.cards:
                     now_str
                 ])
                 
-                share_url = f"https://flashcards-ai.streamlit.app/?deck={new_deck_id}"
+                share_url = f"{APP_URL}/?deck={new_deck_id}"
                 st.success(f"✅ Колода «{deck_title_input}» успешно сохранена!")
                 st.info(f"🔗 Ссылка для отправки ученикам:\n`{share_url}`")
             except Exception as save_err:
