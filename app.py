@@ -16,13 +16,14 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import random
 import extra_streamlit_components as stx
+import time
 
 # --- СПИСОК EMAIL АДМИНИСТРАТОРОВ (БЕЗ ОГРАНИЧЕНИЙ) ---
 ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"  # Твой админский адрес
 ]
 
-# --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА (БЕЗ ОШИБОЧНОГО ДЕКОРАТОРА) ---
+# --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
 # --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
@@ -256,11 +257,13 @@ if not st.session_state.user_email:
                     
                     st.session_state.user_email = email
                     
-                    # 1. АДМИНИСТРАТОР
+                    # 1. АДМИНИСТРАТОР (Записываем куки и плавно обновляем)
                     if email in clean_admin_emails:
                         cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
                         st.session_state.user_name = "Администратор"
                         st.session_state.trial_expired = False
+                        st.success("Успешный вход! Сохранение авторизации...")
+                        time.sleep(0.5)
                         st.rerun()
                     
                     # 2. ОБЫЧНЫЙ ПОЛЬЗОВАТЕЛЬ
@@ -339,6 +342,8 @@ if not st.session_state.user_email:
                                     st.session_state.trial_expired = False
                                     cookie_manager.set("auth_email", email, expires_at=exp_date)
                                     
+                        st.success("Успешный вход! Сохранение авторизации...")
+                        time.sleep(0.5)
                         st.rerun()
                     except Exception as e:
                         st.error(f"Ошибка авторизации: {e}")
@@ -373,6 +378,7 @@ if st.sidebar.button("Выйти из аккаунта"):
     st.session_state.user_email = None
     st.session_state.otp_sent = False
     st.session_state.trial_expired = False
+    time.sleep(0.5)
     st.rerun()
 
 
