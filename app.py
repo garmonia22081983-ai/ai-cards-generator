@@ -22,12 +22,8 @@ ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"  # Твой админский адрес
 ]
 
-# --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
-@st.cache_resource(experimental_allow_widgets=True)
-def get_cookie_manager():
-    return stx.CookieManager()
-
-cookie_manager = get_cookie_manager()
+# --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА (БЕЗ ОШИБОЧНОГО ДЕКОРАТОРА) ---
+cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
 # --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -174,12 +170,14 @@ if saved_email and not st.session_state.user_email:
                     
                     if datetime.now() > (last_pay_date + timedelta(days=30)):
                         st.session_state.trial_expired = True
+                        cookie_manager.delete("auth_email")
                     else:
                         st.session_state.trial_expired = False
                 else:
                     reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
                     if datetime.now() > (reg_date + timedelta(days=3)):
                         st.session_state.trial_expired = True
+                        cookie_manager.delete("auth_email")
                     else:
                         st.session_state.trial_expired = False
         except Exception:
@@ -256,16 +254,16 @@ if not st.session_state.user_email:
                     email = st.session_state.pending_email
                     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
                     
-                    # СОХРАНЯЕМ КУКИ НА 30 ДНЕЙ
-                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=30))
-                    
                     st.session_state.user_email = email
                     
+                    # 1. АДМИНИСТРАТОР
                     if email in clean_admin_emails:
+                        cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
                         st.session_state.user_name = "Администратор"
                         st.session_state.trial_expired = False
                         st.rerun()
                     
+                    # 2. ОБЫЧНЫЙ ПОЛЬЗОВАТЕЛЬ
                     try:
                         gc = get_gsheets_client()
                         sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
@@ -326,16 +324,20 @@ if not st.session_state.user_email:
                                 except Exception:
                                     pass
                                 
-                                if datetime.now() > (last_pay_date + timedelta(days=30)):
+                                exp_date = last_pay_date + timedelta(days=30)
+                                if datetime.now() > exp_date:
                                     st.session_state.trial_expired = True
                                 else:
                                     st.session_state.trial_expired = False
+                                    cookie_manager.set("auth_email", email, expires_at=exp_date)
                             else:
                                 reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-                                if datetime.now() > (reg_date + timedelta(days=3)):
+                                exp_date = reg_date + timedelta(days=3)
+                                if datetime.now() > exp_date:
                                     st.session_state.trial_expired = True
                                 else:
                                     st.session_state.trial_expired = False
+                                    cookie_manager.set("auth_email", email, expires_at=exp_date)
                                     
                         st.rerun()
                     except Exception as e:
@@ -367,7 +369,6 @@ if not st.session_state.user_email:
 # --- КНОПКА ВЫХОДА В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
-    # СТИРАЕМ КУКИ ПРИ ВЫХОДЕ
     cookie_manager.delete("auth_email")
     st.session_state.user_email = None
     st.session_state.otp_sent = False
