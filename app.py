@@ -799,25 +799,62 @@ if generate_click:
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
-# --- ОТРИСОВКА КАРТОЧЕК ---
+# --- ОТРИСОВКА И РЕДАКТИРОВАНИЕ КАРТОЧЕК ---
 if st.session_state.cards:
     st.write("---")
+    
+    # ✏️ ВАРИАНТ А: Скрытый блок редактирования в спойлере
+    with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
+        st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
+        
+        # Подготавливаем DataFrame для редактора
+        df_edit = pd.DataFrame(st.session_state.cards)
+        
+        # Гарантируем наличие всех необходимых полей
+        required_cols = ["word", "translation", "transcription", "explanation", "collocations", "context"]
+        for col in required_cols:
+            if col not in df_edit.columns:
+                df_edit[col] = ""
+        
+        # Настраиваем порядок колонок
+        df_edit = df_edit[required_cols]
+        
+        # Интерактивный редактор с понятными заголовками
+        edited_df = st.data_editor(
+            df_edit,
+            num_rows="dynamic", # Позволяет удалять или добавлять строки
+            use_container_width=True,
+            key="cards_data_editor",
+            column_config={
+                "word": st.column_config.TextColumn("Слово / Фраза (EN)", required=True),
+                "translation": st.column_config.TextColumn("Перевод (RU)", required=True),
+                "transcription": st.column_config.TextColumn("Транскрипция"),
+                "explanation": st.column_config.TextColumn("Дефиниция (EN)"),
+                "collocations": st.column_config.TextColumn("Коллокации"),
+                "context": st.column_config.TextColumn("Контекстное предложение"),
+            }
+        )
+        
+        # Синхронизируем отредактированные данные обратно в session_state
+        st.session_state.cards = edited_df.to_dict(orient="records")
+
+    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ ---
     col_exp1, col_exp2 = st.columns(2)
     
     with col_exp1:
         anki_list = []
         for card in st.session_state.cards:
-            encoded_w = urllib.parse.quote(card['word'])
+            encoded_w = urllib.parse.quote(str(card.get('word', '')))
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card['translation']}</h2>"
+                f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
                 f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{card.get('transcription', '')}</p>"
-                f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card['explanation']}</p>"
+                f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card.get('explanation', '')}</p>"
                 f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
-                f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card['context']}</p>"
+                f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
                 f"</div>"
             )
-            anki_list.append({"Front": card['word'], "Back": anki_back})
+            anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
             
         df = pd.DataFrame(anki_list)
         csv = df.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
@@ -826,15 +863,16 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
+    # --- РЕЖИМ ПЕЧАТИ ИЛИ ИНТЕРАКТИВНЫЕ КАРТОЧКИ ---
     if print_mode:
         for card in st.session_state.cards:
             print_html = f"""<div class="print-row">
-<div class="print-col print-left">{card['word']}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
+<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
-<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card['translation']}</h4>
-<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card['explanation']}</p>
+<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
 <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
-<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card['context']}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
 </div>"""
             st.markdown(print_html, unsafe_allow_html=True)
@@ -846,11 +884,11 @@ if st.session_state.cards:
             col_idx = i % 3
             with cols[col_idx]:
                 is_flipped = st.session_state.flipped.get(i, False)
-                encoded_word = urllib.parse.quote(card['word'])
+                encoded_word = urllib.parse.quote(str(card.get('word', '')))
                 
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
-<span class="card-front-title">{card['word']}</span>
+<span class="card-front-title">{card.get('word', '')}</span>
 <span class="card-front-subtitle">English Word</span>
 </div>"""
                     st.markdown(front_html, unsafe_allow_html=True)
@@ -860,16 +898,16 @@ if st.session_state.cards:
                 else:
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
-<span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card['word']}</span><br/>
+<span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
 <span style="color: #718096; font-size: 11px;">{card.get('transcription', '')}</span>
 </div>
-<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {card['explanation']}</div>
+<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {card.get('explanation', '')}</div>
 <div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
-<div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card['context']}</i></div>
+<div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
 <div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
-{card['translation']}
+{card.get('translation', '')}
 </div>
 </details>
 <div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
