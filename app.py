@@ -509,7 +509,7 @@ else:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
 
-                    response = model.generatecontent(prompt)
+                    response = model.generate_content(prompt)
                     text_response = response.text.strip()
                     
                     backtick_triple = chr(96) * 3
