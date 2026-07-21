@@ -15,11 +15,19 @@ import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import random
+import extra_streamlit_components as stx
 
 # --- СПИСОК EMAIL АДМИНИСТРАТОРОВ (БЕЗ ОГРАНИЧЕНИЙ) ---
 ADMIN_EMAILS = [
-    "garmonia.22081983@gmail.com"  # Укажи здесь свою почту
+    "garmonia.22081983@gmail.com"  # Твой админский адрес
 ]
+
+# --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
+@st.cache_resource(experimental_allow_widgets=True)
+def get_cookie_manager():
+    return stx.CookieManager()
+
+cookie_manager = get_cookie_manager()
 
 # --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
@@ -95,6 +103,89 @@ if "pending_email" not in st.session_state:
     st.session_state.pending_email = None
 
 
+# --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
+saved_email = cookie_manager.get(cookie="auth_email")
+
+if saved_email and not st.session_state.user_email:
+    email = str(saved_email).strip().lower()
+    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+    
+    st.session_state.user_email = email
+    
+    if email in clean_admin_emails:
+        st.session_state.user_name = "Администратор"
+        st.session_state.trial_expired = False
+    else:
+        try:
+            gc = get_gsheets_client()
+            sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+            users_sheet = sh.worksheet("Users")
+            rows = users_sheet.get_all_values()
+            
+            user_row = None
+            for i, r in enumerate(rows[1:], start=2):
+                if r[0].strip().lower() == email:
+                    user_row = (i, r)
+                    break
+            
+            if user_row:
+                row_num, row_data = user_row
+                reg_date_str = row_data[1]
+                status = row_data[2] if len(row_data) > 2 else "active"
+                st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+                
+                if status == "active":
+                    has_paid = False
+                    try:
+                        payments_sheet = sh.worksheet("Payments")
+                        payments_rows = payments_sheet.get_all_values()
+                        for p_row in payments_rows[1:]:
+                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                if len(p_row) > 6 and p_row[6].strip() or len(p_row) > 3 and p_row[3].strip():
+                                    has_paid = True
+                                    if p_row[0].strip():
+                                        st.session_state.user_name = p_row[0].strip()
+                                    break
+                    except Exception:
+                        pass
+                    
+                    if has_paid:
+                        status = "paid"
+                        users_sheet.update_cell(row_num, 3, "paid")
+                        users_sheet.update_cell(row_num, 4, st.session_state.user_name)
+                
+                if status == "paid":
+                    last_pay_date = datetime.now()
+                    try:
+                        payments_sheet = sh.worksheet("Payments")
+                        payments_rows = payments_sheet.get_all_values()
+                        for p_row in reversed(payments_rows[1:]):
+                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                raw_d = p_row[11].strip() if len(p_row) > 11 else ""
+                                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S"):
+                                    try:
+                                        last_pay_date = datetime.strptime(raw_d, fmt)
+                                        break
+                                    except ValueError:
+                                        continue
+                                break
+                    except Exception:
+                        pass
+                    
+                    if datetime.now() > (last_pay_date + timedelta(days=30)):
+                        st.session_state.trial_expired = True
+                    else:
+                        st.session_state.trial_expired = False
+                else:
+                    reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
+                    if datetime.now() > (reg_date + timedelta(days=3)):
+                        st.session_state.trial_expired = True
+                    else:
+                        st.session_state.trial_expired = False
+        except Exception:
+            pass
+
+
 # --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
 if not st.session_state.user_email:
     st.subheader("🔑 Доступ к Генератору Карточек")
@@ -111,7 +202,6 @@ if not st.session_state.user_email:
                 email = email_input.strip().lower()
                 clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
                 
-                # Если почта администратора — пускаем сразу без проверок в таблицах
                 if email in clean_admin_emails:
                     user_exists = True
                 else:
@@ -142,9 +232,8 @@ if not st.session_state.user_email:
                 
                 if not user_exists:
                     st.error("🔴 Ваш Email не найден в системе. Чтобы получить 3 дня бесплатного тест-драйва, пожалуйста, оформите заявку на нашем сайте.")
-                    st.link_button("👉 Получить доступ на flashcards-ai.ru", "https://flashcards-ai.ru", type="primary")
+                    st.link_button("👉 Перейти на flashcards-ai.ru и получить доступ", "https://flashcards-ai.ru", type="primary")
                 else:
-                    # Генерируем 6-значный код и отправляем на почту
                     otp_code = str(random.randint(100000, 999999))
                     with st.spinner("Отправка одноразового кода на вашу почту..."):
                         if send_otp_email(email, otp_code):
@@ -167,15 +256,16 @@ if not st.session_state.user_email:
                     email = st.session_state.pending_email
                     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
                     
+                    # СОХРАНЯЕМ КУКИ НА 30 ДНЕЙ
+                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=30))
+                    
                     st.session_state.user_email = email
                     
-                    # ПРОВЕРКА ПРАВ АДМИНИСТРАТОРА
                     if email in clean_admin_emails:
                         st.session_state.user_name = "Администратор"
                         st.session_state.trial_expired = False
                         st.rerun()
                     
-                    # ОБЫЧНЫЕ ПОЛЬЗОВАТЕЛИ: ПРОВЕРКА СРОКОВ ПОДПИСКИ
                     try:
                         gc = get_gsheets_client()
                         sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
@@ -198,7 +288,6 @@ if not st.session_state.user_email:
                                 st.error("🚫 Ваш доступ заблокирован.")
                                 st.stop()
                                 
-                            # Умный апгрейд
                             if status == "active":
                                 has_paid = False
                                 try:
@@ -219,13 +308,11 @@ if not st.session_state.user_email:
                                     users_sheet.update_cell(row_num, 3, "paid")
                                     users_sheet.update_cell(row_num, 4, st.session_state.user_name)
                             
-                            # Расчет даты окончания доступа
                             if status == "paid":
                                 last_pay_date = datetime.now()
                                 try:
                                     payments_sheet = sh.worksheet("Payments")
                                     payments_rows = payments_sheet.get_all_values()
-                                    # reversed() берет самый свежий платеж снизу таблицы
                                     for p_row in reversed(payments_rows[1:]):
                                         if len(p_row) > 1 and p_row[1].strip().lower() == email:
                                             raw_d = p_row[11].strip() if len(p_row) > 11 else ""
@@ -263,7 +350,6 @@ if not st.session_state.user_email:
                 st.session_state.pending_email = None
                 st.rerun()
 
-    # Юридический блок
     st.markdown(
         """
         <div style="margin-top: 25px; padding-top: 10px; border-top: 1px dashed #cbd5e0;">
@@ -281,6 +367,8 @@ if not st.session_state.user_email:
 # --- КНОПКА ВЫХОДА В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
+    # СТИРАЕМ КУКИ ПРИ ВЫХОДЕ
+    cookie_manager.delete("auth_email")
     st.session_state.user_email = None
     st.session_state.otp_sent = False
     st.session_state.trial_expired = False
@@ -453,7 +541,7 @@ with st.sidebar:
 
 # --- ПРОВЕРКА ОКОНЧАНИЯ ДОСТУПА ---
 if st.session_state.get("trial_expired", False):
-    st.warning("🛑 **Срок действия вашей подписки окончен.**")
+    st.warning("🛑 **Срок действия вашей подписки или бесплатного тест-драйва окончен.**")
     st.info("Вы можете изучать или экспортировать уже сгенерированные в этой сессии карточки ниже. Чтобы продолжить создавать новые уникальные колоды без ограничений, пожалуйста, выберите и оплатите тариф.")
     st.link_button("💳 Посмотреть тарифы и продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
