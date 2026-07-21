@@ -139,6 +139,8 @@ def get_user_tariff_and_usage(email, sh):
                             continue
                     break
 
+        # Считаем карточки из Requests с запасом на разницу часовых поясов (-24 часа)
+        filter_start = period_start - timedelta(days=1)
         requests_sheet = sh.worksheet("Requests")
         req_rows = requests_sheet.get_all_values()
         
@@ -154,7 +156,7 @@ def get_user_tariff_and_usage(email, sh):
                     except ValueError:
                         continue
                 
-                if req_d and req_d >= period_start:
+                if req_d and req_d >= filter_start:
                     try:
                         used_cards += int(r[4].strip())
                     except ValueError:
