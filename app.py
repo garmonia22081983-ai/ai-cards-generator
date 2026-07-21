@@ -96,7 +96,6 @@ def get_user_tariff_and_usage(email, sh):
     period_start = datetime.now() - timedelta(days=3)
 
     try:
-        # 1. Ищем пользователя в Payments
         payments_sheet = sh.worksheet("Payments")
         payments_rows = payments_sheet.get_all_values()
 
@@ -127,7 +126,6 @@ def get_user_tariff_and_usage(email, sh):
                 tariff_name = "Практик"
                 max_cards = 300
         else:
-            # Если оплаты нет, берем дату регистрации из Users
             users_sheet = sh.worksheet("Users")
             u_rows = users_sheet.get_all_values()
             for u in u_rows[1:]:
@@ -141,7 +139,6 @@ def get_user_tariff_and_usage(email, sh):
                             continue
                     break
 
-        # 2. Считаем сгенерированные карточки из Requests
         requests_sheet = sh.worksheet("Requests")
         req_rows = requests_sheet.get_all_values()
         
@@ -510,6 +507,14 @@ input, textarea, select,
     background-image: none !important;
 }}
 
+.tariff-box {{
+    background-color: #ffffff !important;
+    border: 1px solid #ebdcc5;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+}}
+
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -611,7 +616,7 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК И СЧЕТЧИК ЛИМИТОВ ---
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
@@ -622,19 +627,6 @@ with st.sidebar:
         num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
     else:
         num_cards = 0
-
-    st.markdown("---")
-    st.subheader("📊 Твой тариф и лимиты")
-    st.caption(f"Тариф: **{tariff_name.upper()}**")
-    
-    if tariff_name == "АДМИНИСТРАТОР":
-        st.success("👑 Безлимитный доступ")
-    else:
-        progress_val = min(float(used_cards) / float(max_cards), 1.0)
-        st.progress(progress_val)
-        remaining_cards = max(0, max_cards - used_cards)
-        st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
-        st.caption(f"Осталось: **{remaining_cards}** карточек")
 
 
 # --- ПРОВЕРКА ОКОНЧАНИЯ ДОСТУПА ИЛИ ЛИМИТОВ ---
@@ -649,25 +641,48 @@ elif tariff_name != "АДМИНИСТРАТОР" and used_cards >= max_cards:
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
 else:
-    # --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
-    if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
-        user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
-    elif source_type == "🔗 Ссылка на веб-статью":
-        user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
-    else:
-        user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
+    # --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА (КОЛОНКИ: ВВОД СЛЕВА, ТАРИФ СПРАВА) ---
+    col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
-    if st.button("Создать карточки ✨", type="primary"):
+    with col_main:
+        if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
+            user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
+        elif source_type == "🔗 Ссылка на веб-статью":
+            user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
+        else:
+            user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
+
+        generate_click = st.button("Создать карточки ✨", type="primary")
+
+    with col_stats:
+        st.markdown(
+            f"""
+            <div class="tariff-box">
+                <h3 style="margin-top:0; font-size:18px;">📊 Твой тариф и лимиты</h3>
+                <p style="color:#718096; font-size:13px; margin-bottom:12px;">Тариф: <b>{tariff_name.upper()}</b></p>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        if tariff_name == "АДМИНИСТРАТОР":
+            st.success("👑 Безлимитный доступ")
+        else:
+            progress_val = min(float(used_cards) / float(max_cards), 1.0)
+            st.progress(progress_val)
+            remaining_cards = max(0, max_cards - used_cards)
+            st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
+            st.caption(f"Осталось: **{remaining_cards}** карточек")
+
+    if generate_click:
         if not user_input.strip():
             st.warning("Пожалуйста, заполните поле ввода!")
         else:
-            # Оценка количества слов при ручном вводе
             actual_requested = num_cards
             if source_type == "✍️ Готовый список слов":
                 words_list = [w.strip() for w in user_input.replace("\n", ",").split(",") if w.strip()]
                 actual_requested = len(words_list)
 
-            # Проверка лимита перед запуском ИИ
             if tariff_name != "АДМИНИСТРАТОР" and (used_cards + actual_requested) > max_cards:
                 rem = max(0, max_cards - used_cards)
                 st.error(f"🛑 Превышен лимит тарифа! У вас осталось **{rem}** карточек, а вы пытаетесь сгенерировать **{actual_requested}**.")
@@ -733,7 +748,6 @@ else:
                         st.session_state.cards = cards_data
                         st.session_state.flipped = {i: False for i in range(len(cards_data))}
                         
-                        # Запись в Гугл-Таблицу истории генераций
                         try:
                             now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                             request_id = f"req-{int(datetime.now().timestamp())}"
