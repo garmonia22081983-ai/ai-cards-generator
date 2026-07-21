@@ -139,7 +139,6 @@ def get_user_tariff_and_usage(email, sh):
                             continue
                     break
 
-        # Считаем карточки из Requests с запасом на разницу часовых поясов (-24 часа)
         filter_start = period_start - timedelta(days=1)
         requests_sheet = sh.worksheet("Requests")
         req_rows = requests_sheet.get_all_values()
@@ -167,6 +166,232 @@ def get_user_tariff_and_usage(email, sh):
     except Exception:
         return tariff_name, max_cards, 0, period_start
 
+
+# --- СТИЛИ ПРИЛОЖЕНИЯ ---
+def get_base64_of_bin_file(bin_file):
+    with open(bin_file, 'rb') as f:
+        data = f.read()
+    return base64.b64encode(data).decode()
+
+bg_css = ""
+if os.path.exists("background.jpg"):
+    try:
+        bin_str = get_base64_of_bin_file("background.jpg")
+        bg_css = f"background-image: url('data:image/jpeg;base64,{bin_str}') !important;"
+    except Exception:
+        bg_css = "background-color: #f5f0e8 !important;"
+else:
+    bg_css = "background-color: #f5f0e8 !important;"
+
+st.markdown(f"""
+<style>
+html, body, [data-testid="stAppViewContainer"], .stApp {{
+    {bg_css}
+    background-size: cover !important;
+    background-repeat: no-repeat !important;
+    background-attachment: fixed !important;
+    color: #2d3748 !important;
+}}
+
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
+    color: #2d3748 !important;
+}}
+
+[data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}}
+
+input, textarea, select, 
+.stTextInput input, 
+.stTextArea textarea,
+[data-baseweb="base-input"],
+[data-baseweb="textarea"],
+[data-baseweb="select"] > div {{
+    background-color: #ffffff !important;
+    color: #2d3748 !important;
+    -webkit-text-fill-color: #2d3748 !important;
+    border: 1px solid #cbd5e0 !important;
+}}
+
+[data-testid="stSidebar"], 
+.stSidebar, 
+[data-testid="stSidebar"] > div, 
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+    background-color: #f5f0e8 !important;
+    background-image: none !important;
+}}
+
+.tariff-box {{
+    background-color: #ffffff !important;
+    border: 1px solid #ebdcc5;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+}}
+
+.card-front {{
+    background-color: #e3b5b5 !important;
+    border: 1px solid #d49f9f;
+    border-radius: 12px;
+    padding: 15px;
+    text-align: center;
+    min-height: 180px;
+    max-height: 180px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
+}}
+
+.card-front-title {{
+    font-size: 22px;
+    font-weight: bold;
+    font-family: 'Georgia', serif;
+    color: #4a2e2e !important;
+}}
+
+.card-front-subtitle {{
+    font-size: 10px;
+    color: #704b4b !important;
+    margin-top: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+}}
+
+.card-back {{
+    background-color: #ffffff !important;
+    border: 1px solid #ebdcc5;
+    border-radius: 12px;
+    padding: 15px;
+    min-height: 310px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
+    color: #2d3748 !important;
+}}
+
+summary::-webkit-details-marker {{ display: none !important; }}
+summary {{ list-style: none !important; }}
+
+.print-row {{
+    display: flex;
+    border: 1px dashed #ccc;
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+    background-color: #ffffff;
+}}
+.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
+.print-left {{
+    border-right: 1px dashed #ccc;
+    text-align: center;
+    font-weight: bold;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Georgia', serif;
+    color: #1a365d;
+}}
+</style>
+""", unsafe_allow_html=True)
+
+
+# ==============================================================================
+# 🎓 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id)
+# ==============================================================================
+query_params = st.query_params
+student_deck_id = query_params.get("deck", None)
+
+if student_deck_id:
+    st.title("🎴 Интерактивная колода карточек")
+    
+    try:
+        gc_client = get_gsheets_client()
+        sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+        decks_sheet = sh_global.worksheet("Decks")
+        rows = decks_sheet.get_all_values()
+        
+        found_deck = None
+        for r in rows[1:]:
+            if len(r) > 0 and r[0].strip() == student_deck_id:
+                found_deck = r
+                break
+                
+        if not found_deck:
+            st.error("🔴 Колода не найдена или была удалена преподавателем.")
+            st.stop()
+            
+        deck_name = found_deck[2]
+        deck_level = found_deck[3]
+        cards_data = json.loads(found_deck[5])
+        
+        st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
+        st.caption(f"Всего карточек: {len(cards_data)}")
+        
+        if "student_flipped" not in st.session_state:
+            st.session_state.student_flipped = {}
+            
+        cols = st.columns(3)
+        for i, card in enumerate(cards_data):
+            col_idx = i % 3
+            with cols[col_idx]:
+                is_flipped = st.session_state.student_flipped.get(i, False)
+                encoded_word = urllib.parse.quote(str(card.get('word', '')))
+                
+                if not is_flipped:
+                    front_html = f"""<div class="card-front">
+<span class="card-front-title">{card.get('word', '')}</span>
+<span class="card-front-subtitle">English Word</span>
+</div>"""
+                    st.markdown(front_html, unsafe_allow_html=True)
+                    if st.button("🔄 Перевернуть", key=f"s_flip_{i}", use_container_width=True):
+                        st.session_state.student_flipped[i] = True
+                        st.rerun()
+                else:
+                    back_html = f"""<div class="card-back">
+<div style="text-align: center; margin-bottom: 5px;">
+<span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
+<span style="color: #718096; font-size: 11px;">{card.get('transcription', '')}</span>
+</div>
+<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {card.get('explanation', '')}</div>
+<div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
+<div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
+<details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
+<summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
+<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
+{card.get('translation', '')}
+</div>
+</details>
+<div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
+    <div style="display: flex; align-items: center; gap: 4px;">
+        <span style="font-size: 11px; font-weight: bold;">🇺🇸</span>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 28px;"></audio>
+    </div>
+    <div style="display: flex; align-items: center; gap: 4px;">
+        <span style="font-size: 11px; font-weight: bold;">🇬🇧</span>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 28px;"></audio>
+    </div>
+</div>
+</div>"""
+                    st.markdown(back_html, unsafe_allow_html=True)
+                    if st.button("👈 Показать слово", key=f"s_unflip_{i}", use_container_width=True):
+                        st.session_state.student_flipped[i] = False
+                        st.rerun()
+
+    except Exception as e:
+        st.error(f"Ошибка загрузки колоды: {e}")
+
+    st.stop()  # Блокируем показ интерфейса учителя для ученика
+
+
+# ==============================================================================
+# 👩‍🏫 2. ИНТЕРФЕЙС УЧИТЕЛЯ (АВТОРИЗАЦИЯ, ГЕНЕРАЦИЯ, СОХРАНЕНИЕ)
+# ==============================================================================
 
 # --- ИНИЦИАЛИЗАЦИЯ ПЕРЕМЕННЫХ СЕССИИ ---
 if "user_email" not in st.session_state:
@@ -441,7 +666,7 @@ if not st.session_state.user_email:
     st.stop()
 
 
-# --- КНОПКА ВЫХОДА В БОКОВОЙ ПАНЕЛИ ---
+# --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
     cookie_manager.delete("auth_email")
@@ -451,140 +676,6 @@ if st.sidebar.button("Выйти из аккаунта"):
     st.session_state.logout_requested = True
     time.sleep(0.3)
     st.rerun()
-
-
-# --- НАСТРОЙКА ПРЕМИУМ-ДИЗАЙНА И СТИЛЕЙ ---
-def get_base64_of_bin_file(bin_file):
-    with open(bin_file, 'rb') as f:
-        data = f.read()
-    return base64.b64encode(data).decode()
-
-bg_css = ""
-if os.path.exists("background.jpg"):
-    try:
-        bin_str = get_base64_of_bin_file("background.jpg")
-        bg_css = f"background-image: url('data:image/jpeg;base64,{bin_str}') !important;"
-    except Exception:
-        bg_css = "background-color: #f5f0e8 !important;"
-else:
-    bg_css = "background-color: #f5f0e8 !important;"
-
-st.markdown(f"""
-<style>
-html, body, [data-testid="stAppViewContainer"], .stApp {{
-    {bg_css}
-    background-size: cover !important;
-    background-repeat: no-repeat !important;
-    background-attachment: fixed !important;
-    color: #2d3748 !important;
-}}
-
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
-    color: #2d3748 !important;
-}}
-
-[data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
-    background-color: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
-}}
-
-input, textarea, select, 
-.stTextInput input, 
-.stTextArea textarea,
-[data-baseweb="base-input"],
-[data-baseweb="textarea"],
-[data-baseweb="select"] > div {{
-    background-color: #ffffff !important;
-    color: #2d3748 !important;
-    -webkit-text-fill-color: #2d3748 !important;
-    border: 1px solid #cbd5e0 !important;
-}}
-
-[data-testid="stSidebar"], 
-.stSidebar, 
-[data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
-    background-color: #f5f0e8 !important;
-    background-image: none !important;
-}}
-
-.tariff-box {{
-    background-color: #ffffff !important;
-    border: 1px solid #ebdcc5;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-}}
-
-.card-front {{
-    background-color: #e3b5b5 !important;
-    border: 1px solid #d49f9f;
-    border-radius: 12px;
-    padding: 15px;
-    text-align: center;
-    min-height: 180px;
-    max-height: 180px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
-}}
-
-.card-front-title {{
-    font-size: 22px;
-    font-weight: bold;
-    font-family: 'Georgia', serif;
-    color: #4a2e2e !important;
-}}
-
-.card-front-subtitle {{
-    font-size: 10px;
-    color: #704b4b !important;
-    margin-top: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
-}}
-
-.card-back {{
-    background-color: #ffffff !important;
-    border: 1px solid #ebdcc5;
-    border-radius: 12px;
-    padding: 15px;
-    min-height: 310px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
-    color: #2d3748 !important;
-}}
-
-summary::-webkit-details-marker {{ display: none !important; }}
-summary {{ list-style: none !important; }}
-
-.print-row {{
-    display: flex;
-    border: 1px dashed #ccc;
-    margin-bottom: 12px;
-    page-break-inside: avoid;
-    background-color: #ffffff;
-}}
-.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
-.print-left {{
-    border-right: 1px dashed #ccc;
-    text-align: center;
-    font-weight: bold;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Georgia', serif;
-    color: #1a365d;
-}}
-</style>
-""", unsafe_allow_html=True)
 
 st.title("🎴 Умный Генератор Двусторонних Карточек")
 st.write(f"👋 **Рада видеть вас, {st.session_state.get('user_name', 'Преподаватель')}!**")
@@ -618,7 +709,7 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК С МОИМИ КОЛОДАМИ ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
@@ -630,15 +721,43 @@ with st.sidebar:
     else:
         num_cards = 0
 
+    st.write("---")
+    with st.expander("📂 Мои сохраненные колоды"):
+        try:
+            decks_sheet = sh_global.worksheet("Decks")
+            d_rows = decks_sheet.get_all_values()
+            my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
+            
+            if not my_decks:
+                st.caption("У вас пока нет сохраненных колод.")
+            else:
+                for d in reversed(my_decks):
+                    d_id = d[0]
+                    d_name = d[2]
+                    d_level = d[3]
+                    d_cards_json = d[5]
+                    
+                    st.write(f"**{d_name}** ({d_level})")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("👁️ Открыть", key=f"open_{d_id}"):
+                            st.session_state.cards = json.loads(d_cards_json)
+                            st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
+                            st.rerun()
+                    with c2:
+                        student_link = f"https://flashcards-ai.streamlit.app/?deck={d_id}"
+                        st.text_input("Ссылка для ученика:", value=student_link, key=f"link_{d_id}")
+                    st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
+        except Exception:
+            st.caption("Не удалось загрузить список колод.")
+
 
 # --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
 is_expired = st.session_state.get("trial_expired", False)
 is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
 
-# Флаг для блокировки кнопки генерации
 button_disabled = is_expired or is_limit_reached
 
-# Выводим плашку с сообщением над формой ввода, если подписка истекла или лимит исчерпан
 if is_expired:
     st.warning("🛑 **Срок действия вашей подписки окончен.**")
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы продолжить создавать новые колоды, пожалуйста, продлите тариф.")
@@ -650,7 +769,7 @@ elif is_limit_reached:
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
 
-# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА (ОТОБРАЖАЕТСЯ ВСЕГДА) ---
+# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 with col_main:
@@ -661,7 +780,6 @@ with col_main:
     else:
         user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
 
-    # Кнопка становится серой и некликабельной (disabled), если подписка закончилась или исчерпан лимит
     generate_click = st.button(
         "Создать карточки ✨", 
         type="primary", 
@@ -799,30 +917,26 @@ if generate_click:
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
-# --- ОТРИСОВКА И РЕДАКТИРОВАНИЕ КАРТОЧЕК ---
+
+# --- ОТРИСОВКА, РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ КАРТОЧЕК ---
 if st.session_state.cards:
     st.write("---")
     
-    # ✏️ ВАРИАНТ А: Скрытый блок редактирования в спойлере
+    # ✏️ БЛОК РЕДАКТИРОВАНИЯ
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
-        # Подготавливаем DataFrame для редактора
         df_edit = pd.DataFrame(st.session_state.cards)
-        
-        # Гарантируем наличие всех необходимых полей
         required_cols = ["word", "translation", "transcription", "explanation", "collocations", "context"]
         for col in required_cols:
             if col not in df_edit.columns:
                 df_edit[col] = ""
         
-        # Настраиваем порядок колонок
         df_edit = df_edit[required_cols]
         
-        # Интерактивный редактор с понятными заголовками
         edited_df = st.data_editor(
             df_edit,
-            num_rows="dynamic", # Позволяет удалять или добавлять строки
+            num_rows="dynamic",
             use_container_width=True,
             key="cards_data_editor",
             column_config={
@@ -834,9 +948,41 @@ if st.session_state.cards:
                 "context": st.column_config.TextColumn("Контекстное предложение"),
             }
         )
-        
-        # Синхронизируем отредактированные данные обратно в session_state
         st.session_state.cards = edited_df.to_dict(orient="records")
+
+    # 💾 БЛОК СОХРАНЕНИЯ КОЛОДЫ
+    st.markdown("### 💾 Сохранить колоду в личный кабинет")
+    col_save1, col_save2 = st.columns([2, 1])
+    with col_save1:
+        default_deck_title = f"Колода {student_level} — {datetime.now().strftime('%d.%m.%Y')}"
+        deck_title_input = st.text_input("Название колоды:", value=default_deck_title)
+    with col_save2:
+        st.write(" ")
+        st.write(" ")
+        if st.button("💾 Сохранить колоду", type="primary"):
+            try:
+                decks_sheet = sh_global.worksheet("Decks")
+                new_deck_id = f"deck-{int(datetime.now().timestamp())}"
+                cards_json_str = json.dumps(st.session_state.cards, ensure_ascii=False)
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                decks_sheet.append_row([
+                    new_deck_id,
+                    st.session_state.user_email,
+                    deck_title_input.strip(),
+                    student_level,
+                    len(st.session_state.cards),
+                    cards_json_str,
+                    now_str
+                ])
+                
+                share_url = f"https://flashcards-ai.streamlit.app/?deck={new_deck_id}"
+                st.success(f"✅ Колода «{deck_title_input}» успешно сохранена!")
+                st.info(f"🔗 Ссылка для отправки ученикам:\n`{share_url}`")
+            except Exception as save_err:
+                st.error(f"Ошибка сохранения колоды: {save_err}")
+
+    st.write("---")
 
     # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ ---
     col_exp1, col_exp2 = st.columns(2)
