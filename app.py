@@ -18,7 +18,7 @@ import random
 import extra_streamlit_components as stx
 import time
 
-# --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ ---
+# --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 # --- СПИСОК EMAIL АДМИНИСТРАТОРОВ (БЕЗ ОГРАНИЧЕНИЙ) ---
@@ -307,8 +307,18 @@ summary {{ list-style: none !important; }}
 # ==============================================================================
 # 🎓 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id)
 # ==============================================================================
-query_params = st.query_params
-student_deck_id = query_params.get("deck", None)
+student_deck_id = None
+try:
+    if hasattr(st, "query_params"):
+        student_deck_id = st.query_params.get("deck", None)
+    else:
+        q_dict = st.experimental_get_query_params()
+        student_deck_id = q_dict.get("deck", [None])[0]
+        
+    if isinstance(student_deck_id, list):
+        student_deck_id = student_deck_id[0] if student_deck_id else None
+except Exception:
+    student_deck_id = None
 
 if student_deck_id:
     st.title("🎴 Интерактивная колода карточек")
@@ -321,7 +331,7 @@ if student_deck_id:
         
         found_deck = None
         for r in rows[1:]:
-            if len(r) > 0 and r[0].strip() == student_deck_id:
+            if len(r) > 0 and r[0].strip() == str(student_deck_id).strip():
                 found_deck = r
                 break
                 
@@ -748,8 +758,9 @@ with st.sidebar:
                             st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
                             st.rerun()
                     with c2:
-                        student_link = f"{APP_URL}/?deck={d_id}"
-                        st.text_input("Ссылка для ученика:", value=student_link, key=f"link_{d_id}")
+                        student_link = f"{APP_URL}?deck={d_id}"
+                        st.caption("Ссылка для ученика:")
+                        st.code(student_link, language=None)
                     st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
         except Exception:
             st.caption("Не удалось загрузить список колод.")
@@ -979,9 +990,10 @@ if st.session_state.cards:
                     now_str
                 ])
                 
-                share_url = f"{APP_URL}/?deck={new_deck_id}"
+                share_url = f"{APP_URL}?deck={new_deck_id}"
                 st.success(f"✅ Колода «{deck_title_input}» успешно сохранена!")
-                st.info(f"🔗 Ссылка для отправки ученикам:\n`{share_url}`")
+                st.write("🔗 **Ссылка для отправки ученикам:**")
+                st.code(share_url, language=None)
             except Exception as save_err:
                 st.error(f"Ошибка сохранения колоды: {save_err}")
 
