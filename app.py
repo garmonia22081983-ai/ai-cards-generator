@@ -289,8 +289,13 @@ button[data-testid="stBaseButton-primary"]:hover {{
     color: #ffffff !important;
 }}
 
-input, textarea, select, 
-.stTextInput input,
+/* ⬜ Делаем фон карточки авторизации кипельно-белым с красивой тенью */
+[data-testid="stVerticalBlockBorderWrapper"] {{
+    background-color: #ffffff !important;
+    border: 1px solid #ebdcc5 !important;
+    border-radius: 12px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+}}
 
 input, textarea, select, 
 .stTextInput input, 
