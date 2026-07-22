@@ -264,6 +264,7 @@ button[data-testid="stBaseButton-primary"] {{
     border-radius: 8px !important;
     font-weight: bold !important;
     font-size: 15px !important;
+    margin-top: 18px !important; /* 👈 ДОБАВИЛИ ОТСТУП СВЕРХУ */
 }}
 
 /* Белый текст для синей кнопки */
