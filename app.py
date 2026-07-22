@@ -260,22 +260,23 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
-/* 🧡 ГЛАВНАЯ ОРАНЖЕВАЯ КНОПКА */
+/* 💙 ГЛАВНАЯ СИНЯЯ КНОПКА С ОТСТУПОМ СВЕРХУ */
 button[kind="primary"], 
-button[data-testid="stBaseButton-primary"] {{
-    background-color: #ff5722 !important;
+button[data-testid="stBaseButton-primary"] {
+    background-color: #2e6c9e !important;
     color: #ffffff !important;
     border: none !important;
     border-radius: 8px !important;
     font-weight: bold !important;
     font-size: 15px !important;
-}}
+    margin-top: 20px !important;
+}
 
 button[kind="primary"]:hover, 
-button[data-testid="stBaseButton-primary"]:hover {{
-    background-color: #e64a19 !important;
+button[data-testid="stBaseButton-primary"]:hover {
+    background-color: #1a365d !important;
     border: none !important;
-}}
+}
 
 input, textarea, select, 
 .stTextInput input, 
