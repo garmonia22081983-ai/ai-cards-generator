@@ -916,33 +916,33 @@ is_admin_user = (st.session_state.user_email.lower() in clean_admin_emails) if s
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     
-   # 🌟 ПОКАЗЫВАЕМ ВЫБОР МОДЕЛИ ТОЛЬКО АДМИНУ!
+  # 🌟 ПОКАЗЫВАЕМ ВЫБОР МОДЕЛИ ТОЛЬКО АДМИНУ!
 if is_admin_user:
-    model_option = st.selectbox(
+    model_option = st.sidebar.selectbox(
         "Нейросеть (Панель Админа):", 
         ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
     )
 else:
-    model_option = "gemini-2.0-flash"  # По умолчанию для всех учителей
-    
-    source_type = st.radio(
-        "Что берем за основу?", 
-        [
-            "✍️ Готовый список слов",
-            "📝 Текст / Отрывок статьи / Субтитры", 
-            "🎬 Ссылка на YouTube",
-            "📁 Видео или аудио файл (до 5 мин)",
-            "🔗 Ссылка на веб-статью"
-        ],
-        index=0
-    )
-    
-    student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
-    
-    if source_type != "✍️ Готовый список слов":
-        num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
-    else:
-        num_cards = 0
+    model_option = "gemini-2.0-flash"
+
+# --- ВОЗВРАЩАЕМ НАСТРОЙКИ В БОКОВУЮ ПАНЕЛЬ ---
+st.sidebar.markdown("### ⚙️ Настройки generation")
+
+source_type = st.sidebar.radio(
+    "Что берем за основу?",
+    [
+        "✍️ Готовый список слов",
+        "📜 Текст / Отрывок статьи / Субтитры",
+        "🎬 Ссылка на YouTube",
+        "📁 Видео или аудио файл (до 5 мин)",
+        "🔗 Ссылка на веб-статью"
+    ]
+)
+
+student_level = st.sidebar.selectbox(
+    "Уровень студента (CEFR):",
+    ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)"]
+)
 
 
 # --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
