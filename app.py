@@ -848,7 +848,7 @@ elif is_limit_reached:
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 with col_main:
-    if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
+    if source_type == "📝 Текст / Отрывок статьи / Трек субтитров":
         user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
