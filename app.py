@@ -191,18 +191,27 @@ def extract_youtube_id(url):
 # --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
 def get_youtube_transcript(video_url):
     if not YouTubeTranscriptApi:
-        return "Ошибка: Библиотека youtube-transcript-api не установлена."
+        return "Библиотека субтитров недоступна."
     
     video_id = extract_youtube_id(video_url)
     if not video_id:
-        return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
+        return "Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
     try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
+        # Универсальный вызов под разные версии библиотеки
+        if hasattr(YouTubeTranscriptApi, 'get_transcript'):
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
+        elif hasattr(YouTubeTranscriptApi, 'list_transcripts'):
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id).find_transcript(['en', 'en-US', 'en-GB']).fetch()
+        else:
+            api_obj = YouTubeTranscriptApi()
+            transcript_list = api_obj.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
+            
         text = " ".join([item['text'] for item in transcript_list])
         return text
-    except Exception as e:
-        return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
+    except Exception:
+        # Показываем только понятный пользователю текст без системных ошибок
+        return "Не удалось автоматически извлечь субтитры."
 
 
 # --- СТИЛИ ПРИЛОЖЕНИЯ (УБИРАЕМ ПУСТОЕ ПРОСТРАНСТВО СВЕРХУ) ---
