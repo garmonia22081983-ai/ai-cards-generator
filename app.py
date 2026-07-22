@@ -246,6 +246,15 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
+/* ЕДИНАЯ БЕЛАЯ КАРТОЧКА АВТОРИЗАЦИИ */
+div[data-testid="stColumn"]:nth-of-type(2) {{
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    padding: 30px 25px 20px 25px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05) !important;
+}}
+
 /* 1. СИНЯЯ КНОПКА (для экрана авторизации и стандартных действий) */
 button[kind="primary"], 
 button[data-testid="stBaseButton-primary"] {{
