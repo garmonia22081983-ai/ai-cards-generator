@@ -260,6 +260,37 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
+    color: #2d3748 !important;
+}}
+
+/* 💙 Фирменная синяя кнопка с белым текстом и отступом */
+button[kind="primary"], 
+button[data-testid="stBaseButton-primary"] {{
+    background-color: #2e6c9e !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    font-size: 15px !important;
+    margin-top: 25px !important;
+}}
+
+button[kind="primary"] p, 
+button[data-testid="stBaseButton-primary"] p {{
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}}
+
+button[kind="primary"]:hover, 
+button[data-testid="stBaseButton-primary"]:hover {{
+    background-color: #1a365d !important;
+    color: #ffffff !important;
+}}
+
+input, textarea, select, 
+.stTextInput input,
 
 input, textarea, select, 
 .stTextInput input, 
