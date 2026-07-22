@@ -197,37 +197,37 @@ def get_youtube_transcript(video_url):
     if not video_id:
         return "ERR: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
-    # 1. Попытка через новый синтаксис библиотеки (v1.0+)
     try:
-        ytt = YouTubeTranscriptApi()
-        if hasattr(ytt, 'list'):
-            t_list = ytt.list(video_id)
-            transcript = t_list.find_transcript(['en', 'en-US', 'en-GB'])
-            fetched = transcript.fetch()
-            return " ".join([item['text'] for item in fetched])
-        elif hasattr(ytt, 'fetch'):
-            fetched = ytt.fetch(video_id)
-            return " ".join([item['text'] for item in fetched])
-    except Exception:
-        pass
+        # 1. Получаем полный список всех субтитров видео (ручных и авто)
+        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        
+        # 2. Ищем английские субтитры (ручные или автоматические)
+        try:
+            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB', 'en-CA'])
+        except Exception:
+            # Если явных английских нет, забираем автосгенерированные английские
+            transcript = transcript_list.find_generated_transcript(['en'])
 
-    # 2. Попытка через классический синтаксис (до v1.0)
-    try:
-        if hasattr(YouTubeTranscriptApi, 'get_transcript'):
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
-            return " ".join([item['text'] for item in transcript_list])
-    except Exception:
-        pass
+        fetched = transcript.fetch()
+        return " ".join([item['text'] for item in fetched])
 
-    # 3. Резервная попытка без указания конкретного языка
-    try:
-        if hasattr(YouTubeTranscriptApi, 'get_transcript'):
-            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
-            return " ".join([item['text'] for item in transcript_list])
-    except Exception:
-        pass
+    except Exception as e:
+        # 3. Резервный простой способ (на случай старых версий)
+        try:
+            if hasattr(YouTubeTranscriptApi, 'get_transcript'):
+                raw_data = YouTubeTranscriptApi.get_transcript(video_id)
+                return " ".join([item['text'] for item in raw_data])
+        except Exception:
+            pass
 
-    return "ERR: Не удалось автоматически извлечь субтитры. Возможно, автор отключил их у этого видео."
+        # Ошибку записываем кратко, чтобы понимать причину
+        err_msg = str(e)
+        if "Subtitles are disabled" in err_msg or "NoTranscriptFound" in err_msg:
+            return "ERR: У этого видео действительно выключены субтитры."
+        elif "Too Many Requests" in err_msg or "IpBanned" in err_msg:
+            return "ERR: YouTube временно ограничил доступ к субтитрам для серверных запросов."
+        else:
+            return "ERR: Не удалось извлечь субтитры из-за ограничений YouTube."
 
 
 # --- СТИЛИ ПРИЛОЖЕНИЯ (УБИРАЕМ ПУСТОЕ ПРОСТРАНСТВО СВЕРХУ) ---
