@@ -640,15 +640,16 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
 
 # --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
+    col_a1, col_a2, col_a3 = st.columns([1, 1.4, 1])
     with col_a2:
-        # 🌟 ОБОРАЧИВАЕМ ЗАГОЛОВОК И ОПИСАНИЕ В БЕЛУЮ КАРТОЧКУ
+        # 🌟 ОБОРАЧИВАЕМ ВСЁ ОКНО АВТОРИЗАЦИИ В ЕДИНУЮ БЕЛУЮ ПЛАШКУ
         st.markdown(
             """
-            <div style="background-color: #ffffff; border: 1px solid #ebdcc5; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);">
-                <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
-                <p style="color: #718096; font-size: 15px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
-            </div>
+            <div style="background-color: #ffffff; border: 1px solid #ebdcc5; border-radius: 12px; padding: 25px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03); margin-top: 20px;">
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 26px;">🎓 Flashcards AI</h2>
+                    <p style="color: #718096; font-size: 14px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+                </div>
             """, 
             unsafe_allow_html=True
         )
@@ -826,10 +827,11 @@ if not st.session_state.user_email:
 
         st.markdown(
             """
-            <div style="margin-top: 18px; text-align: center;">
-                <small style="color: #a0aec0; font-size: 11px;">
-                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
-                </small>
+                <div style="margin-top: 18px; text-align: center;">
+                    <small style="color: #a0aec0; font-size: 11px;">
+                    Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                    </small>
+                </div>
             </div>
             """, 
             unsafe_allow_html=True
