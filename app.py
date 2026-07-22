@@ -635,7 +635,7 @@ if not st.session_state.user_email:
             """
             <div style="text-align: center; margin-bottom: 22px;">
                 <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
-                <p style="color: #718096; font-size: 16px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+                <p style="color: #718096; font-size: 18px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
             </div>
             """, 
             unsafe_allow_html=True
