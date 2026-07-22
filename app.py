@@ -17,21 +17,13 @@ from email.mime.multipart import MIMEMultipart
 import random
 import extra_streamlit_components as stx
 import time
-import tempfile
-import re
-
-# Импортируем библиотеку субтитров YouTube
-try:
-    from youtube_transcript_api import YouTubeTranscriptApi
-except ImportError:
-    YouTubeTranscriptApi = None
 
 # --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
-# --- СПИСОК EMAIL АДМИНИСТРАТОРОВ ---
+# --- СПИСОК EMAIL АДМИНИСТРАТОРОВ (БЕЗ ОГРАНИЧЕНИЙ) ---
 ADMIN_EMAILS = [
-    "garmonia.22081983@gmail.com"
+    "garmonia.22081983@gmail.com"  # Твой админский адрес
 ]
 
 # --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
@@ -157,7 +149,7 @@ def get_user_tariff_and_usage(email, sh):
         used_cards = 0
         for r in req_rows[1:]:
             if len(r) > 1 and r[1].strip().lower() == email.lower():
-                raw_req_d = r[6].strip() if len(r) > 6 else (r[7].strip() if len(r) > 7 else "")
+                raw_req_d = r[6].strip() if len(r) > 6 else ""
                 req_d = None
                 for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
                     try:
@@ -168,8 +160,7 @@ def get_user_tariff_and_usage(email, sh):
                 
                 if req_d and req_d >= filter_start:
                     try:
-                        card_val = r[4].strip() if len(r) > 4 else "0"
-                        used_cards += int(card_val)
+                        used_cards += int(r[4].strip())
                     except ValueError:
                         pass
 
@@ -179,33 +170,7 @@ def get_user_tariff_and_usage(email, sh):
         return tariff_name, max_cards, 0, period_start
 
 
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
-def extract_youtube_id(url):
-    pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
-    match = re.search(pattern, url)
-    if match:
-        return match.group(1) or match.group(2)
-    return None
-
-
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
-def get_youtube_transcript(video_url):
-    if not YouTubeTranscriptApi:
-        return "Ошибка: Библиотека youtube-transcript-api не установлена."
-    
-    video_id = extract_youtube_id(video_url)
-    if not video_id:
-        return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
-    
-    try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
-        text = " ".join([item['text'] for item in transcript_list])
-        return text
-    except Exception as e:
-        return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
-
-
-# --- СТИЛИ ПРИЛОЖЕНИЯ (UI/UX) ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -217,9 +182,9 @@ if os.path.exists("background.jpg"):
         bin_str = get_base64_of_bin_file("background.jpg")
         bg_css = f"background-image: url('data:image/jpeg;base64,{bin_str}') !important;"
     except Exception:
-        bg_css = "background-color: #f8f6f0 !important;"
+        bg_css = "background-color: #f5f0e8 !important;"
 else:
-    bg_css = "background-color: #f8f6f0 !important;"
+    bg_css = "background-color: #f5f0e8 !important;"
 
 st.markdown(f"""
 <style>
@@ -241,22 +206,6 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
-/* Карточка авторизации */
-.auth-container {{
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 30px 25px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    margin-top: 20px;
-    margin-bottom: 20px;
-}}
-
-.auth-header {{
-    text-align: center;
-    margin-bottom: 20px;
-}}
-
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
@@ -267,14 +216,13 @@ input, textarea, select,
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
-    border-radius: 8px !important;
 }}
 
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
-    background-color: #f4efe6 !important;
+    background-color: #f5f0e8 !important;
     background-image: none !important;
 }}
 
@@ -286,7 +234,6 @@ input, textarea, select,
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
 }}
 
-/* Интерактивные карточки */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -334,43 +281,13 @@ input, textarea, select,
 summary::-webkit-details-marker {{ display: none !important; }}
 summary {{ list-style: none !important; }}
 
-/* Стили печатных карточек */
-.print-row-bw {{
+.print-row {{
     display: flex;
     border: 1px dashed #ccc;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
 }}
-
-.print-row-kids {{
-    display: flex;
-    border: 2px solid #ffb74d;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    page-break-inside: avoid;
-    background-color: #ffffff;
-    overflow: hidden;
-}}
-
-.print-col-kids-left {{
-    width: 45%;
-    padding: 15px;
-    background-color: #ffe0b2;
-    border-right: 2px dashed #ffb74d;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}}
-
-.print-col-kids-right {{
-    width: 55%;
-    padding: 15px;
-    background-color: #ffffff;
-}}
-
 .print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
 .print-left {{
     border-right: 1px dashed #ccc;
@@ -429,6 +346,7 @@ if student_deck_id:
         st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
         st.caption(f"Всего карточек: {len(cards_data)}")
         
+        # --- КНОПКИ ЭКСПОРТА И ПЕЧАТИ ДЛЯ УЧЕНИКА ---
         col_s_exp1, col_s_exp2 = st.columns(2)
         with col_s_exp1:
             anki_list_student = []
@@ -456,7 +374,7 @@ if student_deck_id:
 
         if student_print_mode:
             for card in cards_data:
-                print_html = f"""<div class="print-row-bw">
+                print_html = f"""<div class="print-row">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
@@ -613,77 +531,68 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
 
 # --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
-    with col_a2:
-        st.markdown(
-            """
-            <div class="auth-container">
-                <div class="auth-header">
-                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
-                </div>
-            """, 
-            unsafe_allow_html=True
-        )
+    st.subheader("🔑 Доступ к Генератору Карточек")
+    
+    if not st.session_state.otp_sent:
+        st.write("Введите ваш Email для входа. Доступ предоставляется зарегистрированным пользователям.")
+        email_input = st.text_input("Ваш Email:")
         
-        if not st.session_state.otp_sent:
-            st.write("**Вход в Личный Кабинет**")
-            email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
-            
-            if st.button("Получить код входа", type="primary", use_container_width=True):
-                if "@" not in email_input or "." not in email_input:
-                    st.error("Пожалуйста, введите корректный адрес почты.")
+        if st.button("Получить код входа", type="primary"):
+            if "@" not in email_input or "." not in email_input:
+                st.error("Пожалуйста, введите корректный адрес электронной почты.")
+            else:
+                email = email_input.strip().lower()
+                clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+                
+                if email in clean_admin_emails:
+                    user_exists = True
                 else:
-                    email = email_input.strip().lower()
-                    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
-                    
-                    if email in clean_admin_emails:
-                        user_exists = True
-                    else:
-                        try:
-                            gc = get_gsheets_client()
-                            sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-                            
-                            users_sheet = sh.worksheet("Users")
-                            users_rows = users_sheet.get_all_values()
-                            
-                            payments_sheet = sh.worksheet("Payments")
-                            payments_rows = payments_sheet.get_all_values()
-                            
-                            user_exists = False
-                            for r in users_rows[1:]:
-                                if len(r) > 0 and r[0].strip().lower() == email:
+                    try:
+                        gc = get_gsheets_client()
+                        sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                        
+                        users_sheet = sh.worksheet("Users")
+                        users_rows = users_sheet.get_all_values()
+                        
+                        payments_sheet = sh.worksheet("Payments")
+                        payments_rows = payments_sheet.get_all_values()
+                        
+                        user_exists = False
+                        for r in users_rows[1:]:
+                            if len(r) > 0 and r[0].strip().lower() == email:
+                                user_exists = True
+                                break
+                        
+                        if not user_exists:
+                            for p in payments_rows[1:]:
+                                if len(p) > 1 and p[1].strip().lower() == email:
                                     user_exists = True
                                     break
-                            
-                            if not user_exists:
-                                for p in payments_rows[1:]:
-                                    if len(p) > 1 and p[1].strip().lower() == email:
-                                        user_exists = True
-                                        break
-                        except Exception as e:
-                            st.error(f"Ошибка базы данных: {e}")
-                            user_exists = False
-                    
-                    if not user_exists:
-                        st.error("🔴 Email не найден в системе.")
-                        st.link_button("👉 Получить 3 дня тест-драйва на flashcards-ai.ru", "https://flashcards-ai.ru", type="primary", use_container_width=True)
-                    else:
-                        otp_code = str(random.randint(100000, 999999))
-                        with st.spinner("Отправка одноразового кода..."):
-                            if send_otp_email(email, otp_code):
-                                st.session_state.generated_otp = otp_code
-                                st.session_state.pending_email = email
-                                st.session_state.otp_sent = True
-                                st.rerun()
+                    except Exception as e:
+                        st.error(f"Ошибка подключения к базе данных: {e}")
+                        user_exists = False
+                
+                if not user_exists:
+                    st.error("🔴 Ваш Email не найден в системе. Чтобы получить 3 дня бесплатного тест-драйва, пожалуйста, оформите заявку на нашем сайте.")
+                    st.link_button("👉 Перейти на flashcards-ai.ru и получить доступ", "https://flashcards-ai.ru", type="primary")
+                else:
+                    otp_code = str(random.randint(100000, 999999))
+                    with st.spinner("Отправка одноразового кода на вашу почту..."):
+                        if send_otp_email(email, otp_code):
+                            st.session_state.generated_otp = otp_code
+                            st.session_state.pending_email = email
+                            st.session_state.otp_sent = True
+                            st.rerun()
 
-        else:
-            st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
-            st.caption("Проверьте папку «Спам», если письма нет в течение минуты.")
-            
-            user_code = st.text_input("6-значный код из письма:", max_chars=6)
-            
-            if st.button("Подтвердить и войти", type="primary", use_container_width=True):
+    else:
+        st.info(f"📩 Мы отправили 6-значный код на почту **{st.session_state.pending_email}**.")
+        st.caption("Если письмо не пришло в течение минуты, обязательно проверьте папку **«Спам»**.")
+        
+        user_code = st.text_input("Введите 6-значный код из письма:", max_chars=6)
+        
+        col_btn1, col_btn2 = st.columns([1, 2])
+        with col_btn1:
+            if st.button("Подтвердить и войти", type="primary"):
                 if user_code.strip() == st.session_state.generated_otp:
                     email = st.session_state.pending_email
                     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
@@ -786,25 +695,26 @@ if not st.session_state.user_email:
                     except Exception as e:
                         st.error(f"Ошибка авторизации: {e}")
                 else:
-                    st.error("Неверный код.")
+                    st.error("Неверный код. Пожалуйста, проверьте цифры в письме.")
                     
-            if st.button("Ввести другой Email", use_container_width=True):
+        with col_btn2:
+            if st.button("Ввести другой Email"):
                 st.session_state.otp_sent = False
                 st.session_state.generated_otp = None
                 st.session_state.pending_email = None
                 st.rerun()
 
-        st.markdown(
-            """
-            <div style="margin-top: 20px; text-align: center;">
-                <small style="color: #718096;">
-                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
-                </small>
-            </div>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+    st.markdown(
+        """
+        <div style="margin-top: 25px; padding-top: 10px; border-top: 1px dashed #cbd5e0;">
+            <small style="color: #718096; font-family: Arial, sans-serif;">
+            Нажимая кнопку входа, вы даете согласие на обработку персональных данных 
+            в соответствии с <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политикой конфиденциальности</a>.
+            </small>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
     st.stop()
 
 
@@ -851,23 +761,11 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК С ОПТИМИЗИРОВАННЫМИ МОИМИ КОЛОДАМИ ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
-    
-    source_type = st.radio(
-        "Что берем за основу?", 
-        [
-            "✍️ Готовый список слов",
-            "📝 Текст / Отрывок статьи / Субтитры", 
-            "🎬 Ссылка на YouTube",
-            "📁 Видео или аудио файл (до 5 мин)",
-            "🔗 Ссылка на веб-статью"
-        ],
-        index=0
-    )
-    
+    source_type = st.radio("Что берем за основу?", ["📝 Текст / Отрывок статьи / Трэк субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"])
     student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
     
     if source_type != "✍️ Готовый список слов":
@@ -885,6 +783,7 @@ with st.sidebar:
             if not my_decks:
                 st.caption("У вас пока нет сохраненных колод.")
             else:
+                # Фильтр и поиск по колодам для масштабируемости (даже если 50+ колод)
                 search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
                 show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
                 
@@ -898,7 +797,7 @@ with st.sidebar:
                 display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
                 
                 if not search_q and len(my_decks) > 5 and not show_all:
-                    st.caption(f"Показано последние 5 из {len(my_decks)}.")
+                    st.caption(f"Показано последние 5 из {len(my_decks)}. Включите галочку выше для всего списка.")
                 
                 for d in display_decks:
                     d_id = d[0]
@@ -907,6 +806,8 @@ with st.sidebar:
                     d_cards_json = d[5]
                     
                     st.write(f"**{d_name}** ({d_level})")
+                    
+                    # Две кнопки на ОДНОМ уровне
                     c1, c2 = st.columns(2)
                     with c1:
                         if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
@@ -946,21 +847,13 @@ elif is_limit_reached:
 # --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
-user_input = ""
-uploaded_file_obj = None
-
 with col_main:
-    if source_type == "✍️ Готовый список слов":
-        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
-    elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
-        user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
-    elif source_type == "🎬 Ссылка на YouTube":
-        user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
-    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
-        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
-        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
+    if source_type == "📝 Текст / Отрывок статьи / Трэк субтитров":
+        user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
+    else:
+        user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
 
     generate_click = st.button(
         "Создать карточки ✨", 
@@ -988,16 +881,9 @@ with col_stats:
         st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
         st.caption(f"Осталось: **{remaining_cards}** карточек")
 
-# --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
-    is_valid_input = False
-    if source_type == "📁 Видео или аудио файл (до 5 мин)":
-        is_valid_input = (uploaded_file_obj is not None)
-    else:
-        is_valid_input = bool(user_input.strip())
-
-    if not is_valid_input:
-        st.warning("Пожалуйста, заполните поле ввода или загрузите файл!")
+    if not user_input.strip():
+        st.warning("Пожалуйста, заполните поле ввода!")
     else:
         actual_requested = num_cards
         if source_type == "✍️ Готовый список слов":
@@ -1010,54 +896,22 @@ if generate_click:
             st.info("Пожалуйста, уменьшите количество карточек в слайдере или перейдите на более старший тариф.")
             st.link_button("💳 Посмотреть тарифы", "https://flashcards-ai.ru/#tarifs")
         else:
-            with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
+            with st.spinner("Методист Gemini собирает лингвистические данные..."):
                 try:
-                    final_prompt_content = ""
-                    gemini_uploaded_file = None
-                    temp_file_path = None
-                    source_url_to_save = user_input.strip()
-
-                    # 1. YOUTUBE ССЫЛКА
-                    if source_type == "🎬 Ссылка на YouTube":
-                        yt_transcript = get_youtube_transcript(user_input.strip())
-                        if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
-                            st.error(yt_transcript)
-                            st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео или аудио файл».")
-                            st.stop()
-                        final_prompt_content = yt_transcript
-
-                    # 2. МЕДИАФАЙЛ (MP4 / MP3)
-                    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
-                        if uploaded_file_obj.size > 30 * 1024 * 1024:
-                            st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
-                            st.stop()
-                            
-                        file_ext = os.path.splitext(uploaded_file_obj.name)[1]
-                        source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(uploaded_file_obj.size/1024/1024, 1)} MB)"
-                        
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
-                            tmp.write(uploaded_file_obj.read())
-                            temp_file_path = tmp.name
-                            
-                        gemini_uploaded_file = genai.upload_file(path=temp_file_path)
-
-                    # 3. ВЕБ-СТАТЬЯ
-                    elif source_type == "🔗 Ссылка на веб-статью":
-                        scraped_text = extract_text_from_url(user_input.strip())
+                    final_content = user_input
+                    if source_type == "🔗 Ссылка на веб-статью":
+                        scraped_text = extract_text_from_url(user_input)
                         if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
                             st.error(scraped_text)
                             st.stop()
-                        final_prompt_content = scraped_text
-                    
-                    else:
-                        final_prompt_content = user_input.strip()
+                        final_content = scraped_text
 
                     model = genai.GenerativeModel(model_option)
                     
                     if source_type == "✍️ Готовый список слов":
-                        prompt_text = f"""
+                        prompt = f"""
                         Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
-                        Создай обучающие карточки для следующих слов/фраз: {final_prompt_content}.
+                        Создай обучающие карточки для следующих слов/фраз: {final_content}.
                         Верни строго валидный JSON-массив объектов со следующими ключами:
                         - "word": оригинальное слово на английском
                         - "transcription": фонетическая транскрипция в IPA
@@ -1068,10 +922,9 @@ if generate_click:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
                     else:
-                        prompt_text = f"""
+                        prompt = f"""
                         Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
-                        Проанализируй предоставленный материал и выбери из него ровно {num_cards} самых важных полезных фраз или слов под уровень {student_level}.
-                        
+                        Выбери из предоставленного текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
                         Верни строго валидный JSON-массив объектов со следующими ключами:
                         - "word": оригинальное слово на английском
                         - "transcription": фонетическая транскрипция в IPA
@@ -1082,11 +935,7 @@ if generate_click:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
 
-                    if gemini_uploaded_file:
-                        response = model.generate_content([prompt_text, gemini_uploaded_file])
-                    else:
-                        response = model.generate_content([prompt_text, final_prompt_content])
-
+                    response = model.generate_content(prompt)
                     text_response = response.text.strip()
                     
                     backtick_triple = chr(96) * 3
@@ -1106,17 +955,16 @@ if generate_click:
                     st.session_state.cards = cards_data
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
-                    # --- СОХРАНЕНИЕ В ИСТОРИЮ (ВКЛАДКА REQUESTS С ИСТОЧНИКОМ) ---
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
+                        source_snippet = user_input[:200] + "..." if len(user_input) > 200 else user_input
                         
                         requests_sheet = sh_global.worksheet("Requests")
                         requests_sheet.append_row([
                             request_id, 
                             st.session_state.user_email, 
-                            source_type,
-                            source_url_to_save[:250], 
+                            source_snippet, 
                             student_level, 
                             len(cards_data), 
                             "Completed", 
@@ -1136,15 +984,8 @@ if generate_click:
                                 card['context'], audio_us, audio_uk, st.session_state.user_email
                             ])
                     except Exception as sheets_err:
-                        st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
+                        st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в базу истории: {sheets_err}")
                     
-                    if gemini_uploaded_file:
-                        try: genai.delete_file(gemini_uploaded_file.name)
-                        except Exception: pass
-                    if temp_file_path and os.path.exists(temp_file_path):
-                        try: os.remove(temp_file_path)
-                        except Exception: pass
-
                     st.success(f"Успешно! Создано карточек: {len(cards_data)}")
                     time.sleep(1)
                     st.rerun()
@@ -1244,82 +1085,10 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
-    # 🌟 НАСТРОЙКИ ПЕЧАТИ (ОБНОВЛЕННОЕ БРЕНДИРОВАНИЕ БЕЗ КОНТАКТОВ И ОЦЕНОК)
-    is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
-    custom_print_teacher = ""
-    custom_print_note = ""
-    print_style = "🖨️ Черно-белая (Экономный режим)"
-
+    # --- РЕЖИМ ПЕЧАТИ ИЛИ ИНТЕРАКТИВНЫЕ КАРТОЧКИ ---
     if print_mode:
-        if is_max_tariff:
-            with st.expander("👑 Настройка брендирования распечатки (Тариф Максимум)", expanded=True):
-                print_style = st.selectbox(
-                    "Выберите стиль оформления:", 
-                    [
-                        "🖨️ Черно-белая (Экономный режим)", 
-                        "🎨 Цветная детская (Игровая / Пастельная)", 
-                        "💼 Цветная стильная (Премиум)"
-                    ]
-                )
-                col_p1, col_p2 = st.columns(2)
-                with col_p1:
-                    custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English Class with Anna").strip()
-                with col_p2:
-                    custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
-
-        # 1. Шапка ДЕТСКОГО стиля
-        if "детская" in print_style and is_max_tariff:
-            teacher_title = custom_print_teacher if custom_print_teacher else "English Class"
-            note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
-            st.markdown(
-                f"""
-                <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 16px; font-weight: bold; color: #d84315;">🦁 {teacher_title}</span>
-                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: ______________________ | Date: ___/___/2026</span>
-                    </div>
-                    {note_str}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # 2. Шапка СТИЛЬНОГО ПРЕМИУМ стиля
-        elif "стильная" in print_style and is_max_tariff:
-            teacher_title = custom_print_teacher if custom_print_teacher else "English Worksheet"
-            note_str = f"<p style='margin:3px 0 0 0; color:#718096; font-size:12px;'>{custom_print_note}</p>" if custom_print_note else ""
-            st.markdown(
-                f"""
-                <div style="border-bottom: 2px solid #1a365d; padding: 12px 15px; margin-bottom: 20px; background: #ffffff; border-radius: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <h3 style="margin:0; color:#1a365d; font-family:'Georgia', serif;">{teacher_title}</h3>
-                        <span style="font-size: 12px; color: #718096;">Name: ______________________ | Date: ___/___/2026</span>
-                    </div>
-                    {note_str}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # Отрисовка карточек под выбранный стиль
         for card in st.session_state.cards:
-            if "детская" in print_style and is_max_tariff:
-                # ДЕТСКАЯ ЦВЕТНАЯ КАРТОЧКА
-                print_html = f"""<div class="print-row-kids">
-<div class="print-col-kids-left">
-    <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
-    <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{card.get('transcription', '')}</span>
-</div>
-<div class="print-col-kids-right">
-    <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
-    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
-    <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
-    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
-</div>
-</div>"""
-            else:
-                # ЧЕРНО-БЕЛАЯ / СТАНДАРТНАЯ КАРТОЧКА
-                print_html = f"""<div class="print-row-bw">
+            print_html = f"""<div class="print-row">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
