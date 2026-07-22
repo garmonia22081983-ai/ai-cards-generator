@@ -197,21 +197,37 @@ def get_youtube_transcript(video_url):
     if not video_id:
         return "Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
+    # 1. Попытка через новый синтаксис библиотеки (v1.0+)
     try:
-        # Универсальный вызов под разные версии библиотеки
+        ytt = YouTubeTranscriptApi()
+        if hasattr(ytt, 'list'):
+            t_list = ytt.list(video_id)
+            transcript = t_list.find_transcript(['en', 'en-US', 'en-GB'])
+            fetched = transcript.fetch()
+            return " ".join([item['text'] for item in fetched])
+        elif hasattr(ytt, 'fetch'):
+            fetched = ytt.fetch(video_id)
+            return " ".join([item['text'] for item in fetched])
+    except Exception:
+        pass
+
+    # 2. Попытка через классический синтаксис (до v1.0)
+    try:
         if hasattr(YouTubeTranscriptApi, 'get_transcript'):
             transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
-        elif hasattr(YouTubeTranscriptApi, 'list_transcripts'):
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id).find_transcript(['en', 'en-US', 'en-GB']).fetch()
-        else:
-            api_obj = YouTubeTranscriptApi()
-            transcript_list = api_obj.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
-            
-        text = " ".join([item['text'] for item in transcript_list])
-        return text
+            return " ".join([item['text'] for item in transcript_list])
     except Exception:
-        # Показываем только понятный пользователю текст без системных ошибок
-        return "Не удалось автоматически извлечь субтитры."
+        pass
+
+    # 3. Резервная попытка без указания языков
+    try:
+        if hasattr(YouTubeTranscriptApi, 'get_transcript'):
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id)
+            return " ".join([item['text'] for item in transcript_list])
+    except Exception:
+        pass
+
+    return "Не удалось автоматически извлечь субтитры."
 
 
 # --- СТИЛИ ПРИЛОЖЕНИЯ (УБИРАЕМ ПУСТОЕ ПРОСТРАНСТВО СВЕРХУ) ---
