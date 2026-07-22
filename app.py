@@ -246,7 +246,7 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
-/* Главная синяя кнопка */
+/* 1. СИНЯЯ КНОПКА (для экрана авторизации и стандартных действий) */
 button[kind="primary"], 
 button[data-testid="stBaseButton-primary"] {{
     background-color: #2e6c9e !important;
@@ -257,10 +257,31 @@ button[data-testid="stBaseButton-primary"] {{
     font-size: 15px !important;
 }}
 
+/* Белый текст для синей кнопки */
+button[kind="primary"] *, 
+button[data-testid="stBaseButton-primary"] * {{
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}}
+
 button[kind="primary"]:hover, 
 button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
+}}
+
+/* 2. ОРАНЖЕВАЯ КНОПКА ТОЛЬКО ДЛЯ «СОЗДАТЬ КАРТОЧКИ» В ГЕНЕРАТОРЕ */
+.stApp div[data-testid="stColumn"]:nth-of-type(1) button[kind="primary"] {{
+    background-color: #f26522 !important;
+}}
+
+.stApp div[data-testid="stColumn"]:nth-of-type(1) button[kind="primary"] * {{
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+}}
+
+.stApp div[data-testid="stColumn"]:nth-of-type(1) button[kind="primary"]:hover {{
+    background-color: #d9531e !important;
 }}
 
 input, textarea, select, 
