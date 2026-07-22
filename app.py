@@ -205,7 +205,7 @@ def get_youtube_transcript(video_url):
         return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
 
 
-# --- СТИЛИ ПРИЛОЖЕНИЯ (UI/UX) ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ (ТОЧНАЯ СТИЛИЗАЦИЯ КАРТОЧКИ АВТОРИЗАЦИИ) ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -231,6 +231,12 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     color: #2d3748 !important;
 }}
 
+/* Поднимаем всё содержимое выше, убираем пустоту сверху */
+.main .block-container {{
+    padding-top: 1.5rem !important;
+    padding-bottom: 2rem !important;
+}}
+
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
@@ -241,20 +247,30 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
-/* Карточка авторизации */
-.auth-container {{
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 30px 25px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    margin-top: 20px;
-    margin-bottom: 20px;
+/* Главная синяя кнопка (как на Фото 2) */
+button[kind="primary"], 
+button[data-testid="stBaseButton-primary"] {{
+    background-color: #2e6c9e !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    font-size: 15px !important;
 }}
 
-.auth-header {{
-    text-align: center;
-    margin-bottom: 20px;
+button[kind="primary"]:hover, 
+button[data-testid="stBaseButton-primary"]:hover {{
+    background-color: #1a365d !important;
+    border: none !important;
+}}
+
+/* ЭДОИНАЯ БЕЛАЯ КАРТОЧКА АВТОРИЗАЦИИ (Фото 2) */
+div[data-testid="stColumn"]:nth-of-type(2) {{
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    padding: 30px 25px 20px 25px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05) !important;
 }}
 
 input, textarea, select, 
@@ -611,23 +627,21 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
             pass
 
 
-# --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
+# --- БЛОК АВТОРИЗАЦИИ (ЕНОЕ ОKНО, КАК НА ФОТО 2) ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
+    col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
         st.markdown(
             """
-            <div class="auth-container">
-                <div class="auth-header">
-                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
-                </div>
+            <div style="text-align: center; margin-bottom: 22px;">
+                <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
+                <p style="color: #718096; font-size: 13.5px; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+            </div>
             """, 
             unsafe_allow_html=True
         )
         
         if not st.session_state.otp_sent:
-            st.write("**Вход в Личный Кабинет**")
             email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
             
             if st.button("Получить код входа", type="primary", use_container_width=True):
@@ -796,11 +810,10 @@ if not st.session_state.user_email:
 
         st.markdown(
             """
-            <div style="margin-top: 20px; text-align: center;">
-                <small style="color: #718096;">
+            <div style="margin-top: 18px; text-align: center;">
+                <small style="color: #a0aec0; font-size: 11px;">
                 Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                 </small>
-            </div>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1244,7 +1257,7 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
-    # 🌟 НАСТРОЙКИ ПЕЧАТИ (ОБНОВЛЕННОЕ БРЕНДИРОВАНИЕ БЕЗ КОНТАКТОВ И ОЦЕНОК)
+    # 🌟 НАСТРОЙКИ ПЕЧАТИ
     is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
     custom_print_teacher = ""
     custom_print_note = ""
@@ -1301,10 +1314,9 @@ if st.session_state.cards:
                 unsafe_allow_html=True
             )
 
-        # Отрисовка карточек под выбранный стиль
+        # Отрисовка карточек
         for card in st.session_state.cards:
             if "детская" in print_style and is_max_tariff:
-                # ДЕТСКАЯ ЦВЕТНАЯ КАРТОЧКА
                 print_html = f"""<div class="print-row-kids">
 <div class="print-col-kids-left">
     <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
@@ -1318,7 +1330,6 @@ if st.session_state.cards:
 </div>
 </div>"""
             else:
-                # ЧЕРНО-БЕЛАЯ / СТАНДАРТНАЯ КАРТОЧКА
                 print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
