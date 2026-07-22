@@ -194,8 +194,15 @@ def get_youtube_transcript(video_url):
     if not video_id:
         return "ERR: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
-    # Достаем ключ из Secrets Streamlit
-    api_key = st.secrets.get("SUPADATA_API_KEY", "")
+    # Умный поиск ключа в st.secrets (и на верхнем уровне, и внутри smtp)
+    api_key = ""
+    try:
+        if "SUPADATA_API_KEY" in st.secrets:
+            api_key = st.secrets["SUPADATA_API_KEY"]
+        elif "smtp" in st.secrets and "SUPADATA_API_KEY" in st.secrets["smtp"]:
+            api_key = st.secrets["smtp"]["SUPADATA_API_KEY"]
+    except Exception:
+        pass
     
     if not api_key:
         return "ERR: Не найден API-ключ Supadata в настройках Secrets!"
