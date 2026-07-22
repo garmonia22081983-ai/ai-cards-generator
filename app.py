@@ -188,47 +188,36 @@ def extract_youtube_id(url):
     return None
 
 
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ ЧЕРЕЗ SUPADATA API ---
 def get_youtube_transcript(video_url):
-    if not YouTubeTranscriptApi:
-        return "ERR: Библиотека субтитров недоступна."
-    
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "ERR: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
+    # Достаем ключ из Secrets Streamlit
+    api_key = st.secrets.get("SUPADATA_API_KEY", "")
+    
+    if not api_key:
+        return "ERR: Не найден API-ключ Supadata в настройках Secrets!"
+    
+    url = f"https://api.supadata.ai/v1/youtube/transcript?videoId={video_id}&text=true"
+    headers = {"x-api-key": api_key}
+    
     try:
-        # 1. Получаем полный список всех субтитров видео (ручных и авто)
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-        
-        # 2. Ищем английские субтитры (ручные или автоматические)
-        try:
-            transcript = transcript_list.find_transcript(['en', 'en-US', 'en-GB', 'en-CA'])
-        except Exception:
-            # Если явных английских нет, забираем автосгенерированные английские
-            transcript = transcript_list.find_generated_transcript(['en'])
-
-        fetched = transcript.fetch()
-        return " ".join([item['text'] for item in fetched])
-
-    except Exception as e:
-        # 3. Резервный простой способ (на случай старых версий)
-        try:
-            if hasattr(YouTubeTranscriptApi, 'get_transcript'):
-                raw_data = YouTubeTranscriptApi.get_transcript(video_id)
-                return " ".join([item['text'] for item in raw_data])
-        except Exception:
-            pass
-
-        # Ошибку записываем кратко, чтобы понимать причину
-        err_msg = str(e)
-        if "Subtitles are disabled" in err_msg or "NoTranscriptFound" in err_msg:
-            return "ERR: У этого видео действительно выключены субтитры."
-        elif "Too Many Requests" in err_msg or "IpBanned" in err_msg:
-            return "ERR: YouTube временно ограничил доступ к субтитрам для серверных запросов."
+        response = requests.get(url, headers=headers, timeout=12)
+        if response.status_code == 200:
+            data = response.json()
+            content = data.get("content", "")
+            if content:
+                return content
+            else:
+                return "ERR: У этого видео отсутствуют текстовые субтитры."
+        elif response.status_code == 404:
+            return "ERR: У этого видео действительно отсутствуют субтитры на YouTube."
         else:
-            return "ERR: Не удалось извлечь субтитры из-за ограничений YouTube."
-
+            return "ERR: Не удалось прочитать субтитры через сервис."
+    except Exception as e:
+        return f"ERR: Ошибка подключения к сервису субтитров: {e}"
 
 # --- СТИЛИ ПРИЛОЖЕНИЯ (УБИРАЕМ ПУСТОЕ ПРОСТРАНСТВО СВЕРХУ) ---
 def get_base64_of_bin_file(bin_file):
