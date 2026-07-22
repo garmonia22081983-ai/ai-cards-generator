@@ -205,7 +205,7 @@ def get_youtube_transcript(video_url):
         return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
 
 
-# --- СТИЛИ ПРИЛОЖЕНИЯ (УБИРАЕМ ПУСТОЕ ПРОСТРАНСТВО СВЕРХУ) ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ (UI/UX) ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -223,11 +223,6 @@ else:
 
 st.markdown(f"""
 <style>
-/* Скрываем верхний служебный бар Streamlit */
-[data-testid="stHeader"], header {{
-    display: none !important;
-}}
-
 html, body, [data-testid="stAppViewContainer"], .stApp {{
     {bg_css}
     background-size: cover !important;
@@ -236,31 +231,30 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     color: #2d3748 !important;
 }}
 
-/* Убираем пустое пространство сверху */
-.main .block-container {{
-    padding-top: 1rem !important;
-    padding-bottom: 2rem !important;
-}}
-
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
-/* Главная синяя кнопка */
-button[kind="primary"], 
-button[data-testid="stBaseButton-primary"] {{
-    background-color: #2e6c9e !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: bold !important;
-    font-size: 15px !important;
+[data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
 }}
 
-button[kind="primary"]:hover, 
-button[data-testid="stBaseButton-primary"]:hover {{
-    background-color: #1a365d !important;
-    border: none !important;
+/* Карточка авторизации */
+.auth-container {{
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 30px 25px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+    margin-bottom: 20px;
+}}
+
+.auth-header {{
+    text-align: center;
+    margin-bottom: 20px;
 }}
 
 input, textarea, select, 
@@ -282,7 +276,6 @@ input, textarea, select,
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
     background-color: #f4efe6 !important;
     background-image: none !important;
-    padding-top: 1rem !important;
 }}
 
 .tariff-box {{
@@ -291,7 +284,6 @@ input, textarea, select,
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-    margin-bottom: 15px;
 }}
 
 /* Интерактивные карточки */
@@ -621,19 +613,21 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
 
 # --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
+    col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
-                <p style="color: #718096; font-size: 16px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
-            </div>
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
+                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
+                </div>
             """, 
             unsafe_allow_html=True
         )
         
         if not st.session_state.otp_sent:
+            st.write("**Вход в Личный Кабинет**")
             email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
             
             if st.button("Получить код входа", type="primary", use_container_width=True):
@@ -802,10 +796,11 @@ if not st.session_state.user_email:
 
         st.markdown(
             """
-            <div style="margin-top: 18px; text-align: center;">
-                <small style="color: #a0aec0; font-size: 11px;">
+            <div style="margin-top: 20px; text-align: center;">
+                <small style="color: #718096;">
                 Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                 </small>
+            </div>
             </div>
             """, 
             unsafe_allow_html=True
@@ -813,7 +808,7 @@ if not st.session_state.user_email:
     st.stop()
 
 
-# --- КНОПКА ВЫХОДА В БОКОВОЙ ПАНЕЛИ ---
+# --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
     cookie_manager.delete("auth_email")
@@ -856,20 +851,10 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- ПРОВЕРКА АДМИН-ПРАВ И ВЫБОР МОДЕЛИ ---
-clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
-is_admin_user = (st.session_state.user_email.lower() in clean_admin_emails) if st.session_state.user_email else False
-
-
 # --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
-    
-    # 🌟 ПОКАЗЫВАЕМ ВЫБОР МОДЕЛИ ТОЛЬКО АДМИНУ!
-    if is_admin_user:
-        model_option = st.selectbox("Нейросеть (Панель Админа):", ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-1.5-flash"])
-    else:
-        model_option = "gemini-2.5-flash"  # По умолчанию для всех учителей
+    model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
     
     source_type = st.radio(
         "Что берем за основу?", 
@@ -890,71 +875,8 @@ with st.sidebar:
     else:
         num_cards = 0
 
-
-# --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
-is_expired = st.session_state.get("trial_expired", False)
-is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
-
-button_disabled = is_expired or is_limit_reached
-
-if is_expired:
-    st.warning("🛑 **Срок действия вашей подписки окончен.**")
-    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы продолжить создавать новые колоды, пожалуйста, продлите тариф.")
-    st.link_button("💳 Посмотреть тарифы и продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
-
-elif is_limit_reached:
-    st.warning(f"🛑 **Вы исчерпали лимит карточек ({max_cards} шт.) по тарифу «{tariff_name}».**")
-    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
-    st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
-
-
-# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА (СЛЕВА ФОРМА, СПРАВА ТАРИФ И КОЛОДЫ) ---
-col_main, col_stats = st.columns([1.6, 1], gap="medium")
-
-user_input = ""
-uploaded_file_obj = None
-
-with col_main:
-    if source_type == "✍️ Готовый список слов":
-        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
-    elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
-        user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
-    elif source_type == "🎬 Ссылка на YouTube":
-        user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
-    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
-        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
-        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
-    elif source_type == "🔗 Ссылка на веб-статью":
-        user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
-
-    generate_click = st.button(
-        "Создать карточки ✨", 
-        type="primary", 
-        disabled=button_disabled
-    )
-
-with col_stats:
-    st.markdown(
-        f"""
-        <div class="tariff-box">
-            <h3 style="margin-top:0; font-size:18px;">📊 Твой тариф и лимиты</h3>
-            <p style="color:#718096; font-size:13px; margin-bottom:12px;">Тариф: <b>{tariff_name.upper()}</b></p>
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
-    
-    if tariff_name == "АДМИНИСТРАТОР":
-        st.success("👑 Безлимитный доступ")
-    else:
-        progress_val = min(float(used_cards) / float(max_cards), 1.0)
-        st.progress(progress_val)
-        remaining_cards = max(0, max_cards - used_cards)
-        st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
-        st.caption(f"Осталось: **{remaining_cards}** карточек")
-
-    # 🌟 СКРЫТЫЙ СВЕРНУТЫЙ БЛОК СОХРАНЕННЫХ КОЛОД В ПРАВОЙ КОЛОНКЕ
-    with st.expander("📂 Мои сохраненные колоды", expanded=False):
+    st.write("---")
+    with st.expander("📂 Мои сохраненные колоды"):
         try:
             decks_sheet = sh_global.worksheet("Decks")
             d_rows = decks_sheet.get_all_values()
@@ -1002,6 +924,69 @@ with col_stats:
                     st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
         except Exception:
             st.caption("Не удалось загрузить список колод.")
+
+
+# --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
+is_expired = st.session_state.get("trial_expired", False)
+is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
+
+button_disabled = is_expired or is_limit_reached
+
+if is_expired:
+    st.warning("🛑 **Срок действия вашей подписки окончен.**")
+    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы продолжить создавать новые колоды, пожалуйста, продлите тариф.")
+    st.link_button("💳 Посмотреть тарифы и продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
+
+elif is_limit_reached:
+    st.warning(f"🛑 **Вы исчерпали лимит карточек ({max_cards} шт.) по тарифу «{tariff_name}».**")
+    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
+    st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
+
+
+# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
+col_main, col_stats = st.columns([1.6, 1], gap="medium")
+
+user_input = ""
+uploaded_file_obj = None
+
+with col_main:
+    if source_type == "✍️ Готовый список слов":
+        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
+    elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
+        user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
+    elif source_type == "🎬 Ссылка на YouTube":
+        user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
+    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
+        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
+    elif source_type == "🔗 Ссылка на веб-статью":
+        user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
+
+    generate_click = st.button(
+        "Создать карточки ✨", 
+        type="primary", 
+        disabled=button_disabled
+    )
+
+with col_stats:
+    st.markdown(
+        f"""
+        <div class="tariff-box">
+            <h3 style="margin-top:0; font-size:18px;">📊 Твой тариф и лимиты</h3>
+            <p style="color:#718096; font-size:13px; margin-bottom:12px;">Тариф: <b>{tariff_name.upper()}</b></p>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+    
+    if tariff_name == "АДМИНИСТРАТОР":
+        st.success("👑 Безлимитный доступ")
+    else:
+        progress_val = min(float(used_cards) / float(max_cards), 1.0)
+        st.progress(progress_val)
+        remaining_cards = max(0, max_cards - used_cards)
+        st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
+        st.caption(f"Осталось: **{remaining_cards}** карточек")
 
 # --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
@@ -1259,7 +1244,7 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
-    # 🌟 НАСТРОЙКИ ПЕЧАТИ
+    # 🌟 НАСТРОЙКИ ПЕЧАТИ (ОБНОВЛЕННОЕ БРЕНДИРОВАНИЕ БЕЗ КОНТАКТОВ И ОЦЕНОК)
     is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
     custom_print_teacher = ""
     custom_print_note = ""
@@ -1316,9 +1301,10 @@ if st.session_state.cards:
                 unsafe_allow_html=True
             )
 
-        # Отрисовка карточек
+        # Отрисовка карточек под выбранный стиль
         for card in st.session_state.cards:
             if "детская" in print_style and is_max_tariff:
+                # ДЕТСКАЯ ЦВЕТНАЯ КАРТОЧКА
                 print_html = f"""<div class="print-row-kids">
 <div class="print-col-kids-left">
     <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
@@ -1332,6 +1318,7 @@ if st.session_state.cards:
 </div>
 </div>"""
             else:
+                # ЧЕРНО-БЕЛАЯ / СТАНДАРТНАЯ КАРТОЧКА
                 print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
