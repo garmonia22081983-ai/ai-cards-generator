@@ -6,4 +6,4 @@ beautifulsoup4
 gspread
 google-auth
 extra-streamlit-components
-youtube-transcript-api
+youtube-transcript-api==0.6.2
