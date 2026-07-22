@@ -659,17 +659,32 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
             pass
 
 
-# --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
+# --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ (ПО ДИЗАЙН-МАКЕТУ) ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.4, 1])
+    col_a1, col_a2, col_a3 = st.columns([1.2, 1.3, 1.2])
     with col_a2:
-        # Встроенный надежный контейнер-карточка с белым фоном и рамкой
+        
+        # 🌟 ЖЕЛЕЗОБЕТОННЫЙ СПОСОБ ЗАЛИТЬ ФОН БЕЛЫМ ЦВЕТОМ
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stVerticalBlockBorderWrapper"] {
+                background-color: #ffffff !important;
+                border: 1px solid #ebdcc5 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+            }
+            </style>
+            """, 
+            unsafe_allow_html=True
+        )
+        
         with st.container(border=True):
             st.markdown(
                 """
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <h2 style="margin-bottom: 4px; color: #1a365d; font-size: 26px;">🎓 Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 14px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+                <div style="text-align: center; margin-bottom: 20px; padding-top: 10px;">
+                    <h2 style="margin-bottom: 4px; color: #1a365d; font-size: 24px; font-family: 'Georgia', serif;">🎓 Flashcards AI</h2>
+                    <p style="color: #718096; font-size: 13px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
                 </div>
                 """, 
                 unsafe_allow_html=True
