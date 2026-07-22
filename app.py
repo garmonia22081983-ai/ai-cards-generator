@@ -194,18 +194,17 @@ def get_youtube_transcript(video_url):
     if not video_id:
         return "ERR: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
-    # Умный поиск ключа в st.secrets (и на верхнем уровне, и внутри smtp)
-    api_key = ""
+    # Прямой ключ-резерв (чтобы больше не зависеть от капризов Secrets)
+    api_key = "sd_0b61c52d4b97ec935795c17b295fd47e"
+    
+    # Попытка переопределить из Secrets, если Streamlit всё же соизволит его прочитать
     try:
-        if "SUPADATA_API_KEY" in st.secrets:
+        if "SUPADATA_API_KEY" in st.secrets and st.secrets["SUPADATA_API_KEY"]:
             api_key = st.secrets["SUPADATA_API_KEY"]
         elif "smtp" in st.secrets and "SUPADATA_API_KEY" in st.secrets["smtp"]:
             api_key = st.secrets["smtp"]["SUPADATA_API_KEY"]
     except Exception:
         pass
-    
-    if not api_key:
-        return "ERR: Не найден API-ключ Supadata в настройках Secrets!"
     
     url = f"https://api.supadata.ai/v1/youtube/transcript?videoId={video_id}&text=true"
     headers = {"x-api-key": api_key}
