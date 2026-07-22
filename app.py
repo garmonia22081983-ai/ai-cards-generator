@@ -20,13 +20,12 @@ import time
 import tempfile
 import re
 
-# --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
+# --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 # --- СПИСОК EMAIL АДМИНИСТРАТОРОВ ---
 ADMIN_EMAILS = [
-    "garmonia.22081983@gmail.com",
-    "garmonia.83@mail.ru"
+    "garmonia.22081983@gmail.com"
 ]
 
 # --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
@@ -38,7 +37,6 @@ if "GEMINI_API_KEY" in st.secrets:
 else:
     st.error("Ключ API не найден в настройках Secrets!")
 
-# 🌟 ВСЕГДА ДЕРЖИМ БОКОВУЮ ПАНЕЛЬ ОТКРЫТОЙ ПРИ ЗАГРУЗКЕ!
 st.set_page_config(
     page_title="Генератор карточек", 
     layout="wide",
@@ -63,7 +61,7 @@ def get_gsheets_client():
     return gspread.authorize(creds)
 
 
-# --- ФУНКЦИЯ ОТПРАВКИ EMAIL С КОДОМ (SMTP) ---
+# --- ФУНКЦИЯ ОТПРАВКИ EMAIL С КОДОМ (SMTP GMAIL) ---
 def send_otp_email(target_email, code):
     try:
         smtp_config = st.secrets["smtp"]
@@ -96,14 +94,15 @@ def send_otp_email(target_email, code):
         return False
 
 
-# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ПОДСЧЕТА ИСПОЛЬЗОВАННЫХ КАРТОЧЕК ---
+# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА, ЛИМИТОВ И СРОКА ХРАНЕНИЯ КОЛОД ---
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
-        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365)
+        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365), 999999
 
     tariff_name = "Пробный"
     max_cards = 45
+    retention_days = 14
     period_start = datetime.now() - timedelta(days=3)
 
     try:
@@ -133,9 +132,11 @@ def get_user_tariff_and_usage(email, sh):
             if "Максимум" in product_str or "1190" in str(found_payment):
                 tariff_name = "Максимум"
                 max_cards = 3000
+                retention_days = 999999
             else:
                 tariff_name = "Практик"
                 max_cards = 300
+                retention_days = 60
         else:
             users_sheet = sh.worksheet("Users")
             u_rows = users_sheet.get_all_values()
@@ -173,10 +174,10 @@ def get_user_tariff_and_usage(email, sh):
                     except ValueError:
                         pass
 
-        return tariff_name, max_cards, used_cards, period_start
+        return tariff_name, max_cards, used_cards, period_start, retention_days
 
     except Exception:
-        return tariff_name, max_cards, 0, period_start
+        return tariff_name, max_cards, 0, period_start, retention_days
 
 
 # --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
@@ -565,7 +566,7 @@ if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
 
 
-# --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
+# --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ (АВТО-ВХОД) ---
 saved_email = cookie_manager.get(cookie="auth_email")
 
 if not saved_email:
@@ -578,7 +579,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
     st.session_state.user_email = email
     
     if email in clean_admin_emails:
-        st.session_state.user_name = "Наталья" if email in ["garmonia.83@mail.ru", "garmonia.22081983@gmail.com"] else "Администратор"
+        st.session_state.user_name = "Администратор"
         st.session_state.trial_expired = False
     else:
         try:
@@ -598,7 +599,11 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
                 row_num, row_data = user_row
                 reg_date_str = row_data[1]
                 status = row_data[2] if len(row_data) > 2 else "active"
-                st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+                
+                if len(row_data) > 3 and row_data[3].strip():
+                    st.session_state.user_name = row_data[3].strip()
+                else:
+                    st.session_state.user_name = "Наталья" if email == "garmonia.83@mail.ru" else "Преподаватель"
                 
                 if status == "paid":
                     last_pay_date = datetime.now()
@@ -712,7 +717,7 @@ if not st.session_state.user_email:
                     
                     if email in clean_admin_emails:
                         cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                        st.session_state.user_name = "Наталья" if email in ["garmonia.83@mail.ru", "garmonia.22081983@gmail.com"] else "Администратор"
+                        st.session_state.user_name = "Администратор"
                         st.session_state.trial_expired = False
                         st.success("Успешный вход!")
                         time.sleep(0.3)
@@ -742,7 +747,7 @@ if not st.session_state.user_email:
                                     break
                             
                             if found_p:
-                                user_name = found_p[0].strip() if found_p[0].strip() else "Преподаватель"
+                                user_name = found_p[0].strip() if found_p[0].strip() else ("Наталья" if email == "garmonia.83@mail.ru" else "Преподаватель")
                                 product_name = found_p[5].strip() if len(found_p) > 5 else ""
                                 price_val = found_p[6].strip() if len(found_p) > 6 else ""
                                 reg_time_str = found_p[11].strip() if len(found_p) > 11 else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -758,7 +763,11 @@ if not st.session_state.user_email:
                             row_num, row_data = user_row
                             reg_date_str = row_data[1]
                             status = row_data[2] if len(row_data) > 2 else "active"
-                            st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+                            
+                            if len(row_data) > 3 and row_data[3].strip():
+                                st.session_state.user_name = row_data[3].strip()
+                            else:
+                                st.session_state.user_name = "Наталья" if email == "garmonia.83@mail.ru" else "Преподаватель"
                             
                             if status == "blocked":
                                 st.error("🚫 Ваш доступ заблокирован.")
@@ -863,10 +872,10 @@ def extract_text_from_url(url):
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
 
-# --- ЗАГРУЗКА ДАННЫХ О ТАРИФЕ И ЛИМИТАХ ---
+# --- ЗАГРУЗКА ДАННЫХ О ТАРИФЕ, ЛИМИТАХ И СРОКЕ ХРАНЕНИЯ ---
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
+tariff_name, max_cards, used_cards, period_start, retention_days = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
 # --- ПРОВЕРКА АДМИН-ПРАВ И ВЫБОР МОДЕЛИ ---
@@ -878,10 +887,11 @@ is_admin_user = (st.session_state.user_email.lower() in clean_admin_emails) if s
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     
+    # 🌟 ВОЗВРАЩЕНЫ 3.5 И 2.5 ДЛЯ АДМИНА!
     if is_admin_user:
-        model_option = st.selectbox("Нейросеть (Панель Админа):", ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"])
+        model_option = st.sidebar.selectbox("Нейросеть (Панель Админа):", ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"])
     else:
-        model_option = "gemini-2.0-flash"  # По умолчанию для всех учителей
+        model_option = "gemini-3.5-flash"  # По умолчанию для всех
     
     source_type = st.radio(
         "Что берем за основу?", 
@@ -920,7 +930,7 @@ elif is_limit_reached:
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
 
-# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА (СЛЕВА ФОРМА, СПРАВА ТАРИФ И КОЛОДЫ) ---
+# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -946,11 +956,13 @@ with col_main:
     )
 
 with col_stats:
+    retention_label = "Вечный архив 👑" if retention_days > 365 else f"{retention_days} дней"
     st.markdown(
         f"""
         <div class="tariff-box">
             <h3 style="margin-top:0; font-size:18px;">📊 Твой тариф и лимиты</h3>
-            <p style="color:#718096; font-size:13px; margin-bottom:12px;">Тариф: <b>{tariff_name.upper()}</b></p>
+            <p style="color:#718096; font-size:13px; margin-bottom:4px;">Тариф: <b>{tariff_name.upper()}</b></p>
+            <p style="color:#718096; font-size:12px; margin-bottom:12px;">Срок хранения колод: <b>{retention_label}</b></p>
         </div>
         """, 
         unsafe_allow_html=True
@@ -969,10 +981,30 @@ with col_stats:
         try:
             decks_sheet = sh_global.worksheet("Decks")
             d_rows = decks_sheet.get_all_values()
-            my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
+            
+            raw_my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
+            
+            my_decks = []
+            now_dt = datetime.now()
+            
+            for d in raw_my_decks:
+                deck_created_str = d[6].strip() if len(d) > 6 else ""
+                deck_dt = None
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                    try:
+                        deck_dt = datetime.strptime(deck_created_str, fmt)
+                        break
+                    except ValueError:
+                        pass
+                
+                if deck_dt and retention_days < 999999:
+                    if now_dt <= (deck_dt + timedelta(days=retention_days)):
+                        my_decks.append(d)
+                else:
+                    my_decks.append(d)
             
             if not my_decks:
-                st.caption("У вас пока нет сохраненных колод.")
+                st.caption("У вас пока нет активных сохраненных колод.")
             else:
                 search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
                 show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
@@ -1132,7 +1164,7 @@ if generate_click:
                     st.session_state.cards = cards_data
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
-                    # --- СОХРАНЕНИЕ В ИСТОРИЮ (ВКЛАДКА REQUESTS С ИСТОЧНИКОМ) ---
+                    # --- СОХРАНЕНИЕ В ИСТОРИЮ ---
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
