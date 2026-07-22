@@ -290,7 +290,9 @@ button[data-testid="stBaseButton-primary"]:hover {{
 }}
 
 /* ⬜ Делаем фон карточки авторизации кипельно-белым с красивой тенью */
-[data-testid="stVerticalBlockBorderWrapper"] {{
+div[data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="stVerticalBlockBorderWrapper"] > div {{
+    background: #ffffff !important;
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5 !important;
     border-radius: 12px !important;
