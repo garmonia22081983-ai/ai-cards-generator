@@ -17,13 +17,21 @@ from email.mime.multipart import MIMEMultipart
 import random
 import extra_streamlit_components as stx
 import time
+import tempfile
+import re
+
+# Импортируем библиотеку субтитров YouTube
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except ImportError:
+    YouTubeTranscriptApi = None
 
 # --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
-# --- СПИСОК EMAIL АДМИНИСТРАТОРОВ (БЕЗ ОГРАНИЧЕНИЙ) ---
+# --- СПИСОК EMAIL АДМИНИСТРАТОРОВ ---
 ADMIN_EMAILS = [
-    "garmonia.22081983@gmail.com"  # Твой админский адрес
+    "garmonia.22081983@gmail.com"
 ]
 
 # --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
@@ -149,7 +157,7 @@ def get_user_tariff_and_usage(email, sh):
         used_cards = 0
         for r in req_rows[1:]:
             if len(r) > 1 and r[1].strip().lower() == email.lower():
-                raw_req_d = r[6].strip() if len(r) > 6 else ""
+                raw_req_d = r[6].strip() if len(r) > 6 else (r[7].strip() if len(r) > 7 else "")
                 req_d = None
                 for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
                     try:
@@ -160,7 +168,8 @@ def get_user_tariff_and_usage(email, sh):
                 
                 if req_d and req_d >= filter_start:
                     try:
-                        used_cards += int(r[4].strip())
+                        card_val = r[4].strip() if len(r) > 4 else "0"
+                        used_cards += int(card_val)
                     except ValueError:
                         pass
 
@@ -168,6 +177,32 @@ def get_user_tariff_and_usage(email, sh):
 
     except Exception:
         return tariff_name, max_cards, 0, period_start
+
+
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
+def extract_youtube_id(url):
+    pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1) or match.group(2)
+    return None
+
+
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
+def get_youtube_transcript(video_url):
+    if not YouTubeTranscriptApi:
+        return "Ошибка: Библиотека youtube-transcript-api не установлена."
+    
+    video_id = extract_youtube_id(video_url)
+    if not video_id:
+        return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
+    
+    try:
+        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
+        text = " ".join([item['text'] for item in transcript_list])
+        return text
+    except Exception as e:
+        return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
 
 
 # --- СТИЛИ ПРИЛОЖЕНИЯ ---
@@ -346,7 +381,6 @@ if student_deck_id:
         st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
         st.caption(f"Всего карточек: {len(cards_data)}")
         
-        # --- КНОПКИ ЭКСПОРТА И ПЕЧАТИ ДЛЯ УЧЕНИКА ---
         col_s_exp1, col_s_exp2 = st.columns(2)
         with col_s_exp1:
             anki_list_student = []
@@ -761,11 +795,24 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК С ОПТИМИЗИРОВАННЫМИ МОИМИ КОЛОДАМИ ---
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК (ГОТОВЫЙ СПИСОК СЛОВ - ПЕРВЫМ) ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
-    source_type = st.radio("Что берем за основу?", ["📝 Текст / Отрывок статьи / Трек субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"])
+    
+    # 🌟 СПИСОК СЛОВ НА ПЕРВОМ МЕСТЕ И ПО УМОЛЧАНИЮ
+    source_type = st.radio(
+        "Что берем за основу?", 
+        [
+            "✍️ Готовый список слов",
+            "📝 Текст / Отрывок статьи / Субтитры", 
+            "🎬 Ссылка на YouTube",
+            "📁 Видео или аудио файл (до 5 мин)",
+            "🔗 Ссылка на веб-статью"
+        ],
+        index=0
+    )
+    
     student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
     
     if source_type != "✍️ Готовый список слов":
@@ -783,7 +830,6 @@ with st.sidebar:
             if not my_decks:
                 st.caption("У вас пока нет сохраненных колод.")
             else:
-                # Фильтр и поиск по колодам для масштабируемости (даже если 50+ колод)
                 search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
                 show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
                 
@@ -797,7 +843,7 @@ with st.sidebar:
                 display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
                 
                 if not search_q and len(my_decks) > 5 and not show_all:
-                    st.caption(f"Показано последние 5 из {len(my_decks)}. Включите галочку выше для всего списка.")
+                    st.caption(f"Показано последние 5 из {len(my_decks)}.")
                 
                 for d in display_decks:
                     d_id = d[0]
@@ -806,8 +852,6 @@ with st.sidebar:
                     d_cards_json = d[5]
                     
                     st.write(f"**{d_name}** ({d_level})")
-                    
-                    # Две кнопки на ОДНОМ уровне
                     c1, c2 = st.columns(2)
                     with c1:
                         if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
@@ -847,13 +891,21 @@ elif is_limit_reached:
 # --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
+user_input = ""
+uploaded_file_obj = None
+
 with col_main:
-    if source_type == "📝 Текст / Отрывок статьи / Трек субтитров":
-        user_input = st.text_area("Вставьте сюда текст статьи или субтитры:", height=200)
+    if source_type == "✍️ Готовый список слов":
+        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
+    elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
+        user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
+    elif source_type == "🎬 Ссылка на YouTube":
+        user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
+    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
+        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
-    else:
-        user_input = st.text_area("Введите конкретные слова или фразы:", height=120)
 
     generate_click = st.button(
         "Создать карточки ✨", 
@@ -881,9 +933,16 @@ with col_stats:
         st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
         st.caption(f"Осталось: **{remaining_cards}** карточек")
 
+# --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
-    if not user_input.strip():
-        st.warning("Пожалуйста, заполните поле ввода!")
+    is_valid_input = False
+    if source_type == "📁 Видео или аудио файл (до 5 мин)":
+        is_valid_input = (uploaded_file_obj is not None)
+    else:
+        is_valid_input = bool(user_input.strip())
+
+    if not is_valid_input:
+        st.warning("Пожалуйста, заполните поле ввода или загрузите файл!")
     else:
         actual_requested = num_cards
         if source_type == "✍️ Готовый список слов":
@@ -896,22 +955,54 @@ if generate_click:
             st.info("Пожалуйста, уменьшите количество карточек в слайдере или перейдите на более старший тариф.")
             st.link_button("💳 Посмотреть тарифы", "https://flashcards-ai.ru/#tarifs")
         else:
-            with st.spinner("Методист Gemini собирает лингвистические данные..."):
+            with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
                 try:
-                    final_content = user_input
-                    if source_type == "🔗 Ссылка на веб-статью":
-                        scraped_text = extract_text_from_url(user_input)
+                    final_prompt_content = ""
+                    gemini_uploaded_file = None
+                    temp_file_path = None
+                    source_url_to_save = user_input.strip()
+
+                    # 1. YOUTUBE ССЫЛКА
+                    if source_type == "🎬 Ссылка на YouTube":
+                        yt_transcript = get_youtube_transcript(user_input.strip())
+                        if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
+                            st.error(yt_transcript)
+                            st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео или аудио файл».")
+                            st.stop()
+                        final_prompt_content = yt_transcript
+
+                    # 2. МЕДИАФАЙЛ (MP4 / MP3)
+                    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+                        if uploaded_file_obj.size > 30 * 1024 * 1024:
+                            st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
+                            st.stop()
+                            
+                        file_ext = os.path.splitext(uploaded_file_obj.name)[1]
+                        source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(uploaded_file_obj.size/1024/1024, 1)} MB)"
+                        
+                        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+                            tmp.write(uploaded_file_obj.read())
+                            temp_file_path = tmp.name
+                            
+                        gemini_uploaded_file = genai.upload_file(path=temp_file_path)
+
+                    # 3. ВЕБ-СТАТЬЯ
+                    elif source_type == "🔗 Ссылка на веб-статью":
+                        scraped_text = extract_text_from_url(user_input.strip())
                         if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
                             st.error(scraped_text)
                             st.stop()
-                        final_content = scraped_text
+                        final_prompt_content = scraped_text
+                    
+                    else:
+                        final_prompt_content = user_input.strip()
 
                     model = genai.GenerativeModel(model_option)
                     
                     if source_type == "✍️ Готовый список слов":
-                        prompt = f"""
+                        prompt_text = f"""
                         Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
-                        Создай обучающие карточки для следующих слов/фраз: {final_content}.
+                        Создай обучающие карточки для следующих слов/фраз: {final_prompt_content}.
                         Верни строго валидный JSON-массив объектов со следующими ключами:
                         - "word": оригинальное слово на английском
                         - "transcription": фонетическая транскрипция в IPA
@@ -922,9 +1013,10 @@ if generate_click:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
                     else:
-                        prompt = f"""
+                        prompt_text = f"""
                         Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
-                        Выбери из предоставленного текста ровно {num_cards} важных слов под уровень {student_level} из материала: {final_content}
+                        Проанализируй предоставленный материал и выбери из него ровно {num_cards} самых важных полезных фраз или слов под уровень {student_level}.
+                        
                         Верни строго валидный JSON-массив объектов со следующими ключами:
                         - "word": оригинальное слово на английском
                         - "transcription": фонетическая транскрипция в IPA
@@ -935,7 +1027,11 @@ if generate_click:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
 
-                    response = model.generate_content(prompt)
+                    if gemini_uploaded_file:
+                        response = model.generate_content([prompt_text, gemini_uploaded_file])
+                    else:
+                        response = model.generate_content([prompt_text, final_prompt_content])
+
                     text_response = response.text.strip()
                     
                     backtick_triple = chr(96) * 3
@@ -955,16 +1051,17 @@ if generate_click:
                     st.session_state.cards = cards_data
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
+                    # --- СОХРАНЕНИЕ В ИСТОРИЮ (ВКЛАДКА REQUESTS С ИСТОЧНИКОМ) ---
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
-                        source_snippet = user_input[:200] + "..." if len(user_input) > 200 else user_input
                         
                         requests_sheet = sh_global.worksheet("Requests")
                         requests_sheet.append_row([
                             request_id, 
                             st.session_state.user_email, 
-                            source_snippet, 
+                            source_type,
+                            source_url_to_save[:250], 
                             student_level, 
                             len(cards_data), 
                             "Completed", 
@@ -984,8 +1081,15 @@ if generate_click:
                                 card['context'], audio_us, audio_uk, st.session_state.user_email
                             ])
                     except Exception as sheets_err:
-                        st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в базу истории: {sheets_err}")
+                        st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
                     
+                    if gemini_uploaded_file:
+                        try: genai.delete_file(gemini_uploaded_file.name)
+                        except Exception: pass
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        try: os.remove(temp_file_path)
+                        except Exception: pass
+
                     st.success(f"Успешно! Создано карточек: {len(cards_data)}")
                     time.sleep(1)
                     st.rerun()
