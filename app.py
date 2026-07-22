@@ -205,7 +205,7 @@ def get_youtube_transcript(video_url):
         return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
 
 
-# --- СТИЛИ ПРИЛОЖЕНИЯ (ТОЧНАЯ СТИЛИЗАЦИЯ КАРТОЧКИ АВТОРИЗАЦИИ) ---
+# --- УЛУЧШЕННЫЕ СТИЛИ ПРИЛОЖЕНИЯ (UI/UX) ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -231,12 +231,6 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     color: #2d3748 !important;
 }}
 
-/* Поднимаем всё содержимое выше, убираем пустоту сверху */
-.main .block-container {{
-    padding-top: 1.5rem !important;
-    padding-bottom: 2rem !important;
-}}
-
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
@@ -247,32 +241,23 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
-/* Главная синяя кнопка (как на Фото 2) */
-button[kind="primary"], 
-button[data-testid="stBaseButton-primary"] {{
-    background-color: #2e6c9e !important;
-    color: #ffffff !important;
-    border: none !important;
-    border-radius: 8px !important;
-    font-weight: bold !important;
-    font-size: 15px !important;
-}}
-
-button[kind="primary"]:hover, 
-button[data-testid="stBaseButton-primary"]:hover {{
-    background-color: #1a365d !important;
-    border: none !important;
-}}
-
-/* ЭДОИНАЯ БЕЛАЯ КАРТОЧКА АВТОРИЗАЦИИ (Фото 2) */
-div[data-testid="stColumn"]:nth-of-type(2) {{
+/* Карточка авторизации */
+.auth-container {{
     background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 20px !important;
-    padding: 30px 25px 20px 25px !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 30px 25px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+    margin-bottom: 20px;
 }}
 
+.auth-header {{
+    text-align: center;
+    margin-bottom: 20px;
+}}
+
+/* Инпуты и формы */
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
@@ -302,7 +287,7 @@ input, textarea, select,
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
 }}
 
-/* Интерактивные карточки */
+/* Карточки тренажера */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -350,43 +335,26 @@ input, textarea, select,
 summary::-webkit-details-marker {{ display: none !important; }}
 summary {{ list-style: none !important; }}
 
-/* Стили печатных карточек */
-.print-row-bw {{
+/* Печатная фича для тарифа Максимум */
+.print-brand-header {{
+    border-bottom: 2px solid #1a365d;
+    padding-bottom: 10px;
+    margin-bottom: 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    background: #ffffff;
+    padding: 15px;
+    border-radius: 8px;
+}}
+
+.print-row {{
     display: flex;
     border: 1px dashed #ccc;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
 }}
-
-.print-row-kids {{
-    display: flex;
-    border: 2px solid #ffb74d;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    page-break-inside: avoid;
-    background-color: #ffffff;
-    overflow: hidden;
-}}
-
-.print-col-kids-left {{
-    width: 45%;
-    padding: 15px;
-    background-color: #ffe0b2;
-    border-right: 2px dashed #ffb74d;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}}
-
-.print-col-kids-right {{
-    width: 55%;
-    padding: 15px;
-    background-color: #ffffff;
-}}
-
 .print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
 .print-left {{
     border-right: 1px dashed #ccc;
@@ -472,7 +440,7 @@ if student_deck_id:
 
         if student_print_mode:
             for card in cards_data:
-                print_html = f"""<div class="print-row-bw">
+                print_html = f"""<div class="print-row">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
@@ -627,21 +595,23 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
             pass
 
 
-# --- БЛОК АВТОРИЗАЦИИ (ЕНОЕ ОKНО, КАК НА ФОТО 2) ---
+# --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ (АККУРАТНАЯ ЦЕНТРИРОВАННАЯ КАРТОЧКА) ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
+    col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 22px;">
-                <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
-                <p style="color: #718096; font-size: 16px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
-            </div>
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
+                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
+                </div>
             """, 
             unsafe_allow_html=True
         )
         
         if not st.session_state.otp_sent:
+            st.write("**Вход в Личный Кабинет**")
             email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
             
             if st.button("Получить код входа", type="primary", use_container_width=True):
@@ -810,10 +780,11 @@ if not st.session_state.user_email:
 
         st.markdown(
             """
-            <div style="margin-top: 18px; text-align: center;">
-                <small style="color: #a0aec0; font-size: 11px;">
+            <div style="margin-top: 20px; text-align: center;">
+                <small style="color: #718096;">
                 Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                 </small>
+            </div>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1232,7 +1203,7 @@ if st.session_state.cards:
 
     st.write("---")
 
-    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ ---
+    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ (С БРЕНДИРОВАНИЕМ ДЛЯ ТАРИФА МАКСИМУМ) ---
     col_exp1, col_exp2 = st.columns(2)
     
     with col_exp1:
@@ -1257,80 +1228,42 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
-    # 🌟 НАСТРОЙКИ ПЕЧАТИ
+    # 🌟 НАСТРОЙКА БРЕНДИРОВАНИЯ ДЛЯ ТАРИФА «МАКСИМУМ» И АДМИНА
     is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
     custom_print_teacher = ""
+    custom_print_contacts = ""
     custom_print_note = ""
-    print_style = "🖨️ Черно-белая (Экономный режим)"
 
     if print_mode:
         if is_max_tariff:
-            with st.expander("👑 Настройка брендирования распечатки (Тариф Максимум)", expanded=True):
-                print_style = st.selectbox(
-                    "Выберите стиль оформления:", 
-                    [
-                        "🖨️ Черно-белая (Экономный режим)", 
-                        "🎨 Цветная детская (Игровая / Пастельная)", 
-                        "💼 Цветная стильная (Премиум)"
-                    ]
-                )
+            with st.expander("👑 Настройка брендирования распечатки (Фича тарифа Максимум)", expanded=True):
+                st.caption("Укажите свои данные, и они автоматически появятся в фирменном шапке распечатки:")
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
-                    custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English Class with Anna").strip()
+                    custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English with Anna").strip()
                 with col_p2:
-                    custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
+                    custom_print_contacts = st.text_input("Контакты (Telegram / Instagram / Tel):", placeholder="@anna_english").strip()
+                custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
 
-        # 1. Шапка ДЕТСКОГО стиля
-        if "детская" in print_style and is_max_tariff:
-            teacher_title = custom_print_teacher if custom_print_teacher else "English Class"
-            note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
+        # Отрисовка шапки брендинга
+        if custom_print_teacher or custom_print_contacts or custom_print_note:
             st.markdown(
                 f"""
-                <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 16px; font-weight: bold; color: #d84315;">🦁 {teacher_title}</span>
-                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: ______________________ | Date: ___/___/2026</span>
+                <div class="print-brand-header">
+                    <div>
+                        <h2 style="margin:0; color:#1a365d; font-family:'Georgia', serif;">{custom_print_teacher if custom_print_teacher else 'English Worksheet'}</h2>
+                        <p style="margin:3px 0 0 0; color:#718096; font-size:13px;">{custom_print_note}</p>
                     </div>
-                    {note_str}
+                    <div style="text-align:right; font-size:13px; color:#2e6c9e; font-weight:bold;">
+                        {custom_print_contacts}
+                    </div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
-        # 2. Шапка СТИЛЬНОГО ПРЕМИУМ стиля
-        elif "стильная" in print_style and is_max_tariff:
-            teacher_title = custom_print_teacher if custom_print_teacher else "English Worksheet"
-            note_str = f"<p style='margin:3px 0 0 0; color:#718096; font-size:12px;'>{custom_print_note}</p>" if custom_print_note else ""
-            st.markdown(
-                f"""
-                <div style="border-bottom: 2px solid #1a365d; padding: 12px 15px; margin-bottom: 20px; background: #ffffff; border-radius: 8px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <h3 style="margin:0; color:#1a365d; font-family:'Georgia', serif;">{teacher_title}</h3>
-                        <span style="font-size: 12px; color: #718096;">Name: ______________________ | Date: ___/___/2026</span>
-                    </div>
-                    {note_str}
-                </div>
-                """,
-                unsafe_allow_html=True
-            )
-
-        # Отрисовка карточек
         for card in st.session_state.cards:
-            if "детская" in print_style and is_max_tariff:
-                print_html = f"""<div class="print-row-kids">
-<div class="print-col-kids-left">
-    <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
-    <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{card.get('transcription', '')}</span>
-</div>
-<div class="print-col-kids-right">
-    <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
-    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
-    <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
-    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
-</div>
-</div>"""
-            else:
-                print_html = f"""<div class="print-row-bw">
+            print_html = f"""<div class="print-row">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
