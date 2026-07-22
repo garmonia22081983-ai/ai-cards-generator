@@ -19,39 +19,29 @@ import extra_streamlit_components as stx
 import time
 import tempfile
 import re
-
 # Импортируем библиотеку субтитров YouTube
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
     YouTubeTranscriptApi = None
-
 # --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
-
 # --- СПИСОК EMAIL АДМИНИСТРАТОРОВ ---
 ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"
 ]
-
 # --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
-
 # --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
     st.error("Ключ API не найден в настройках Secrets!")
-
 st.set_page_config(page_title="Генератор карточек", layout="wide")
-
 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
     del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
-
 api_key = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=api_key)
-
-
 # --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
 def get_gsheets_client():
     scopes = [
@@ -61,8 +51,6 @@ def get_gsheets_client():
     creds_info = st.secrets["gcp_service_account"]
     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
     return gspread.authorize(creds)
-
-
 # --- ФУНКЦИЯ ОТПРАВКИ EMAIL С КОДОМ (SMTP) ---
 def send_otp_email(target_email, code):
     try:
@@ -71,7 +59,6 @@ def send_otp_email(target_email, code):
         msg['From'] = f"Flashcards AI <{smtp_config['email']}>"
         msg['To'] = target_email
         msg['Subject'] = f"{code} — Ваш код входа в Генератор Карточек"
-
         body = f"""
         <html>
             <body style="font-family: Arial, sans-serif; color: #2d3748; padding: 20px;">
@@ -85,7 +72,6 @@ def send_otp_email(target_email, code):
         </html>
         """
         msg.attach(MIMEText(body, 'html'))
-
         server = smtplib.SMTP_SSL(smtp_config['server'], int(smtp_config['port']))
         server.login(smtp_config['email'], smtp_config['password'])
         server.send_message(msg)
@@ -94,22 +80,17 @@ def send_otp_email(target_email, code):
     except Exception as e:
         st.error(f"Ошибка отправки письма: {e}")
         return False
-
-
 # --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ПОДСЧЕТА ИСПОЛЬЗОВАННЫХ КАРТОЧЕК ---
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
         return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365)
-
     tariff_name = "Пробный"
     max_cards = 45
     period_start = datetime.now() - timedelta(days=3)
-
     try:
         payments_sheet = sh.worksheet("Payments")
         payments_rows = payments_sheet.get_all_values()
-
         found_payment = None
         for p_row in reversed(payments_rows[1:]):
             if len(p_row) > 1 and p_row[1].strip().lower() == email.lower():
@@ -118,7 +99,6 @@ def get_user_tariff_and_usage(email, sh):
                 if product_name or price_val:
                     found_payment = p_row
                     break
-
         if found_payment:
             product_str = found_payment[5].strip() if len(found_payment) > 5 else ""
             raw_d = found_payment[11].strip() if len(found_payment) > 11 else ""
@@ -129,7 +109,6 @@ def get_user_tariff_and_usage(email, sh):
                     break
                 except ValueError:
                     continue
-
             if "Максимум" in product_str or "1190" in str(found_payment):
                 tariff_name = "Максимум"
                 max_cards = 3000
@@ -149,7 +128,6 @@ def get_user_tariff_and_usage(email, sh):
                         except ValueError:
                             continue
                     break
-
         filter_start = period_start - timedelta(days=1)
         requests_sheet = sh.worksheet("Requests")
         req_rows = requests_sheet.get_all_values()
@@ -172,13 +150,9 @@ def get_user_tariff_and_usage(email, sh):
                         used_cards += int(card_val)
                     except ValueError:
                         pass
-
         return tariff_name, max_cards, used_cards, period_start
-
     except Exception:
         return tariff_name, max_cards, 0, period_start
-
-
 # --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
 def extract_youtube_id(url):
     pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
@@ -186,8 +160,6 @@ def extract_youtube_id(url):
     if match:
         return match.group(1) or match.group(2)
     return None
-
-
 # --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
 def get_youtube_transcript(video_url):
     if not YouTubeTranscriptApi:
@@ -203,14 +175,11 @@ def get_youtube_transcript(video_url):
         return text
     except Exception as e:
         return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
-
-
-# --- УЛУЧШЕННЫЕ СТИЛИ ПРИЛОЖЕНИЯ (UI/UX) ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ (ТОЧНАЯ СТИЛИЗАЦИЯ КАРТОЧКИ АВТОРИЗАЦИИ) ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
     return base64.b64encode(data).decode()
-
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -220,7 +189,6 @@ if os.path.exists("background.jpg"):
         bg_css = "background-color: #f8f6f0 !important;"
 else:
     bg_css = "background-color: #f8f6f0 !important;"
-
 st.markdown(f"""
 <style>
 html, body, [data-testid="stAppViewContainer"], .stApp {{
@@ -230,34 +198,42 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     background-attachment: fixed !important;
     color: #2d3748 !important;
 }}
-
+/* Поднимаем всё содержимое выше, убираем пустоту сверху */
+.main .block-container {{
+    padding-top: 1.5rem !important;
+    padding-bottom: 2rem !important;
+}}
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
-
 [data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
 }}
-
-/* Карточка авторизации */
-.auth-container {{
+/* Главная синяя кнопка (как на Фото 2) */
+button[kind="primary"], 
+button[data-testid="stBaseButton-primary"] {{
+    background-color: #2e6c9e !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    font-size: 15px !important;
+}}
+button[kind="primary"]:hover, 
+button[data-testid="stBaseButton-primary"]:hover {{
+    background-color: #1a365d !important;
+    border: none !important;
+}}
+/* ЭДОИНАЯ БЕЛАЯ КАРТОЧКА АВТОРИЗАЦИИ (Фото 2) */
+div[data-testid="stColumn"]:nth-of-type(2) {{
     background-color: #ffffff !important;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 30px 25px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    margin-top: 20px;
-    margin-bottom: 20px;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    padding: 30px 25px 20px 25px !important;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05) !important;
 }}
-
-.auth-header {{
-    text-align: center;
-    margin-bottom: 20px;
-}}
-
-/* Инпуты и формы */
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
@@ -270,7 +246,6 @@ input, textarea, select,
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
 }}
-
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
@@ -278,7 +253,6 @@ input, textarea, select,
     background-color: #f4efe6 !important;
     background-image: none !important;
 }}
-
 .tariff-box {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
@@ -286,8 +260,7 @@ input, textarea, select,
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
 }}
-
-/* Карточки тренажера */
+/* Интерактивные карточки */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -302,14 +275,12 @@ input, textarea, select,
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
 }}
-
 .card-front-title {{
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
 }}
-
 .card-front-subtitle {{
     font-size: 10px;
     color: #704b4b !important;
@@ -318,7 +289,6 @@ input, textarea, select,
     letter-spacing: 1px;
     font-weight: 600;
 }}
-
 .card-back {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
@@ -331,28 +301,39 @@ input, textarea, select,
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
 }}
-
 summary::-webkit-details-marker {{ display: none !important; }}
 summary {{ list-style: none !important; }}
-
-/* Печатная фича для тарифа Максимум */
-.print-brand-header {{
-    border-bottom: 2px solid #1a365d;
-    padding-bottom: 10px;
-    margin-bottom: 20px;
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-end;
-    background: #ffffff;
-    padding: 15px;
-    border-radius: 8px;
-}}
-
-.print-row {{
+/* Стили печатных карточек */
+.print-row-bw {{
     display: flex;
     border: 1px dashed #ccc;
     margin-bottom: 12px;
     page-break-inside: avoid;
+    background-color: #ffffff;
+}}
+.print-row-kids {{
+    display: flex;
+    border: 2px solid #ffb74d;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+    background-color: #ffffff;
+    overflow: hidden;
+}}
+.print-col-kids-left {{
+    width: 45%;
+    padding: 15px;
+    background-color: #ffe0b2;
+    border-right: 2px dashed #ffb74d;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}}
+.print-col-kids-right {{
+    width: 55%;
+    padding: 15px;
     background-color: #ffffff;
 }}
 .print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
@@ -369,8 +350,6 @@ summary {{ list-style: none !important; }}
 }}
 </style>
 """, unsafe_allow_html=True)
-
-
 # ==============================================================================
 # 🎓 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id)
 # ==============================================================================
@@ -386,7 +365,6 @@ try:
         student_deck_id = student_deck_id[0] if student_deck_id else None
 except Exception:
     student_deck_id = None
-
 if student_deck_id:
     st.title("🎴 Интерактивная колода карточек")
     
@@ -435,12 +413,10 @@ if student_deck_id:
             
         with col_s_exp2:
             student_print_mode = st.checkbox("🖨️ Включить режим для печати", key="s_print_mode")
-
         st.write("---")
-
         if student_print_mode:
             for card in cards_data:
-                print_html = f"""<div class="print-row">
+                print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
@@ -500,17 +476,12 @@ if student_deck_id:
                         if st.button("👈 Показать слово", key=f"s_unflip_{i}", use_container_width=True):
                             st.session_state.student_flipped[i] = False
                             st.rerun()
-
     except Exception as e:
         st.error(f"Ошибка загрузки колоды: {e}")
-
     st.stop()
-
-
 # ==============================================================================
 # 👩‍🏫 2. ИНТЕРФЕЙС УЧИТЕЛЯ (АВТОРИЗАЦИЯ, ГЕНЕРАЦИЯ, СОХРАНЕНИЕ)
 # ==============================================================================
-
 # --- ИНИЦИАЛИЗАЦИЯ ПЕРЕМЕННЫХ СЕССИИ ---
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
@@ -526,14 +497,10 @@ if "pending_email" not in st.session_state:
     st.session_state.pending_email = None
 if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
-
-
 # --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 saved_email = cookie_manager.get(cookie="auth_email")
-
 if not saved_email:
     st.session_state.logout_requested = False
-
 if saved_email and not st.session_state.user_email and not st.session_state.logout_requested:
     email = str(saved_email).strip().lower()
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
@@ -593,25 +560,21 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
                         st.session_state.trial_expired = False
         except Exception:
             pass
-
-
-# --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ (АККУРАТНАЯ ЦЕНТРИРОВАННАЯ КАРТОЧКА) ---
+# --- БЛОК АВТОРИЗАЦИИ (ЕНОЕ ОKНО, КАК НА ФОТО 2) ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
+    col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
         st.markdown(
             """
-            <div class="auth-container">
-                <div class="auth-header">
-                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
-                </div>
+            <div style="text-align: center; margin-bottom: 22px;">
+                <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
+                <p style="color: #718096; font-size: 13.5px; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+            </div>
             """, 
             unsafe_allow_html=True
         )
         
         if not st.session_state.otp_sent:
-            st.write("**Вход в Личный Кабинет**")
             email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
             
             if st.button("Получить код входа", type="primary", use_container_width=True):
@@ -660,7 +623,6 @@ if not st.session_state.user_email:
                                 st.session_state.pending_email = email
                                 st.session_state.otp_sent = True
                                 st.rerun()
-
         else:
             st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
             st.caption("Проверьте папку «Спам», если письма нет в течение минуты.")
@@ -777,21 +739,17 @@ if not st.session_state.user_email:
                 st.session_state.generated_otp = None
                 st.session_state.pending_email = None
                 st.rerun()
-
         st.markdown(
             """
-            <div style="margin-top: 20px; text-align: center;">
-                <small style="color: #718096;">
+            <div style="margin-top: 18px; text-align: center;">
+                <small style="color: #a0aec0; font-size: 11px;">
                 Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                 </small>
-            </div>
             </div>
             """, 
             unsafe_allow_html=True
         )
     st.stop()
-
-
 # --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
@@ -802,16 +760,12 @@ if st.sidebar.button("Выйти из аккаунта"):
     st.session_state.logout_requested = True
     time.sleep(0.3)
     st.rerun()
-
 st.title("🎴 Умный Генератор Двусторонних Карточек")
 st.write(f"👋 **Рада видеть вас, {st.session_state.get('user_name', 'Преподаватель')}!**")
-
 if "cards" not in st.session_state:
     st.session_state.cards = []
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
-
-
 # --- ФУНКЦИЯ ПАРСИНГА СТАТЕЙ ПО ССЫЛКЕ ---
 def extract_text_from_url(url):
     try:
@@ -827,14 +781,10 @@ def extract_text_from_url(url):
         return f"Ошибка загрузки сайта: Статус {response.status_code}"
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
-
-
 # --- ЗАГРУЗКА ДАННЫХ О ТАРИФЕ И ЛИМИТАХ ---
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
-
-
 # --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
@@ -858,7 +808,6 @@ with st.sidebar:
         num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
     else:
         num_cards = 0
-
     st.write("---")
     with st.expander("📂 Мои сохраненные колоды"):
         try:
@@ -908,31 +857,22 @@ with st.sidebar:
                     st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
         except Exception:
             st.caption("Не удалось загрузить список колод.")
-
-
 # --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
 is_expired = st.session_state.get("trial_expired", False)
 is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
-
 button_disabled = is_expired or is_limit_reached
-
 if is_expired:
     st.warning("🛑 **Срок действия вашей подписки окончен.**")
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы продолжить создавать новые колоды, пожалуйста, продлите тариф.")
     st.link_button("💳 Посмотреть тарифы и продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
-
 elif is_limit_reached:
     st.warning(f"🛑 **Вы исчерпали лимит карточек ({max_cards} шт.) по тарифу «{tariff_name}».**")
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
-
-
 # --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
-
 user_input = ""
 uploaded_file_obj = None
-
 with col_main:
     if source_type == "✍️ Готовый список слов":
         user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
@@ -945,13 +885,11 @@ with col_main:
         st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
-
     generate_click = st.button(
         "Создать карточки ✨", 
         type="primary", 
         disabled=button_disabled
     )
-
 with col_stats:
     st.markdown(
         f"""
@@ -971,7 +909,6 @@ with col_stats:
         remaining_cards = max(0, max_cards - used_cards)
         st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
         st.caption(f"Осталось: **{remaining_cards}** карточек")
-
 # --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
     is_valid_input = False
@@ -979,7 +916,6 @@ if generate_click:
         is_valid_input = (uploaded_file_obj is not None)
     else:
         is_valid_input = bool(user_input.strip())
-
     if not is_valid_input:
         st.warning("Пожалуйста, заполните поле ввода или загрузите файл!")
     else:
@@ -987,7 +923,6 @@ if generate_click:
         if source_type == "✍️ Готовый список слов":
             words_list = [w.strip() for w in user_input.replace("\n", ",").split(",") if w.strip()]
             actual_requested = len(words_list)
-
         if tariff_name != "АДМИНИСТРАТОР" and (used_cards + actual_requested) > max_cards:
             rem = max(0, max_cards - used_cards)
             st.error(f"🛑 Превышен лимит тарифа! У вас осталось **{rem}** карточек, а вы пытаетесь сгенерировать **{actual_requested}**.")
@@ -1000,7 +935,6 @@ if generate_click:
                     gemini_uploaded_file = None
                     temp_file_path = None
                     source_url_to_save = user_input.strip()
-
                     # 1. YOUTUBE ССЫЛКА
                     if source_type == "🎬 Ссылка на YouTube":
                         yt_transcript = get_youtube_transcript(user_input.strip())
@@ -1009,7 +943,6 @@ if generate_click:
                             st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео или аудио файл».")
                             st.stop()
                         final_prompt_content = yt_transcript
-
                     # 2. МЕДИАФАЙЛ (MP4 / MP3)
                     elif source_type == "📁 Видео или аудио файл (до 5 мин)":
                         if uploaded_file_obj.size > 30 * 1024 * 1024:
@@ -1024,7 +957,6 @@ if generate_click:
                             temp_file_path = tmp.name
                             
                         gemini_uploaded_file = genai.upload_file(path=temp_file_path)
-
                     # 3. ВЕБ-СТАТЬЯ
                     elif source_type == "🔗 Ссылка на веб-статью":
                         scraped_text = extract_text_from_url(user_input.strip())
@@ -1035,7 +967,6 @@ if generate_click:
                     
                     else:
                         final_prompt_content = user_input.strip()
-
                     model = genai.GenerativeModel(model_option)
                     
                     if source_type == "✍️ Готовый список слов":
@@ -1065,12 +996,10 @@ if generate_click:
                         - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
-
                     if gemini_uploaded_file:
                         response = model.generate_content([prompt_text, gemini_uploaded_file])
                     else:
                         response = model.generate_content([prompt_text, final_prompt_content])
-
                     text_response = response.text.strip()
                     
                     backtick_triple = chr(96) * 3
@@ -1083,7 +1012,6 @@ if generate_click:
                             if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
                                 text_response = clean_chunk
                                 break
-
                     text_response = text_response.strip()
                     cards_data = json.loads(text_response)
                     
@@ -1128,14 +1056,11 @@ if generate_click:
                     if temp_file_path and os.path.exists(temp_file_path):
                         try: os.remove(temp_file_path)
                         except Exception: pass
-
                     st.success(f"Успешно! Создано карточек: {len(cards_data)}")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
-
-
 # --- ОТРИСОВКА, РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ КАРТОЧЕК ---
 if st.session_state.cards:
     st.write("---")
@@ -1167,7 +1092,6 @@ if st.session_state.cards:
             }
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
-
     # 💾 БЛОК СОХРАНЕНИЯ КОЛОДЫ
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
     col_save1, col_save2 = st.columns([2, 1])
@@ -1200,10 +1124,8 @@ if st.session_state.cards:
                 st.code(share_url, language=None)
             except Exception as save_err:
                 st.error(f"Ошибка сохранения колоды: {save_err}")
-
     st.write("---")
-
-    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ (С БРЕНДИРОВАНИЕМ ДЛЯ ТАРИФА МАКСИМУМ) ---
+    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ ---
     col_exp1, col_exp2 = st.columns(2)
     
     with col_exp1:
@@ -1227,43 +1149,76 @@ if st.session_state.cards:
         
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
-
-    # 🌟 НАСТРОЙКА БРЕНДИРОВАНИЯ ДЛЯ ТАРИФА «МАКСИМУМ» И АДМИНА
+    # 🌟 НАСТРОЙКИ ПЕЧАТИ
     is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
     custom_print_teacher = ""
-    custom_print_contacts = ""
     custom_print_note = ""
-
+    print_style = "🖨️ Черно-белая (Экономный режим)"
     if print_mode:
         if is_max_tariff:
-            with st.expander("👑 Настройка брендирования распечатки (Фича тарифа Максимум)", expanded=True):
-                st.caption("Укажите свои данные, и они автоматически появятся в фирменном шапке распечатки:")
+            with st.expander("👑 Настройка брендирования распечатки (Тариф Максимум)", expanded=True):
+                print_style = st.selectbox(
+                    "Выберите стиль оформления:", 
+                    [
+                        "🖨️ Черно-белая (Экономный режим)", 
+                        "🎨 Цветная детская (Игровая / Пастельная)", 
+                        "💼 Цветная стильная (Премиум)"
+                    ]
+                )
                 col_p1, col_p2 = st.columns(2)
                 with col_p1:
-                    custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English with Anna").strip()
+                    custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English Class with Anna").strip()
                 with col_p2:
-                    custom_print_contacts = st.text_input("Контакты (Telegram / Instagram / Tel):", placeholder="@anna_english").strip()
-                custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
-
-        # Отрисовка шапки брендинга
-        if custom_print_teacher or custom_print_contacts or custom_print_note:
+                    custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
+        # 1. Шапка ДЕТСКОГО стиля
+        if "детская" in print_style and is_max_tariff:
+            teacher_title = custom_print_teacher if custom_print_teacher else "English Class"
+            note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
                 f"""
-                <div class="print-brand-header">
-                    <div>
-                        <h2 style="margin:0; color:#1a365d; font-family:'Georgia', serif;">{custom_print_teacher if custom_print_teacher else 'English Worksheet'}</h2>
-                        <p style="margin:3px 0 0 0; color:#718096; font-size:13px;">{custom_print_note}</p>
+                <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 16px; font-weight: bold; color: #d84315;">🦁 {teacher_title}</span>
+                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: ______________________ | Date: ___/___/2026</span>
                     </div>
-                    <div style="text-align:right; font-size:13px; color:#2e6c9e; font-weight:bold;">
-                        {custom_print_contacts}
-                    </div>
+                    {note_str}
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-
+        # 2. Шапка СТИЛЬНОГО ПРЕМИУМ стиля
+        elif "стильная" in print_style and is_max_tariff:
+            teacher_title = custom_print_teacher if custom_print_teacher else "English Worksheet"
+            note_str = f"<p style='margin:3px 0 0 0; color:#718096; font-size:12px;'>{custom_print_note}</p>" if custom_print_note else ""
+            st.markdown(
+                f"""
+                <div style="border-bottom: 2px solid #1a365d; padding: 12px 15px; margin-bottom: 20px; background: #ffffff; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <h3 style="margin:0; color:#1a365d; font-family:'Georgia', serif;">{teacher_title}</h3>
+                        <span style="font-size: 12px; color: #718096;">Name: ______________________ | Date: ___/___/2026</span>
+                    </div>
+                    {note_str}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        # Отрисовка карточек
         for card in st.session_state.cards:
-            print_html = f"""<div class="print-row">
+            if "детская" in print_style and is_max_tariff:
+                print_html = f"""<div class="print-row-kids">
+<div class="print-col-kids-left">
+    <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
+    <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{card.get('transcription', '')}</span>
+</div>
+<div class="print-col-kids-right">
+    <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
+    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+    <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
+    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
+</div>
+</div>"""
+            else:
+                print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
