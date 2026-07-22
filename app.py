@@ -157,6 +157,7 @@ def get_user_tariff_and_usage(email, sh):
         used_cards = 0
         for r in req_rows[1:]:
             if len(r) > 1 and r[1].strip().lower() == email.lower():
+                # Учитываем количество созданных карточек
                 raw_req_d = r[6].strip() if len(r) > 6 else (r[7].strip() if len(r) > 7 else "")
                 req_d = None
                 for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
@@ -168,6 +169,7 @@ def get_user_tariff_and_usage(email, sh):
                 
                 if req_d and req_d >= filter_start:
                     try:
+                        # Колонка с кол-вом карточек
                         card_val = r[4].strip() if len(r) > 4 else "0"
                         used_cards += int(card_val)
                     except ValueError:
@@ -198,6 +200,7 @@ def get_youtube_transcript(video_url):
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
     try:
+        # Пробуем получить субтитры на английском (официальные или авто)
         transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
         text = " ".join([item['text'] for item in transcript_list])
         return text
@@ -795,22 +798,21 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК (ГОТОВЫЙ СПИСОК СЛОВ - ПЕРВЫМ) ---
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК (С НОВЫМИ ИСТОЧНИКАМИ) ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
     
-    # 🌟 СПИСОК СЛОВ НА ПЕРВОМ МЕСТЕ И ПО УМОЛЧАНИЮ
+    # 🌟 ОБНОВЛЕННЫЕ ИСТОЧНИКИ ВВОДА
     source_type = st.radio(
         "Что берем за основу?", 
         [
-            "✍️ Готовый список слов",
-            "📝 Текст / Отрывок статьи / Субтитры", 
-            "🎬 Ссылка на YouTube",
-            "📁 Видео или аудио файл (до 5 мин)",
-            "🔗 Ссылка на веб-статью"
-        ],
-        index=0
+            "📝 Вставить текст / субтитры вручную", 
+            "🎬 Ссылка на YouTube (Субтитры)",
+            "📁 Видео/Аудио файл (MP4, MP3 до 5 мин)",
+            "🔗 Ссылка на веб-статью", 
+            "✍️ Готовый список слов"
+        ]
     )
     
     student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
@@ -895,17 +897,17 @@ user_input = ""
 uploaded_file_obj = None
 
 with col_main:
-    if source_type == "✍️ Готовый список слов":
-        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
-    elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
+    if source_type == "📝 Вставить текст / субтитры вручную":
         user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
-    elif source_type == "🎬 Ссылка на YouTube":
+    elif source_type == "🎬 Ссылка на YouTube (Субтитры)":
         user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
-    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+    elif source_type == "📁 Видео/Аудио файл (MP4, MP3 до 5 мин)":
         uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
         st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
+    else:
+        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
 
     generate_click = st.button(
         "Создать карточки ✨", 
@@ -936,7 +938,7 @@ with col_stats:
 # --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
     is_valid_input = False
-    if source_type == "📁 Видео или аудио файл (до 5 мин)":
+    if source_type == "📁 Видео/Аудио файл (MP4, MP3 до 5 мин)":
         is_valid_input = (uploaded_file_obj is not None)
     else:
         is_valid_input = bool(user_input.strip())
@@ -962,17 +964,18 @@ if generate_click:
                     temp_file_path = None
                     source_url_to_save = user_input.strip()
 
-                    # 1. YOUTUBE ССЫЛКА
-                    if source_type == "🎬 Ссылка на YouTube":
+                    # 1. ОБРАБОТКА YOUTUBE ССЫЛКИ
+                    if source_type == "🎬 Ссылка на YouTube (Субтитры)":
                         yt_transcript = get_youtube_transcript(user_input.strip())
                         if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
                             st.error(yt_transcript)
-                            st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео или аудио файл».")
+                            st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео/Аудио файл».")
                             st.stop()
                         final_prompt_content = yt_transcript
 
-                    # 2. МЕДИАФАЙЛ (MP4 / MP3)
-                    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+                    # 2. ОБРАБОТКА ЗАГРУЖЕННОГО МЕДИАФАЙЛА (MP4 / MP3)
+                    elif source_type == "📁 Видео/Аудио файл (MP4, MP3 до 5 мин)":
+                        # Проверка размера (макс 30 МБ ~ 5 минут речи)
                         if uploaded_file_obj.size > 30 * 1024 * 1024:
                             st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
                             st.stop()
@@ -980,13 +983,15 @@ if generate_click:
                         file_ext = os.path.splitext(uploaded_file_obj.name)[1]
                         source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(uploaded_file_obj.size/1024/1024, 1)} MB)"
                         
+                        # Сохраняем во временный файл для загрузки в Gemini
                         with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
                             tmp.write(uploaded_file_obj.read())
                             temp_file_path = tmp.name
                             
+                        # Загружаем файл в Gemini API
                         gemini_uploaded_file = genai.upload_file(path=temp_file_path)
 
-                    # 3. ВЕБ-СТАТЬЯ
+                    # 3. ОБРАБОТКА ВЕБ-СТАТЬИ
                     elif source_type == "🔗 Ссылка на веб-статью":
                         scraped_text = extract_text_from_url(user_input.strip())
                         if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
@@ -1027,6 +1032,7 @@ if generate_click:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
 
+                    # Отправляем запрос в Gemini (с медиафайлом или только текстом)
                     if gemini_uploaded_file:
                         response = model.generate_content([prompt_text, gemini_uploaded_file])
                     else:
@@ -1034,6 +1040,7 @@ if generate_click:
 
                     text_response = response.text.strip()
                     
+                    # Чистим JSON от маркдаун слэшей
                     backtick_triple = chr(96) * 3
                     if backtick_triple in text_response:
                         chunks = text_response.split(backtick_triple)
@@ -1057,6 +1064,7 @@ if generate_click:
                         request_id = f"req-{int(datetime.now().timestamp())}"
                         
                         requests_sheet = sh_global.worksheet("Requests")
+                        # Записываем: ID, Email, Тип источника, Ссылка/Имя файла, Уровень, Кол-во карточек, Статус, Дата
                         requests_sheet.append_row([
                             request_id, 
                             st.session_state.user_email, 
@@ -1083,6 +1091,7 @@ if generate_click:
                     except Exception as sheets_err:
                         st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
                     
+                    # Удаляем временные медиафайлы после генерации
                     if gemini_uploaded_file:
                         try: genai.delete_file(gemini_uploaded_file.name)
                         except Exception: pass
