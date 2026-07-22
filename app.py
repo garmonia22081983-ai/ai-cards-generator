@@ -661,33 +661,29 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
 
 # --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ (ПО ДИЗАЙН-МАКЕТУ) ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1.2, 1.4, 1.2])
+    col_a1, col_a2, col_a3 = st.columns([1, 1.4, 1])
     with col_a2:
-        # Используем обычный контейнер без системной рамки Streamlit
-        with st.container():
-            
-            # 🔥 ХИТРЫЙ ПРИЕМ: УМНЫЙ МАРКЕР И ЛОКАЛЬНЫЕ СТИЛИ
-            st.markdown(
-                """
-                <div class="login-card-marker"></div>
-                <style>
-                /* Ищем контейнер, внутри которого лежит наш маркер, и превращаем его в белую карточку */
-                div[data-testid="stVerticalBlock"]:has(.login-card-marker) {
-                    background-color: #ffffff !important;
-                    border: 1px solid #ebdcc5 !important;
-                    border-radius: 12px !important;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
-                    padding: 30px !important;
-                }
-                </style>
-                """, 
-                unsafe_allow_html=True
-            )
-            
+        
+        # 🌟 Точный стиль: красит только саму карточку по уникальному ID заголовка
+        st.markdown(
+            """
+            <style>
+            div[data-testid="stVerticalBlockBorderWrapper"]:has(h2#auth-title) {
+                background-color: #ffffff !important;
+                border: 1px solid #ebdcc5 !important;
+                border-radius: 12px !important;
+                box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05) !important;
+            }
+            </style>
+            """, 
+            unsafe_allow_html=True
+        )
+        
+        with st.container(border=True):
             st.markdown(
                 """
                 <div style="text-align: center; margin-bottom: 20px;">
-                    <h2 style="margin-bottom: 4px; color: #1a365d; font-size: 24px; font-family: 'Georgia', serif;">🎓 Flashcards AI</h2>
+                    <h2 id="auth-title" style="margin-bottom: 4px; color: #1a365d; font-size: 24px; font-family: 'Georgia', serif;">🎓 Flashcards AI</h2>
                     <p style="color: #718096; font-size: 13px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
                 </div>
                 """, 
@@ -842,14 +838,15 @@ if not st.session_state.user_email:
                             st.rerun()
                         except Exception as e:
                             st.error(f"Ошибка авторизации: {e}")
-                else:
-                    st.error("Неверный код.")
-                    
-            if st.button("Ввести другой Email", use_container_width=True):
-                st.session_state.otp_sent = False
-                st.session_state.generated_otp = None
-                st.session_state.pending_email = None
-                st.rerun()
+                    else:
+                        st.error("Неверный код.")
+                
+                # Кнопка "Ввести другой Email" теперь спрятана глубоко в блоке проверки кода!
+                if st.button("Ввести другой Email", use_container_width=True):
+                    st.session_state.otp_sent = False
+                    st.session_state.generated_otp = None
+                    st.session_state.pending_email = None
+                    st.rerun()
 
             st.markdown(
                 """
