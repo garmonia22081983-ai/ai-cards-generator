@@ -916,11 +916,14 @@ is_admin_user = (st.session_state.user_email.lower() in clean_admin_emails) if s
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     
-    # 🌟 ПОКАЗЫВАЕМ ВЫБОР МОДЕЛИ ТОЛЬКО АДМИНУ!
-    if is_admin_user:
-        model_option = st.selectbox("Нейросеть (Панель Админа):", ["gemini-2.5-flash", "gemini-3.5-flash", "gemini-1.5-flash"])
-    else:
-        model_option = "gemini-2.5-flash"  # По умолчанию для всех учителей
+   # 🌟 ПОКАЗЫВАЕМ ВЫБОР МОДЕЛИ ТОЛЬКО АДМИНУ!
+if is_admin_user:
+    model_option = st.selectbox(
+        "Нейросеть (Панель Админа):", 
+        ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]
+    )
+else:
+    model_option = "gemini-2.0-flash"  # По умолчанию для всех учителей
     
     source_type = st.radio(
         "Что берем за основу?", 
