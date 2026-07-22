@@ -641,11 +641,12 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
+        # 🌟 ОБОРАЧИВАЕМ ЗАГОЛОВОК И ОПИСАНИЕ В БЕЛУЮ КАРТОЧКУ
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 20px;">
+            <div style="background-color: #ffffff; border: 1px solid #ebdcc5; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 20px; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);">
                 <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
-                <p style="color: #718096; font-size: 16px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+                <p style="color: #718096; font-size: 15px; font-weight: 500; margin-top: 0;">Умный генератор карточек для преподавателей</p>
             </div>
             """, 
             unsafe_allow_html=True
