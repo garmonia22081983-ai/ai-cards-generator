@@ -1088,13 +1088,17 @@ if generate_click:
                     temp_file_path = None
                     source_url_to_save = user_input.strip()
 
-                    # 1. YOUTUBE ССЫЛКА
+                   # 1. YOUTUBE ССЫЛКА
                     if source_type == "🎬 Ссылка на YouTube":
                         yt_transcript = get_youtube_transcript(user_input.strip())
-                        if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
-                            st.error(yt_transcript)
+                        
+                        # Если функция вернула ошибку:
+                        if yt_transcript.startswith("ERR:"):
+                            error_text = yt_transcript.replace("ERR:", "").strip()
+                            st.error(f"⚠️ {error_text}")
                             st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео или аудио файл».")
-                            st.stop()
+                            st.stop()  # Жёстко останавливаем выполнение, чтобы не сгорел лимит и не создавались пустые карточки
+                        
                         final_prompt_content = yt_transcript
 
                     # 2. МЕДИАФАЙЛ (MP4 / MP3)
