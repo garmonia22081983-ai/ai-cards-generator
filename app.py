@@ -205,7 +205,7 @@ def get_youtube_transcript(video_url):
         return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
 
 
-# --- СТИЛИ ПРИЛОЖЕНИЯ ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ (UI/UX) ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -217,9 +217,9 @@ if os.path.exists("background.jpg"):
         bin_str = get_base64_of_bin_file("background.jpg")
         bg_css = f"background-image: url('data:image/jpeg;base64,{bin_str}') !important;"
     except Exception:
-        bg_css = "background-color: #f5f0e8 !important;"
+        bg_css = "background-color: #f8f6f0 !important;"
 else:
-    bg_css = "background-color: #f5f0e8 !important;"
+    bg_css = "background-color: #f8f6f0 !important;"
 
 st.markdown(f"""
 <style>
@@ -241,6 +241,22 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
+/* Карточка авторизации */
+.auth-container {{
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 30px 25px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    margin-top: 20px;
+    margin-bottom: 20px;
+}}
+
+.auth-header {{
+    text-align: center;
+    margin-bottom: 20px;
+}}
+
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
@@ -251,13 +267,14 @@ input, textarea, select,
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
+    border-radius: 8px !important;
 }}
 
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
-    background-color: #f5f0e8 !important;
+    background-color: #f4efe6 !important;
     background-image: none !important;
 }}
 
@@ -269,6 +286,7 @@ input, textarea, select,
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
 }}
 
+/* Интерактивные карточки */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -316,13 +334,43 @@ input, textarea, select,
 summary::-webkit-details-marker {{ display: none !important; }}
 summary {{ list-style: none !important; }}
 
-.print-row {{
+/* Стили печатных карточек */
+.print-row-bw {{
     display: flex;
     border: 1px dashed #ccc;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
 }}
+
+.print-row-kids {{
+    display: flex;
+    border: 2px solid #ffb74d;
+    border-radius: 12px;
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+    background-color: #ffffff;
+    overflow: hidden;
+}}
+
+.print-col-kids-left {{
+    width: 45%;
+    padding: 15px;
+    background-color: #ffe0b2;
+    border-right: 2px dashed #ffb74d;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}}
+
+.print-col-kids-right {{
+    width: 55%;
+    padding: 15px;
+    background-color: #ffffff;
+}}
+
 .print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
 .print-left {{
     border-right: 1px dashed #ccc;
@@ -408,7 +456,7 @@ if student_deck_id:
 
         if student_print_mode:
             for card in cards_data:
-                print_html = f"""<div class="print-row">
+                print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
@@ -565,68 +613,77 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
 
 # --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
 if not st.session_state.user_email:
-    st.subheader("🔑 Доступ к Генератору Карточек")
-    
-    if not st.session_state.otp_sent:
-        st.write("Введите ваш Email для входа. Доступ предоставляется зарегистрированным пользователям.")
-        email_input = st.text_input("Ваш Email:")
+    col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
+    with col_a2:
+        st.markdown(
+            """
+            <div class="auth-container">
+                <div class="auth-header">
+                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
+                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
+                </div>
+            """, 
+            unsafe_allow_html=True
+        )
         
-        if st.button("Получить код входа", type="primary"):
-            if "@" not in email_input or "." not in email_input:
-                st.error("Пожалуйста, введите корректный адрес электронной почты.")
-            else:
-                email = email_input.strip().lower()
-                clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
-                
-                if email in clean_admin_emails:
-                    user_exists = True
+        if not st.session_state.otp_sent:
+            st.write("**Вход в Личный Кабинет**")
+            email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
+            
+            if st.button("Получить код входа", type="primary", use_container_width=True):
+                if "@" not in email_input or "." not in email_input:
+                    st.error("Пожалуйста, введите корректный адрес почты.")
                 else:
-                    try:
-                        gc = get_gsheets_client()
-                        sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-                        
-                        users_sheet = sh.worksheet("Users")
-                        users_rows = users_sheet.get_all_values()
-                        
-                        payments_sheet = sh.worksheet("Payments")
-                        payments_rows = payments_sheet.get_all_values()
-                        
-                        user_exists = False
-                        for r in users_rows[1:]:
-                            if len(r) > 0 and r[0].strip().lower() == email:
-                                user_exists = True
-                                break
-                        
-                        if not user_exists:
-                            for p in payments_rows[1:]:
-                                if len(p) > 1 and p[1].strip().lower() == email:
+                    email = email_input.strip().lower()
+                    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+                    
+                    if email in clean_admin_emails:
+                        user_exists = True
+                    else:
+                        try:
+                            gc = get_gsheets_client()
+                            sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                            
+                            users_sheet = sh.worksheet("Users")
+                            users_rows = users_sheet.get_all_values()
+                            
+                            payments_sheet = sh.worksheet("Payments")
+                            payments_rows = payments_sheet.get_all_values()
+                            
+                            user_exists = False
+                            for r in users_rows[1:]:
+                                if len(r) > 0 and r[0].strip().lower() == email:
                                     user_exists = True
                                     break
-                    except Exception as e:
-                        st.error(f"Ошибка подключения к базе данных: {e}")
-                        user_exists = False
-                
-                if not user_exists:
-                    st.error("🔴 Ваш Email не найден в системе. Чтобы получить 3 дня бесплатного тест-драйва, пожалуйста, оформите заявку на нашем сайте.")
-                    st.link_button("👉 Перейти на flashcards-ai.ru и получить доступ", "https://flashcards-ai.ru", type="primary")
-                else:
-                    otp_code = str(random.randint(100000, 999999))
-                    with st.spinner("Отправка одноразового кода на вашу почту..."):
-                        if send_otp_email(email, otp_code):
-                            st.session_state.generated_otp = otp_code
-                            st.session_state.pending_email = email
-                            st.session_state.otp_sent = True
-                            st.rerun()
+                            
+                            if not user_exists:
+                                for p in payments_rows[1:]:
+                                    if len(p) > 1 and p[1].strip().lower() == email:
+                                        user_exists = True
+                                        break
+                        except Exception as e:
+                            st.error(f"Ошибка базы данных: {e}")
+                            user_exists = False
+                    
+                    if not user_exists:
+                        st.error("🔴 Email не найден в системе.")
+                        st.link_button("👉 Получить 3 дня тест-драйва на flashcards-ai.ru", "https://flashcards-ai.ru", type="primary", use_container_width=True)
+                    else:
+                        otp_code = str(random.randint(100000, 999999))
+                        with st.spinner("Отправка одноразового кода..."):
+                            if send_otp_email(email, otp_code):
+                                st.session_state.generated_otp = otp_code
+                                st.session_state.pending_email = email
+                                st.session_state.otp_sent = True
+                                st.rerun()
 
-    else:
-        st.info(f"📩 Мы отправили 6-значный код на почту **{st.session_state.pending_email}**.")
-        st.caption("Если письмо не пришло в течение минуты, обязательно проверьте папку **«Спам»**.")
-        
-        user_code = st.text_input("Введите 6-значный код из письма:", max_chars=6)
-        
-        col_btn1, col_btn2 = st.columns([1, 2])
-        with col_btn1:
-            if st.button("Подтвердить и войти", type="primary"):
+        else:
+            st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
+            st.caption("Проверьте папку «Спам», если письма нет в течение минуты.")
+            
+            user_code = st.text_input("6-значный код из письма:", max_chars=6)
+            
+            if st.button("Подтвердить и войти", type="primary", use_container_width=True):
                 if user_code.strip() == st.session_state.generated_otp:
                     email = st.session_state.pending_email
                     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
@@ -729,26 +786,25 @@ if not st.session_state.user_email:
                     except Exception as e:
                         st.error(f"Ошибка авторизации: {e}")
                 else:
-                    st.error("Неверный код. Пожалуйста, проверьте цифры в письме.")
+                    st.error("Неверный код.")
                     
-        with col_btn2:
-            if st.button("Ввести другой Email"):
+            if st.button("Ввести другой Email", use_container_width=True):
                 st.session_state.otp_sent = False
                 st.session_state.generated_otp = None
                 st.session_state.pending_email = None
                 st.rerun()
 
-    st.markdown(
-        """
-        <div style="margin-top: 25px; padding-top: 10px; border-top: 1px dashed #cbd5e0;">
-            <small style="color: #718096; font-family: Arial, sans-serif;">
-            Нажимая кнопку входа, вы даете согласие на обработку персональных данных 
-            в соответствии с <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политикой конфиденциальности</a>.
-            </small>
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
+        st.markdown(
+            """
+            <div style="margin-top: 20px; text-align: center;">
+                <small style="color: #718096;">
+                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                </small>
+            </div>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
     st.stop()
 
 
@@ -795,12 +851,11 @@ sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88"
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК (ГОТОВЫЙ СПИСОК СЛОВ - ПЕРВЫМ) ---
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
     
-    # 🌟 СПИСОК СЛОВ НА ПЕРВОМ МЕСТЕ И ПО УМОЛЧАНИЮ
     source_type = st.radio(
         "Что берем за основу?", 
         [
@@ -1189,10 +1244,82 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
-    # --- РЕЖИМ ПЕЧАТИ ИЛИ ИНТЕРАКТИВНЫЕ КАРТОЧКИ ---
+    # 🌟 НАСТРОЙКИ ПЕЧАТИ (ОБНОВЛЕННОЕ БРЕНДИРОВАНИЕ БЕЗ КОНТАКТОВ И ОЦЕНОК)
+    is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
+    custom_print_teacher = ""
+    custom_print_note = ""
+    print_style = "🖨️ Черно-белая (Экономный режим)"
+
     if print_mode:
+        if is_max_tariff:
+            with st.expander("👑 Настройка брендирования распечатки (Тариф Максимум)", expanded=True):
+                print_style = st.selectbox(
+                    "Выберите стиль оформления:", 
+                    [
+                        "🖨️ Черно-белая (Экономный режим)", 
+                        "🎨 Цветная детская (Игровая / Пастельная)", 
+                        "💼 Цветная стильная (Премиум)"
+                    ]
+                )
+                col_p1, col_p2 = st.columns(2)
+                with col_p1:
+                    custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English Class with Anna").strip()
+                with col_p2:
+                    custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
+
+        # 1. Шапка ДЕТСКОГО стиля
+        if "детская" in print_style and is_max_tariff:
+            teacher_title = custom_print_teacher if custom_print_teacher else "English Class"
+            note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
+            st.markdown(
+                f"""
+                <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 16px; font-weight: bold; color: #d84315;">🦁 {teacher_title}</span>
+                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: ______________________ | Date: ___/___/2026</span>
+                    </div>
+                    {note_str}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # 2. Шапка СТИЛЬНОГО ПРЕМИУМ стиля
+        elif "стильная" in print_style and is_max_tariff:
+            teacher_title = custom_print_teacher if custom_print_teacher else "English Worksheet"
+            note_str = f"<p style='margin:3px 0 0 0; color:#718096; font-size:12px;'>{custom_print_note}</p>" if custom_print_note else ""
+            st.markdown(
+                f"""
+                <div style="border-bottom: 2px solid #1a365d; padding: 12px 15px; margin-bottom: 20px; background: #ffffff; border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <h3 style="margin:0; color:#1a365d; font-family:'Georgia', serif;">{teacher_title}</h3>
+                        <span style="font-size: 12px; color: #718096;">Name: ______________________ | Date: ___/___/2026</span>
+                    </div>
+                    {note_str}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
+        # Отрисовка карточек под выбранный стиль
         for card in st.session_state.cards:
-            print_html = f"""<div class="print-row">
+            if "детская" in print_style and is_max_tariff:
+                # ДЕТСКАЯ ЦВЕТНАЯ КАРТОЧКА
+                print_html = f"""<div class="print-row-kids">
+<div class="print-col-kids-left">
+    <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
+    <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{card.get('transcription', '')}</span>
+</div>
+<div class="print-col-kids-right">
+    <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
+    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+    <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
+    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
+</div>
+</div>"""
+            else:
+                # ЧЕРНО-БЕЛАЯ / СТАНДАРТНАЯ КАРТОЧКА
+                print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
