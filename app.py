@@ -765,7 +765,7 @@ tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
-    source_type = st.radio("Что берем за основу?", ["📝 Текст / Отрывок статьи / Трэк субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"])
+    source_type = st.radio("Что берем за основу?", ["📝 Текст / Отрывок статьи / Трек субтитров", "🔗 Ссылка на веб-статью", "✍️ Готовый список слов"])
     student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
     
     if source_type != "✍️ Готовый список слов":
