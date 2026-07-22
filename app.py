@@ -32,13 +32,18 @@ ADMIN_EMAILS = [
 # --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
-# --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
+# --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI И НАСТРОЙКА СТРАНИЦЫ ---
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
     st.error("Ключ API не найден в настройках Secrets!")
 
-st.set_page_config(page_title="Генератор карточек", layout="wide")
+# 🌟 ВСЕГДА ДЕРЖИМ БОКОВУЮ ПАНЕЛЬ ОТКРЫТОЙ ПРИ ЗАГРУЗКЕ!
+st.set_page_config(
+    page_title="Генератор карточек", 
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
     del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
@@ -70,7 +75,7 @@ def send_otp_email(target_email, code):
         body = f"""
         <html>
             <body style="font-family: Arial, sans-serif; color: #2d3748; padding: 20px;">
-                <h2 style="color: #2e6c9e;">🔑 Вход в Генератор Карточек</h2>
+                <h2 style="color: #ff5722;">🔑 Вход в Генератор Карточек</h2>
                 <p>Ваш одноразовый код для авторизации:</p>
                 <div style="background-color: #f7fafc; border: 1px dashed #cbd5e0; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #1a365d; border-radius: 8px; margin: 15px 0;">
                     {code}
@@ -183,7 +188,7 @@ def extract_youtube_id(url):
     return None
 
 
-# --- 🛠️ ИСПРАВЛЕННАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ЧЕРЕЗ SUPADATA API ---
+# --- ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ЧЕРЕЗ SUPADATA API ---
 def get_youtube_transcript(video_url):
     video_id = extract_youtube_id(video_url)
     if not video_id:
@@ -218,7 +223,7 @@ def get_youtube_transcript(video_url):
         return f"Ошибка подключения к сервису субтитров: {e}"
 
 
-# --- СТИЛИ ПРИЛОЖЕНИЯ (УБИРАЕМ ПУСТОЕ ПРОСТРАНСТВО СВЕРХУ) ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -236,11 +241,6 @@ else:
 
 st.markdown(f"""
 <style>
-/* Скрываем верхний служебный бар Streamlit */
-[data-testid="stHeader"], header {{
-    display: none !important;
-}}
-
 html, body, [data-testid="stAppViewContainer"], .stApp {{
     {bg_css}
     background-size: cover !important;
@@ -259,10 +259,10 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
 
-/* Главная синяя кнопка */
+/* 🧡 ГЛАВНАЯ ОРАНЖЕВАЯ КНОПКА */
 button[kind="primary"], 
 button[data-testid="stBaseButton-primary"] {{
-    background-color: #2e6c9e !important;
+    background-color: #ff5722 !important;
     color: #ffffff !important;
     border: none !important;
     border-radius: 8px !important;
@@ -272,7 +272,7 @@ button[data-testid="stBaseButton-primary"] {{
 
 button[kind="primary"]:hover, 
 button[data-testid="stBaseButton-primary"]:hover {{
-    background-color: #1a365d !important;
+    background-color: #e64a19 !important;
     border: none !important;
 }}
 
@@ -457,10 +457,10 @@ if student_deck_id:
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                    f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
+                    f"<h2 style='color:#ff5722; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
                     f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{card.get('transcription', '')}</p>"
                     f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card.get('explanation', '')}</p>"
-                    f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
+                    f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#ff5722;'>{card.get('collocations', '')}</span></p>"
                     f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
                     f"</div>"
                 )
@@ -480,7 +480,7 @@ if student_deck_id:
                 print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
-<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
+<h4 style="color:#ff5722; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
 <p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
 <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
@@ -514,11 +514,11 @@ if student_deck_id:
 <span style="color: #718096; font-size: 11px;">{card.get('transcription', '')}</span>
 </div>
 <div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {card.get('explanation', '')}</div>
-<div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
+<div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #ff5722;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
-<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
+<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #ff5722; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
 {card.get('translation', '')}
 </div>
 </details>
@@ -578,7 +578,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
     st.session_state.user_email = email
     
     if email in clean_admin_emails:
-        st.session_state.user_name = "Администратор" if email != "garmonia.83@mail.ru" else "Наталья"
+        st.session_state.user_name = "Наталья" if email in ["garmonia.83@mail.ru", "garmonia.22081983@gmail.com"] else "Администратор"
         st.session_state.trial_expired = False
     else:
         try:
@@ -712,7 +712,7 @@ if not st.session_state.user_email:
                     
                     if email in clean_admin_emails:
                         cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                        st.session_state.user_name = "Наталья" if email == "garmonia.83@mail.ru" else "Администратор"
+                        st.session_state.user_name = "Наталья" if email in ["garmonia.83@mail.ru", "garmonia.22081983@gmail.com"] else "Администратор"
                         st.session_state.trial_expired = False
                         st.success("Успешный вход!")
                         time.sleep(0.3)
@@ -878,7 +878,6 @@ is_admin_user = (st.session_state.user_email.lower() in clean_admin_emails) if s
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     
-    # 🌟 ИСПРАВЛЕНО: МОДЕЛИ GEMINI 2.0 FLASH
     if is_admin_user:
         model_option = st.selectbox("Нейросеть (Панель Админа):", ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"])
     else:
@@ -1255,10 +1254,10 @@ if st.session_state.cards:
             encoded_w = urllib.parse.quote(str(card.get('word', '')))
             anki_back = (
                 f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
+                f"<h2 style='color:#ff5722; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
                 f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{card.get('transcription', '')}</p>"
                 f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card.get('explanation', '')}</p>"
-                f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
+                f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#ff5722;'>{card.get('collocations', '')}</span></p>"
                 f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
                 f"</div>"
             )
@@ -1347,7 +1346,7 @@ if st.session_state.cards:
                 print_html = f"""<div class="print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
-<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
+<h4 style="color:#ff5722; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
 <p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
 <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
@@ -1356,7 +1355,6 @@ if st.session_state.cards:
             st.markdown(print_html, unsafe_allow_html=True)
             
     else:
-        # 🌟 ИСПРАВЛЕНО: Убрали лишнюю плашку "Интерактивный тренажер"
         cols = st.columns(3)
         for i, card in enumerate(st.session_state.cards):
             col_idx = i % 3
@@ -1380,11 +1378,11 @@ if st.session_state.cards:
 <span style="color: #718096; font-size: 11px;">{card.get('transcription', '')}</span>
 </div>
 <div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {card.get('explanation', '')}</div>
-<div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
+<div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #ff5722;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
-<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
+<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #ff5722; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
 {card.get('translation', '')}
 </div>
 </details>
