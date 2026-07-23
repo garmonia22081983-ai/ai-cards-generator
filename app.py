@@ -288,13 +288,19 @@ button[data-testid="stBaseButton-primary"]:hover {{
     border: none !important;
 }}
 
-/* Белая плашка авторизации */
-[data-testid="stVerticalBlockBorderWrapper"] {{
+/* Сплошная белая плашка авторизации без просвечивания */
+div[data-testid="stVerticalBlockBorderWrapper"],
+div[data-testid="stVerticalBlockBorderWrapper"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {{
     background-color: #ffffff !important;
-    border: 1px solid #ebdcc5 !important;
+    background: #ffffff !important;
     border-radius: 16px !important;
+}}
+
+div[data-testid="stVerticalBlockBorderWrapper"] {{
+    border: 1px solid #ebdcc5 !important;
     padding: 24px !important;
-    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.04) !important;
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.05) !important;
 }}
 
 input, textarea, select, 
