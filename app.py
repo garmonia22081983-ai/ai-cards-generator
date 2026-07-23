@@ -270,6 +270,16 @@ button[data-testid="stBaseButton-primary"] {{
     font-weight: bold !important;
     font-size: 15px !important;
 }}
+/* Оранжевая кнопка для генератора */
+div.orange-gen-btn button {
+    background-color: #e67e22 !important;
+    border-color: #e67e22 !important;
+    color: #ffffff !important;
+}
+div.orange-gen-btn button:hover {
+    background-color: #d35400 !important;
+    border-color: #d35400 !important;
+}
 button[kind="primary"]:hover, 
 button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
