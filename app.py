@@ -888,9 +888,9 @@ with col_main:
         st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
-   st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
-   st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
-    generate_click = st.button(
+        st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
+  
+        generate_click = st.button(
         "Создать карточки ✨", 
         type="primary", 
         disabled=button_disabled
