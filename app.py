@@ -635,6 +635,8 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
+        st.markdown('<div style="background-color: #ffffff; padding: 30px; border-radius: 16px; box-shadow: 0 8px 20px rgba(0,0,0,0.06); border: 1px solid #ebdcc5;">', unsafe_allow_html=True)
+        
         st.markdown(
             """
             <div style="text-align: center; margin-bottom: 22px;">
@@ -819,7 +821,8 @@ if not st.session_state.user_email:
             """, 
             unsafe_allow_html=True
         )
-    st.stop()
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.stop()
 
 # --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
