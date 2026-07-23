@@ -238,14 +238,7 @@ button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
 }}
-/* ЭДОИНАЯ БЕЛАЯ КАРТОЧКА АВТОРИЗАЦИИ (Фото 2) */
-div[data-testid="stColumn"]:nth-of-type(2) {{
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 20px !important;
-    padding: 30px 25px 20px 25px !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05) !important;
-}}
+
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
@@ -930,7 +923,7 @@ with col_stats:
                     st.write(f"**{d_name}** ({d_level})")
                     
                     # Ровные колонки 1:1 для одинаковых и красивых кнопок
-                    c1, c2 = st.columns([1, 1])
+                    c1, c2 = st.columns([1, 1], gap="small")
                     with c1:
                         if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
                             st.session_state.cards = json.loads(d_cards_json)
