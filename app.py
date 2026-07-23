@@ -251,17 +251,21 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     padding-top: 1.5rem !important;
 }}
 
-/* Четкая белоснежная 100% непрозрачная плашка авторизации с контрастной синей рамкой и глубокой тенью */
-[data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stContainer"] {{
+/* Белоснежная 100% непрозрачная плашка авторизации с контрастной яркой синей обводкой */
+div[data-testid="stVerticalBlockBorderWrapper"] {{
     background-color: #ffffff !important;
     background: #ffffff !important;
-    border: 2px solid #2563eb !important;
+    border: 3px solid #2563eb !important;
     border-radius: 24px !important;
     padding: 38px 32px 42px 32px !important;
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     margin-top: 10px !important;
     opacity: 1 !important;
+}}
+
+div[data-testid="stVerticalBlockBorderWrapper"] > div {{
+    background-color: #ffffff !important;
+    background: #ffffff !important;
 }}
 
 /* Синяя кнопка входа с ярким белоснежным текстом */
