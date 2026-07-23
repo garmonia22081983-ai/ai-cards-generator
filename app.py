@@ -34,7 +34,6 @@ ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"
 ]
 
-# --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
 if "GEMINI_API_KEY" in st.secrets:
@@ -255,35 +254,41 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
 
 /* Уменьшаем верхний отступ страницы, чтобы плашка встала выше */
 [data-testid="stMainBlockContainer"] {{
-    padding-top: 1rem !important;
+    padding-top: 1.5rem !important;
 }}
 
-/* Четкая белоснежная плашка контейнера авторизации с яркой тенью и рамкой */
+/* Четкая белоснежная 100% непрозрачная плашка авторизации с контрастной рамкой и глубокой тенью */
+[data-testid="stVerticalBlockBorderWrapper"],
 [data-testid="stContainer"] {{
     background-color: #ffffff !important;
     background: #ffffff !important;
-    border: 2px solid #cbd5e0 !important;
-    border-radius: 20px !important;
-    padding: 35px 30px !important;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
-    margin-top: 5px !important;
+    border: 1px solid #d1d5db !important;
+    border-radius: 24px !important;
+    padding: 38px 32px !important;
+    box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
+    margin-top: 10px !important;
     opacity: 1 !important;
 }}
 
-/* Синяя кнопка входа с ярким белым текстом */
+/* Синяя кнопка входа с ярким белоснежным текстом */
 .stButton > button[kind="primary"] {{
-    background-color: #2b6cb0 !important;
+    background-color: #2563eb !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     border: none !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
     font-weight: 600 !important;
+    font-size: 16px !important;
+    padding: 10px 16px !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
+    transition: all 0.2s ease-in-out !important;
 }}
 
 .stButton > button[kind="primary"]:hover {{
-    background-color: #1a365d !important;
+    background-color: #1d4ed8 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
+    box-shadow: 0 6px 16px rgba(29, 78, 216, 0.35) !important;
 }}
 
 input, textarea, select, 
@@ -293,10 +298,10 @@ input, textarea, select,
 [data-baseweb="textarea"],
 [data-baseweb="select"] > div {{
     background-color: #ffffff !important;
-    color: #2d3748 !important;
-    -webkit-text-fill-color: #2d3748 !important;
+    color: #1e293b !important;
+    -webkit-text-fill-color: #1e293b !important;
     border: 1px solid #cbd5e0 !important;
-    border-radius: 8px !important;
+    border-radius: 10px !important;
 }}
 
 [data-testid="stSidebar"], 
@@ -609,7 +614,6 @@ if student_deck_id:
 # ==============================================================================
 # 👩‍🏫 2. ИНТЕРФЕЙС УЧИТЕЛЯ (АВТОРИЗАЦИЯ, ГЕНЕРАЦИЯ, СОХРАНЕНИЕ)
 # ==============================================================================
-
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -692,17 +696,16 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
         with st.container(border=True):
             st.markdown(
                 """
-                <div style="text-align: center; margin-bottom: 20px;">
-                    <div style="font-size: 42px; margin-bottom: 10px;">🎓</div>
-                    <h2 style="margin: 0 0 6px 0; color: #1a365d; font-size: 28px; font-weight: bold;">Flashcards AI</h2>
-                    <p style="color: #4a5568; font-size: 16px; margin-top: 0; line-height: 1.4; font-weight: 500;">Умный генератор карточек для преподавателей</p>
+                <div style="text-align: center; margin-bottom: 22px;">
+                    <div style="font-size: 46px; margin-bottom: 8px;">🎓</div>
+                    <h2 style="margin: 0 0 6px 0; color: #0f172a; font-size: 30px; font-weight: 700;">Flashcards AI</h2>
+                    <p style="color: #475569; font-size: 16px; margin-top: 0; line-height: 1.4; font-weight: 500;">Умный генератор карточек для преподавателей</p>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -838,9 +841,9 @@ if not st.session_state.user_email:
 
             st.markdown(
                 """
-                <div style="margin-top: 20px; text-align: center;">
-                    <small style="color: #718096;">
-                    Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                <div style="margin-top: 22px; text-align: center;">
+                    <small style="color: #64748b; font-size: 13px;">
+                    Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2563eb; text-decoration: underline;">Политику конфиденциальности</a>.
                     </small>
                 </div>
                 """, 
@@ -867,7 +870,6 @@ if "cards" not in st.session_state:
     st.session_state.cards = []
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
-
 
 def extract_text_from_url(url):
     """Парсинг текста веб-статьи по ссылке."""
@@ -1028,7 +1030,6 @@ with col_stats:
         remaining_cards = max(0, max_cards - used_cards)
         st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
         st.caption(f"Осталось: **{remaining_cards}** карточек")
-
 
 if generate_click:
     is_valid_input = False
