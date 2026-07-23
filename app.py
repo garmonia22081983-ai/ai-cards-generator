@@ -20,7 +20,6 @@ import time
 import tempfile
 import re
 
-# Проверка наличия библиотеки для субтитров YouTube
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
@@ -34,10 +33,8 @@ ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"
 ]
 
-# Инициализация менеджера куки для сохранения сессии на 365 дней
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
-# Настройка API ключа Google Gemini
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
@@ -223,16 +220,16 @@ bg_css = ""
 if os.path.exists("background.jpg"):
     try:
         bin_str = get_base64_of_bin_file("background.jpg")
-        bg_css = f"background-image: url('data:image/jpeg;base64,{bin_str}') !important;"
+        bg_css = "background-image: url('data:image/jpeg;base64," + bin_str + "') !important;"
     except Exception:
         bg_css = "background-color: #f8f6f0 !important;"
 else:
     bg_css = "background-color: #f8f6f0 !important;"
 
-# Безопасное формирование CSS с гарантийным отсутствием синтаксических ошибок f-string
-css_content = """<style>
+# Конструирование CSS через обычную подстановку строк, чтобы избежать синтаксических ошибок f-string
+css_template = """<style>
 html, body, [data-testid="stAppViewContainer"], .stApp {
-    """ + bg_css + """
+    BG_CSS_PLACEHOLDER
     background-size: cover !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
@@ -249,12 +246,12 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {
     box-shadow: none !important;
 }
 
-/* Уменьшаем верхний отступ страницы, чтобы плашка встала выше */
+/* Уменьшаем верхний отступ страницы */
 [data-testid="stMainBlockContainer"] {
     padding-top: 1.5rem !important;
 }
 
-/* Белоснежная 100% непрозрачная плашка авторизации с контрастной яркой синей обводкой */
+/* Белоснежная 100% непрозрачная плашка авторизации с синей обводкой */
 div[data-testid="stVerticalBlockBorderWrapper"] {
     background-color: #ffffff !important;
     background: #ffffff !important;
@@ -263,7 +260,7 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
     border-style: solid !important;
     border-width: 3px !important;
     border-radius: 24px !important;
-    padding: 38px 32px 42px 32px !important;
+    padding: 38px 32px 35px 32px !important;
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     margin-top: 10px !important;
     opacity: 1 !important;
@@ -275,8 +272,12 @@ div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] 
     background: #ffffff !important;
 }
 
-/* Синяя кнопка входа с ярким белоснежным текстом */
+/* Синяя кнопка входа с жирным белоснежным текстом */
 .stButton > button[kind="primary"] {
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
+    border: none !important;
     border-radius: 10px !important;
     font-weight: 600 !important;
     font-size: 16px !important;
@@ -420,6 +421,7 @@ summary { list-style: none !important; }
 }
 </style>"""
 
+css_content = css_template.replace("BG_CSS_PLACEHOLDER", bg_css)
 st.markdown(css_content, unsafe_allow_html=True)
 
 
@@ -691,6 +693,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
+
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
@@ -710,7 +713,7 @@ if not st.session_state.user_email:
                 st.write("**Ваш Email:**")
                 email_input = st.text_input("", placeholder="example@gmail.com", label_visibility="collapsed")
                 
-                # Дополнительный отступ перед кнопкой
+                # Небольшой отступ перед кнопкой
                 st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
                 
                 if st.button("Получить код входа", type="primary", use_container_width=True):
@@ -1022,6 +1025,7 @@ with col_stats:
         remaining_cards = max(0, max_cards - used_cards)
         st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
         st.caption(f"Осталось: **{remaining_cards}** карточек")
+
 
 if generate_click:
     is_valid_input = False
