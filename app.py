@@ -248,13 +248,17 @@ css_template = """
     display: none !important;
 }
 
-/* Убираем верхние отступы у основного контейнера и боковой панели */
+/* Корректируем верхний отступ основного контейнера и боковой панели, чтобы почта не срезалась */
 [data-testid="stMainBlockContainer"],
-.main .block-container,
+.main .block-container {
+    padding-top: 1.2rem !important;
+    margin-top: 0rem !important;
+}
+
 [data-testid="stSidebarContent"],
 [data-testid="stSidebarUserContent"] {
-    padding-top: 0rem !important;
-    margin-top: -0.5rem !important;
+    padding-top: 1rem !important;
+    margin-top: 0rem !important;
 }
 
 [data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
@@ -268,6 +272,38 @@ css_template = """
 html, body, [data-testid="stAppViewContainer"], .stApp {
     color: #2d3748 !important;
     __BG_CSS__
+}
+
+/* Фикс синей темы для кнопок, радио-переключателей и слайдеров (убираем оранжевый дефолт) */
+:root {
+    --primary-color: #2563eb !important;
+}
+
+div[data-baseweb="radio"] input:checked + div,
+div[data-baseweb="radio"] div[aria-checked="true"] {
+    border-color: #2563eb !important;
+    background-color: #2563eb !important;
+}
+
+div[role="radiogroup"] label div[aria-checked="true"] {
+    border-color: #2563eb !important;
+    background-color: #2563eb !important;
+}
+
+span[data-baseweb="radio"] div {
+    border-color: #2563eb !important;
+}
+
+.stButton > button[kind="primary"] {
+    background-color: #2563eb !important;
+    border-color: #2563eb !important;
+    color: #ffffff !important;
+}
+
+.stButton > button[kind="primary"]:hover {
+    background-color: #1d4ed8 !important;
+    border-color: #1d4ed8 !important;
+    color: #ffffff !important;
 }
 
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {
@@ -1000,7 +1036,7 @@ with st.sidebar:
     with col_usr1:
         st.markdown(
             f"""
-            <div style="padding-top: 4px; font-size: 12px; font-weight: bold; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{st.session_state.user_email}">
+            <div style="padding-top: 6px; font-size: 13px; font-weight: bold; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{st.session_state.user_email}">
                 👤 {st.session_state.user_email}
             </div>
             """,
