@@ -46,12 +46,37 @@ def get_gsheets_client():
         'https://www.googleapis.com/auth/spreadsheets',
         'https://www.googleapis.com/auth/drive'
     ]
-    if "GOOGLE_APPLICATION_CREDENTIALS" in st.secrets:
-        creds_dict = json.loads(st.secrets["GOOGLE_APPLICATION_CREDENTIALS"])
+    creds_dict = None
+    
+    # 1. Проверяем наличие ключей в st.secrets
+    sec_keys = ["GOOGLE_APPLICATION_CREDENTIALS", "gcp_service_account"]
+    for sec_key in sec_keys:
+        if sec_key in st.secrets:
+            raw_creds = st.secrets[sec_key]
+            if isinstance(raw_creds, str):
+                try:
+                    creds_dict = json.loads(raw_creds)
+                except Exception:
+                    pass
+            else:
+                try:
+                    creds_dict = dict(raw_creds)
+                except Exception:
+                    pass
+            if creds_dict:
+                break
+
+    if creds_dict:
         credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
-    else:
+        return gspread.authorize(credentials)
+
+    # 2. Резервный вариант — локальный файл credentials.json (если он существует)
+    if os.path.exists("credentials.json"):
         credentials = Credentials.from_service_account_file("credentials.json", scopes=scopes)
-    return gspread.authorize(credentials)
+        return gspread.authorize(credentials)
+
+    st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам! Добавьте секрет GOOGLE_APPLICATION_CREDENTIALS в настройки Streamlit Secrets.")
+    st.stop()
 
 def send_otp_email(target_email, otp_code):
     try:
