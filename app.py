@@ -695,7 +695,7 @@ if not st.session_state.user_email:
                                     st.session_state.pending_email = email
                                     st.session_state.otp_sent = True
                                     st.rerun()
-            else:
+           else:
                 st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
                 st.caption("Проверьте папку «Спам», если письма нет в течение минуты.")
                 
@@ -763,6 +763,65 @@ if not st.session_state.user_email:
                                     st.error("🚫 Ваш доступ заблокирован.")
                                     st.stop()
                                     
+                                if status == "paid":
+                                    last_pay_date = datetime.now()
+                                    try:
+                                        payments_sheet = sh.worksheet("Payments")
+                                        payments_rows = payments_sheet.get_all_values()
+                                        for p_row in reversed(payments_rows[1:]):
+                                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                                raw_d = p_row[11].strip() if len(p_row) > 11 else ""
+                                                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                                                    try:
+                                                        last_pay_date = datetime.strptime(raw_d, fmt)
+                                                        break
+                                                    except ValueError:
+                                                        continue
+                                                break
+                                    except Exception:
+                                        pass
+                                    
+                                    exp_date = last_pay_date + timedelta(days=30)
+                                    if datetime.now() > exp_date:
+                                        st.session_state.trial_expired = True
+                                    else:
+                                        st.session_state.trial_expired = False
+                                    
+                                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                else:
+                                    reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
+                                    exp_date = reg_date + timedelta(days=3)
+                                    if datetime.now() > exp_date:
+                                        st.session_state.trial_expired = True
+                                    else:
+                                        st.session_state.trial_expired = False
+                                    
+                                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                        
+                        st.success("Успешный вход!")
+                        time.sleep(0.3)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"Ошибка авторизации: {e}")
+                else:
+                    st.error("Неверный код.")
+                    
+            if st.button("Ввести другой Email", use_container_width=True):
+                st.session_state.otp_sent = False
+                st.session_state.generated_otp = None
+                st.session_state.pending_email = None
+                st.rerun()
+                
+            st.markdown(
+                """
+                <div style="margin-top: 20px; text-align: center;">
+                    <small style="color: #718096;">
+                    Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                    </small>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )                                    
                                 if status == "paid":
                                     last_pay_date = datetime.now()
                                     try:
