@@ -20,7 +20,7 @@ import time
 import tempfile
 import re
 
-# Библиотека субтитров YouTube через SupaData API (резервный импорт)
+# Библиотека субтитров YouTube (резервный импорт)
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
@@ -37,7 +37,6 @@ ADMIN_EMAILS = [
 # --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
-# --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
@@ -52,6 +51,7 @@ api_key = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=api_key)
 
 
+# --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К GOOGLE ТАБЛИЦАМ ---
 def get_gsheets_client():
     """Подключение к Google Таблицам с использованием сервисного аккаунта."""
     scopes = [
@@ -63,6 +63,7 @@ def get_gsheets_client():
     return gspread.authorize(creds)
 
 
+# --- ФУНКЦИЯ ОТПРАВКИ ОДНОРАЗОВОГО КОДА НА EMAIL ---
 def send_otp_email(target_email, code):
     """Отправка одноразового кода авторизации на email через SMTP."""
     try:
@@ -96,6 +97,7 @@ def send_otp_email(target_email, code):
         return False
 
 
+# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ПОДСЧЕТА ЛИМИТОВ ---
 def get_user_tariff_and_usage(email, sh):
     """Определение текущего тарифа пользователя и подсчет использованных карточек."""
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
@@ -179,6 +181,7 @@ def get_user_tariff_and_usage(email, sh):
         return tariff_name, max_cards, 0, period_start
 
 
+# --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE ID ---
 def extract_youtube_id(url):
     """Извлечение ID видео из ссылки YouTube."""
     pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
@@ -188,6 +191,7 @@ def extract_youtube_id(url):
     return None
 
 
+# --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ YOUTUBE ЧЕРЕЗ SUPADATA API ---
 def get_youtube_transcript(video_url):
     """Извлечение субтитров YouTube через защищенный сервис SupaData API."""
     supadata_key = st.secrets.get("SUPADATA_API_KEY", "")
@@ -251,23 +255,24 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
 
 /* Уменьшаем верхний отступ страницы, чтобы плашка встала выше */
 [data-testid="stMainBlockContainer"] {{
-    padding-top: 1.5rem !important;
+    padding-top: 1rem !important;
 }}
 
-/* Стилизация контейнера авторизации (белая плашка со всеми элементами внутри) */
+/* Четкая белоснежная плашка контейнера авторизации с глубокой тенью */
 [data-testid="stContainer"] {{
     background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
+    border: 1px solid #cbd5e0 !important;
     border-radius: 20px !important;
-    padding: 30px 25px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+    padding: 35px 30px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08) !important;
     margin-top: 5px !important;
 }}
 
-/* Синяя кнопка входа с белым текстом */
+/* Синяя кнопка входа с ярким белым текстом */
 .stButton > button[kind="primary"] {{
     background-color: #2b6cb0 !important;
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
     border: none !important;
     border-radius: 8px !important;
     font-weight: 600 !important;
@@ -276,6 +281,7 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
 .stButton > button[kind="primary"]:hover {{
     background-color: #1a365d !important;
     color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }}
 
 input, textarea, select, 
@@ -408,7 +414,9 @@ summary {{ list-style: none !important; }}
 """, unsafe_allow_html=True)
 
 
-# --- 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id) ---
+# ==============================================================================
+# 🎓 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id)
+# ==============================================================================
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -596,7 +604,10 @@ if student_deck_id:
     st.stop()
 
 
-# --- ИНИЦИАЛИЗАЦИЯ ПЕРЕМЕННЫХ СЕССИИ УЧИТЕЛЯ ---
+# ==============================================================================
+# 👩‍🏫 2. ИНТЕРФЕЙС УЧИТЕЛЯ (АВТОРИЗАЦИЯ, ГЕНЕРАЦИЯ, СОХРАНЕНИЕ)
+# ==============================================================================
+
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -680,17 +691,16 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
             pass
 
 
-# --- БЛОК АВТОРИЗАЦИИ ВНУТРИ ЕДИНОЙ БЕЛОЙ ПЛАШКИ ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
         with st.container(border=True):
             st.markdown(
                 """
-                <div style="text-align: center; margin-bottom: 15px;">
-                    <div style="font-size: 38px; margin-bottom: 8px;">🎓</div>
-                    <h2 style="margin: 0 0 5px 0; color: #1a365d; font-size: 26px; font-weight: bold;">Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 14px; margin-top: 0; line-height: 1.4;">Умный генератор карточек для преподавателей</p>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <div style="font-size: 42px; margin-bottom: 10px;">🎓</div>
+                    <h2 style="margin: 0 0 6px 0; color: #1a365d; font-size: 28px; font-weight: bold;">Flashcards AI</h2>
+                    <p style="color: #4a5568; font-size: 16px; margin-top: 0; line-height: 1.4; font-weight: 500;">Умный генератор карточек для преподавателей</p>
                 </div>
                 """, 
                 unsafe_allow_html=True
@@ -826,7 +836,7 @@ if not st.session_state.user_email:
 
             st.markdown(
                 """
-                <div style="margin-top: 15px; text-align: center;">
+                <div style="margin-top: 20px; text-align: center;">
                     <small style="color: #718096;">
                     Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                     </small>
@@ -837,7 +847,7 @@ if not st.session_state.user_email:
     st.stop()
 
 
-# --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
+# --- КНОПКА ВЫХОДА И СПИСОК КОЛОД В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
     cookie_manager.delete("auth_email")
@@ -882,7 +892,7 @@ tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.
 
 # --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
-    st.header("⚙️ Настройки generation")
+    st.header("⚙️ Настройки генерации")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
     
     source_type = st.radio(
@@ -1018,7 +1028,6 @@ with col_stats:
         st.caption(f"Осталось: **{remaining_cards}** карточек")
 
 
-# --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -1182,36 +1191,9 @@ if generate_click:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
 
-# --- ОТРИСОВКА, РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ КАРТОЧЕК ---
 if st.session_state.cards:
     st.write("---")
     
-    # --- БЛОК AI-УЛУЧШЕНИЯ КОЛОДЫ ---
-    with st.expander("🤖 AI Улучшение колоды (Добавить дополнительные примеры или синонимы)", expanded=False):
-        st.write("Нажмите кнопку ниже, чтобы с помощью Gemini обогатить текущие карточки дополнительными нюансами использования.")
-        if st.button("✨ Обогатить карточки через AI", key="ai_enhance_btn"):
-            with st.spinner("Gemini улучшает карточки..."):
-                try:
-                    model = genai.GenerativeModel(model_option)
-                    current_json = json.dumps(st.session_state.cards, ensure_ascii=False)
-                    enhance_prompt = f"""
-                    У тебя есть колода карточек английских слов в формате JSON: {current_json}
-                    Для каждой карточки добавь или обнови поле "collocations" или сделай дефиниции еще более яркими для уровня {student_level}.
-                    Верни строго валидный JSON-массив объектов с теми же ключами ("word", "transcription", "translation", "explanation", "collocations", "context").
-                    Только чистый JSON без маркдаун оберток.
-                    """
-                    resp = model.generate_content(enhance_prompt)
-                    txt_resp = resp.text.strip()
-                    if "```" in txt_resp:
-                        txt_resp = txt_resp.split("```")[1]
-                        if txt_resp.startswith("json"):
-                            txt_resp = txt_resp[4:].strip()
-                    st.session_state.cards = json.loads(txt_resp.strip())
-                    st.success("✨ Карточки успешно обогащены!")
-                    st.rerun()
-                except Exception as ex_err:
-                    st.error(f"Не удалось улучшить карточки: {ex_err}")
-
     # --- БЛОК РЕДАКТИРОВАНИЯ ---
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
@@ -1425,7 +1407,7 @@ if st.session_state.cards:
     </div>
 </div>
 </div>"""
-                    st.markdown(back_html, unsafe_application_html=True) if hasattr(st, 'application_html') else st.markdown(back_html, unsafe_allow_html=True)
+                    st.markdown(back_html, unsafe_allow_html=True)
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
