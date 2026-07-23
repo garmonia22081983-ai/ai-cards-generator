@@ -247,33 +247,33 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
 }}
 
 /* Уменьшаем верхний отступ страницы, чтобы плашка встала выше */
-[data-testid="stMainBlockContainer"] {{
+[data-testid="stMainBlockContainer"] {
     padding-top: 1.5rem !important;
-}}
+}
 
 /* Белоснежная 100% непрозрачная плашка авторизации с контрастной яркой синей обводкой */
-div[data-testid="stVerticalBlockBorderWrapper"] {{
+div[data-testid="stVerticalBlockBorderWrapper"] {
     background-color: #ffffff !important;
     background: #ffffff !important;
     border: 3px solid #2563eb !important;
+    border-color: #2563eb !important;
+    border-style: solid !important;
+    border-width: 3px !important;
     border-radius: 24px !important;
     padding: 38px 32px 42px 32px !important;
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     margin-top: 10px !important;
     opacity: 1 !important;
-}}
+}
 
-div[data-testid="stVerticalBlockBorderWrapper"] > div {{
+div[data-testid="stVerticalBlockBorderWrapper"] > div,
+div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {
     background-color: #ffffff !important;
     background: #ffffff !important;
-}}
+}
 
 /* Синяя кнопка входа с ярким белоснежным текстом */
-.stButton > button[kind="primary"] {{
-    background-color: #2563eb !important;
-    color: #ffffff !important;
-    -webkit-text-fill-color: #ffffff !important;
-    border: none !important;
+.stButton > button[kind="primary"] {
     border-radius: 10px !important;
     font-weight: 600 !important;
     font-size: 16px !important;
