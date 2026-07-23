@@ -249,20 +249,33 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
-/* Карточка авторизации (оригинальный дизайн с шапкой) */
-.auth-container {{
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0;
-    border-radius: 20px;
-    padding: 35px 30px;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
-    margin-top: 20px;
-    margin-bottom: 20px;
+/* Уменьшаем верхний отступ страницы, чтобы плашка встала выше */
+[data-testid="stMainBlockContainer"] {{
+    padding-top: 1.5rem !important;
 }}
 
-.auth-header {{
-    text-align: center;
-    margin-bottom: 25px;
+/* Стилизация контейнера авторизации (белая плашка со всеми элементами внутри) */
+[data-testid="stContainer"] {{
+    background-color: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 20px !important;
+    padding: 30px 25px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04) !important;
+    margin-top: 5px !important;
+}}
+
+/* Синяя кнопка входа с белым текстом */
+.stButton > button[kind="primary"] {{
+    background-color: #2b6cb0 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+}}
+
+.stButton > button[kind="primary"]:hover {{
+    background-color: #1a365d !important;
+    color: #ffffff !important;
 }}
 
 input, textarea, select, 
@@ -667,161 +680,160 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
             pass
 
 
-# --- БЛОК АВТОРИЗАЦИИ С ОРИГИНАЛЬНЫМ МАКЕТОМ ---
+# --- БЛОК АВТОРИЗАЦИИ ВНУТРИ ЕДИНОЙ БЕЛОЙ ПЛАШКИ ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
-        st.markdown(
-            """
-            <div class="auth-container">
-                <div class="auth-header">
+        with st.container(border=True):
+            st.markdown(
+                """
+                <div style="text-align: center; margin-bottom: 15px;">
                     <div style="font-size: 38px; margin-bottom: 8px;">🎓</div>
                     <h2 style="margin: 0 0 5px 0; color: #1a365d; font-size: 26px; font-weight: bold;">Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 13px; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+                    <p style="color: #718096; font-size: 14px; margin-top: 0; line-height: 1.4;">Умный генератор карточек для преподавателей</p>
                 </div>
-            """, 
-            unsafe_allow_html=True
-        )
-        
-        if not st.session_state.otp_sent:
-            st.write("**Ваш Email:**")
-            email_input = st.text_input("", placeholder="example@gmail.com", label_visibility="collapsed")
+                """, 
+                unsafe_allow_html=True
+            )
             
-            if st.button("Получить код входа", type="primary", use_container_width=True):
-                if "@" not in email_input or "." not in email_input:
-                    st.error("Пожалуйста, введите корректный адрес почты.")
-                else:
-                    email = email_input.strip().lower()
-                    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
-                    
-                    if email in clean_admin_emails:
-                        user_exists = True
+            if not st.session_state.otp_sent:
+                st.write("**Ваш Email:**")
+                email_input = st.text_input("", placeholder="example@gmail.com", label_visibility="collapsed")
+                
+                if st.button("Получить код входа", type="primary", use_container_width=True):
+                    if "@" not in email_input or "." not in email_input:
+                        st.error("Пожалуйста, введите корректный адрес почты.")
                     else:
+                        email = email_input.strip().lower()
+                        clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+                        
+                        if email in clean_admin_emails:
+                            user_exists = True
+                        else:
+                            try:
+                                gc = get_gsheets_client()
+                                sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                                
+                                users_sheet = sh.worksheet("Users")
+                                users_rows = users_sheet.get_all_values()
+                                
+                                payments_sheet = sh.worksheet("Payments")
+                                payments_rows = payments_sheet.get_all_values()
+                                
+                                user_exists = False
+                                for r in users_rows[1:]:
+                                    if len(r) > 0 and r[0].strip().lower() == email:
+                                        user_exists = True
+                                        break
+                                
+                                if not user_exists:
+                                    for p in payments_rows[1:]:
+                                        if len(p) > 1 and p[1].strip().lower() == email:
+                                            user_exists = True
+                                            break
+                            except Exception as e:
+                                st.error(f"Ошибка базы данных: {e}")
+                                user_exists = False
+                        
+                        if not user_exists:
+                            st.error("🔴 Email не найден в системе.")
+                            st.link_button("👉 Получить 3 дня тест-драйва на flashcards-ai.ru", "https://flashcards-ai.ru", type="primary", use_container_width=True)
+                        else:
+                            otp_code = str(random.randint(100000, 999999))
+                            with st.spinner("Отправка одноразового кода..."):
+                                if send_otp_email(email, otp_code):
+                                    st.session_state.generated_otp = otp_code
+                                    st.session_state.pending_email = email
+                                    st.session_state.otp_sent = True
+                                    st.rerun()
+
+            else:
+                st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
+                st.caption("Проверьте папку «Спам», если письма нет в течение минуты.")
+                
+                user_code = st.text_input("6-значный код из письма:", max_chars=6)
+                
+                if st.button("Подтвердить и войти", type="primary", use_container_width=True):
+                    if user_code.strip() == st.session_state.generated_otp:
+                        email = st.session_state.pending_email
+                        clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+                        
+                        st.session_state.user_email = email
+                        st.session_state.logout_requested = False
+                        
+                        if email in clean_admin_emails:
+                            cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                            st.session_state.user_name = "Администратор"
+                            st.session_state.trial_expired = False
+                            st.success("Успешный вход!")
+                            time.sleep(0.3)
+                            st.rerun()
+                        
                         try:
                             gc = get_gsheets_client()
                             sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
                             
                             users_sheet = sh.worksheet("Users")
-                            users_rows = users_sheet.get_all_values()
+                            rows = users_sheet.get_all_values()
                             
-                            payments_sheet = sh.worksheet("Payments")
-                            payments_rows = payments_sheet.get_all_values()
-                            
-                            user_exists = False
-                            for r in users_rows[1:]:
+                            user_row = None
+                            for i, r in enumerate(rows[1:], start=2):
                                 if len(r) > 0 and r[0].strip().lower() == email:
-                                    user_exists = True
+                                    user_row = (i, r)
                                     break
                             
-                            if not user_exists:
-                                for p in payments_rows[1:]:
+                            if not user_row:
+                                payments_sheet = sh.worksheet("Payments")
+                                p_rows = payments_sheet.get_all_values()
+                                
+                                found_p = None
+                                for p in reversed(p_rows[1:]):
                                     if len(p) > 1 and p[1].strip().lower() == email:
-                                        user_exists = True
+                                        found_p = p
                                         break
+                                
+                                if found_p:
+                                    user_name = found_p[0].strip() if found_p[0].strip() else "Преподаватель"
+                                    product_name = found_p[5].strip() if len(found_p) > 5 else ""
+                                    price_val = found_p[6].strip() if len(found_p) > 6 else ""
+                                    reg_time_str = found_p[11].strip() if len(found_p) > 11 else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                                    
+                                    new_status = "paid" if (product_name or price_val) else "active"
+                                    users_sheet.append_row([email, reg_time_str, new_status, user_name])
+                                    
+                                    st.session_state.user_name = user_name
+                                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                else:
+                                    row_num, row_data = user_row
+                                    reg_date_str = row_data[1]
+                                    status = row_data[2] if len(row_data) > 2 else "active"
+                                    st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+                                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                    
+                            st.success("Успешный вход!")
+                            time.sleep(0.3)
+                            st.rerun()
                         except Exception as e:
-                            st.error(f"Ошибка базы данных: {e}")
-                            user_exists = False
-                    
-                    if not user_exists:
-                        st.error("🔴 Email не найден в системе.")
-                        st.link_button("👉 Получить 3 дня тест-драйва на flashcards-ai.ru", "https://flashcards-ai.ru", type="primary", use_container_width=True)
+                            st.error(f"Ошибка авторизации: {e}")
                     else:
-                        otp_code = str(random.randint(100000, 999999))
-                        with st.spinner("Отправка одноразового кода..."):
-                            if send_otp_email(email, otp_code):
-                                st.session_state.generated_otp = otp_code
-                                st.session_state.pending_email = email
-                                st.session_state.otp_sent = True
-                                st.rerun()
+                        st.error("Неверный код.")
+                        
+                if st.button("Ввести другой Email", use_container_width=True):
+                    st.session_state.otp_sent = False
+                    st.session_state.generated_otp = None
+                    st.session_state.pending_email = None
+                    st.rerun()
 
-        else:
-            st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
-            st.caption("Проверьте папку «Спам», если письма нет в течение минуты.")
-            
-            user_code = st.text_input("6-значный код из письма:", max_chars=6)
-            
-            if st.button("Подтвердить и войти", type="primary", use_container_width=True):
-                if user_code.strip() == st.session_state.generated_otp:
-                    email = st.session_state.pending_email
-                    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
-                    
-                    st.session_state.user_email = email
-                    st.session_state.logout_requested = False
-                    
-                    if email in clean_admin_emails:
-                        cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                        st.session_state.user_name = "Администратор"
-                        st.session_state.trial_expired = False
-                        st.success("Успешный вход!")
-                        time.sleep(0.3)
-                        st.rerun()
-                    
-                    try:
-                        gc = get_gsheets_client()
-                        sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-                        
-                        users_sheet = sh.worksheet("Users")
-                        rows = users_sheet.get_all_values()
-                        
-                        user_row = None
-                        for i, r in enumerate(rows[1:], start=2):
-                            if len(r) > 0 and r[0].strip().lower() == email:
-                                user_row = (i, r)
-                                break
-                        
-                        if not user_row:
-                            payments_sheet = sh.worksheet("Payments")
-                            p_rows = payments_sheet.get_all_values()
-                            
-                            found_p = None
-                            for p in reversed(p_rows[1:]):
-                                if len(p) > 1 and p[1].strip().lower() == email:
-                                    found_p = p
-                                    break
-                            
-                            if found_p:
-                                user_name = found_p[0].strip() if found_p[0].strip() else "Преподаватель"
-                                product_name = found_p[5].strip() if len(found_p) > 5 else ""
-                                price_val = found_p[6].strip() if len(found_p) > 6 else ""
-                                reg_time_str = found_p[11].strip() if len(found_p) > 11 else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                
-                                new_status = "paid" if (product_name or price_val) else "active"
-                                users_sheet.append_row([email, reg_time_str, new_status, user_name])
-                                
-                                st.session_state.user_name = user_name
-                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                            else:
-                                row_num, row_data = user_row
-                                reg_date_str = row_data[1]
-                                status = row_data[2] if len(row_data) > 2 else "active"
-                                st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
-                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                                
-                        st.success("Успешный вход!")
-                        time.sleep(0.3)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Ошибка авторизации: {e}")
-                else:
-                    st.error("Неверный код.")
-                    
-            if st.button("Ввести другой Email", use_container_width=True):
-                st.session_state.otp_sent = False
-                st.session_state.generated_otp = None
-                st.session_state.pending_email = None
-                st.rerun()
-
-        st.markdown(
-            """
-            <div style="margin-top: 20px; text-align: center;">
-                <small style="color: #718096;">
-                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
-                </small>
-            </div>
-            </div>
-            """, 
-            unsafe_allow_html=True
-        )
+            st.markdown(
+                """
+                <div style="margin-top: 15px; text-align: center;">
+                    <small style="color: #718096;">
+                    Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                    </small>
+                </div>
+                """, 
+                unsafe_allow_html=True
+            )
     st.stop()
 
 
@@ -1413,7 +1425,7 @@ if st.session_state.cards:
     </div>
 </div>
 </div>"""
-                    st.markdown(back_html, unsafe_allow_html=True)
+                    st.markdown(back_html, unsafe_application_html=True) if hasattr(st, 'application_html') else st.markdown(back_html, unsafe_allow_html=True)
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
