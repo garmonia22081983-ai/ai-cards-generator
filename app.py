@@ -198,7 +198,6 @@ def extract_youtube_id(url):
     return None
 
 def scrape_youtube_captions_fallback(video_id):
-    """Direct player scraping fallback if API is throttled or missing auto-captions."""
     try:
         url = f"https://www.youtube.com/watch?v={video_id}"
         headers = {
@@ -256,7 +255,6 @@ def get_youtube_transcript(video_url):
     if not video_id:
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
 
-    # Tier 1: SupaData API (if configured)
     supa_key = st.secrets.get("SUPADATA_API_KEY", None)
     if supa_key:
         try:
@@ -272,12 +270,10 @@ def get_youtube_transcript(video_url):
         except Exception:
             pass
 
-    # Tier 2: YouTubeTranscriptApi with smart list_transcripts search
     if YouTubeTranscriptApi:
         try:
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
             
-            # Try manual english
             try:
                 t = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
                 data = t.fetch()
@@ -286,7 +282,6 @@ def get_youtube_transcript(video_url):
             except Exception:
                 pass
                 
-            # Try auto-generated english
             try:
                 t = transcript_list.find_generated_transcript(['en', 'en-US', 'en-GB'])
                 data = t.fetch()
@@ -295,7 +290,6 @@ def get_youtube_transcript(video_url):
             except Exception:
                 pass
                 
-            # Fallback to direct fetch
             try:
                 data = YouTubeTranscriptApi.get_transcript(video_id)
                 text = " ".join([item['text'] for item in data])
@@ -305,7 +299,6 @@ def get_youtube_transcript(video_url):
         except Exception:
             pass
 
-    # Tier 3: Direct Web Scraper Fallback
     scraped_text = scrape_youtube_captions_fallback(video_id)
     if scraped_text:
         return scraped_text
@@ -497,10 +490,17 @@ div[data-baseweb="popover"] [role="option"] {{
     color: #4a2e2e !important;
 }}
 
+.card-front-transcription {{
+    font-size: 14px;
+    color: #5c3a3a !important;
+    margin-top: 6px;
+    font-family: sans-serif;
+}}
+
 .card-front-subtitle {{
     font-size: 10px;
     color: #704b4b !important;
-    margin-top: 12px;
+    margin-top: 8px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
@@ -655,7 +655,19 @@ summary {{ list-style: none !important; }}
 
 st.markdown(css_template, unsafe_allow_html=True)
 
-def render_quiz_section(cards_data, quiz_key_prefix="quiz"):
+def get_card_transcription(card, accent_choice):
+    if "US" in accent_choice:
+        return card.get('transcription_us', card.get('transcription', ''))
+    else:
+        return card.get('transcription_uk', card.get('transcription', ''))
+
+def get_card_explanation(card, def_lang_choice):
+    if "русском" in def_lang_choice.lower():
+        return card.get('explanation_ru', card.get('explanation', ''))
+    else:
+        return card.get('explanation_en', card.get('explanation', ''))
+
+def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺🇸 US (Американский)"):
     st.markdown("### 🧪 Интерактивный тест по колоде")
     st.caption("Выберите один из вариантов перевода для каждого слова:")
     
@@ -685,8 +697,8 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz"):
             q_list.append({
                 "id": idx,
                 "word": card.get('word', ''),
-                "transcription": card.get('transcription', ''),
-                "explanation": card.get('explanation', ''),
+                "transcription": get_card_transcription(card, accent_choice),
+                "explanation": card.get('explanation_en', card.get('explanation', '')),
                 "context": card.get('context', ''),
                 "correct": correct_ans,
                 "options": opts
@@ -792,6 +804,12 @@ if student_deck_id:
         st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
         st.caption(f"Всего карточек: {len(cards_data)}")
         
+        col_s_opt1, col_s_opt2 = st.columns(2)
+        with col_s_opt1:
+            s_accent = st.radio("Акцент / Произношение:", ["🇺🇸 US (Американский)", "🇬🇧 GB (Британский)"], horizontal=True, key="s_accent_radio")
+        with col_s_opt2:
+            s_def_lang = st.radio("Язык дефиниции:", ["🇬🇧 На английском", "🇷🇺 На русском"], horizontal=True, key="s_def_lang_radio")
+
         student_mode = st.radio(
             "Выберите режим:",
             ["🎴 Интерактивные карточки", "🧪 Пройти тест", "🖨️ Версия для печати"],
@@ -802,11 +820,13 @@ if student_deck_id:
 
         if student_mode == "🖨️ Версия для печати":
             for card in cards_data:
+                tr_str = get_card_transcription(card, s_accent)
+                exp_str = get_card_explanation(card, s_def_lang)
                 print_html = f"""<div class="printable-content print-row-bw">
-<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
+<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{tr_str}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
-<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
 <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
@@ -814,17 +834,19 @@ if student_deck_id:
                 st.markdown(print_html, unsafe_allow_html=True)
 
         elif student_mode == "🧪 Пройти тест":
-            render_quiz_section(cards_data, quiz_key_prefix=f"s_quiz_{student_deck_id}")
+            render_quiz_section(cards_data, quiz_key_prefix=f"s_quiz_{student_deck_id}", accent_choice=s_accent)
 
         else:
             anki_list_student = []
             for card in cards_data:
+                tr_str = get_card_transcription(card, s_accent)
+                exp_str = get_card_explanation(card, s_def_lang)
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                     f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-                    f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{card.get('transcription', '')}</p>"
-                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card.get('explanation', '')}</p>"
+                    f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
+                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {exp_str}</p>"
                     f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
                     f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
                     f"</div>"
@@ -842,6 +864,11 @@ if student_deck_id:
             cols = st.columns(3)
             for i, card in enumerate(cards_data):
                 col_idx = i % 3
+                tr_str = get_card_transcription(card, s_accent)
+                exp_str = get_card_explanation(card, s_def_lang)
+                audio_type = "2" if "US" in s_accent else "1"
+                flag_emoji = "🇺🇸" if "US" in s_accent else "🇬🇧"
+
                 with cols[col_idx]:
                     is_flipped = st.session_state.student_flipped.get(i, False)
                     encoded_word = urllib.parse.quote(str(card.get('word', '')))
@@ -849,7 +876,8 @@ if student_deck_id:
                     if not is_flipped:
                         front_html = f"""<div class="card-front">
 <span class="card-front-title">{card.get('word', '')}</span>
-<span class="card-front-subtitle">English Word</span>
+<span class="card-front-transcription">{tr_str}</span>
+<span class="card-front-subtitle">{s_accent.split()[0]} English</span>
 </div>"""
                         st.markdown(front_html, unsafe_allow_html=True)
                         if st.button("🔄 Перевернуть", key=f"s_flip_{i}", use_container_width=True):
@@ -859,9 +887,9 @@ if student_deck_id:
                         back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
 <span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
-<span style="color: #718096; font-size: 11px;">{card.get('transcription', '')}</span>
+<span style="color: #718096; font-size: 11px;">{tr_str}</span>
 </div>
-<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {card.get('explanation', '')}</div>
+<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {exp_str}</div>
 <div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
@@ -870,14 +898,10 @@ if student_deck_id:
 {card.get('translation', '')}
 </div>
 </details>
-<div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
+<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
     <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold;">🇺🇸</span>
-        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 28px;"></audio>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold;">🇬🇧</span>
-        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 28px;"></audio>
+        <span style="font-size: 11px; font-weight: bold;">{flag_emoji}</span>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
     </div>
 </div>
 </div>"""
@@ -1224,6 +1248,25 @@ with st.sidebar:
     
     student_level = st.selectbox("Уровень студента (CEFR):", ["A1 (Beginner)", "A2 (Elementary)", "B1 (Intermediate)", "B2 (Upper-Intermediate)", "C1 (Advanced)", "C2 (Proficient)"], index=2)
     
+    st.markdown("---")
+    st.subheader("🗣️ Выбор акцента и языка")
+    
+    accent_option = st.radio(
+        "Транскрипция и озвучка:",
+        ["🇺🇸 US (Американский)", "🇬🇧 GB (Британский)"],
+        index=0,
+        key="teacher_accent_radio"
+    )
+    
+    def_lang_option = st.radio(
+        "Язык дефиниции (Definition):",
+        ["🇬🇧 На английском", "🇷🇺 На русском"],
+        index=0,
+        key="teacher_def_lang_radio"
+    )
+    
+    st.markdown("---")
+    
     if source_type != "✍️ Готовый список слов":
         num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
     else:
@@ -1465,9 +1508,11 @@ if generate_click:
                         Создай обучающие карточки для следующих слов/фраз: {final_prompt_content}.
                         Верни строго валидный JSON-массив объектов со следующими ключами:
                         - "word": оригинальное слово на английском
-                        - "transcription": фонетическая транскрипция в IPA
+                        - "transcription_us": американская фонетическая транскрипция в IPA
+                        - "transcription_uk": британская фонетическая транскрипция в IPA
                         - "translation": точный и красивый перевод на русский
-                        - "explanation": дефиниция на английском языке под уровень {student_level}
+                        - "explanation_en": простое объяснение (дефиниция) на английском языке под уровень {student_level}
+                        - "explanation_ru": простое понятное объяснение (дефиниция) на русском языке для детей/начинающих
                         - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую
                         - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
@@ -1479,9 +1524,11 @@ if generate_click:
                         
                         Верни строго валидный JSON-массив объектов со следующими ключами:
                         - "word": оригинальное слово на английском
-                        - "transcription": фонетическая транскрипция в IPA
+                        - "transcription_us": американская фонетическая транскрипция в IPA
+                        - "transcription_uk": британская фонетическая транскрипция в IPA
                         - "translation": точный и красивый перевод на русский
-                        - "explanation": дефиниция на английском языке под уровень {student_level}
+                        - "explanation_en": простое объяснение (дефиниция) на английском языке под уровень {student_level}
+                        - "explanation_ru": простое понятное объяснение (дефиниция) на русском языке для детей/начинающих
                         - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую
                         - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
@@ -1533,10 +1580,12 @@ if generate_click:
                             encoded_w = urllib.parse.quote(card['word'])
                             audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
                             audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
+                            tr_val = card.get('transcription_us', card.get('transcription', ''))
+                            exp_val = card.get('explanation_en', card.get('explanation', ''))
                             
                             cards_sheet.append_row([
-                                card_id, request_id, card['word'], card.get('transcription', ''),
-                                card['translation'], card['explanation'], card.get('collocations', ''),
+                                card_id, request_id, card['word'], tr_val,
+                                card['translation'], exp_val, card.get('collocations', ''),
                                 card['context'], audio_us, audio_uk, st.session_state.user_email
                             ])
                     except Exception as sheets_err:
@@ -1562,7 +1611,18 @@ if st.session_state.cards:
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
         df_edit = pd.DataFrame(st.session_state.cards)
-        required_cols = ["word", "translation", "transcription", "explanation", "collocations", "context"]
+        
+        # Normalize fields for table editing
+        if "transcription_us" not in df_edit.columns:
+            df_edit["transcription_us"] = df_edit.get("transcription", "")
+        if "transcription_uk" not in df_edit.columns:
+            df_edit["transcription_uk"] = df_edit.get("transcription", "")
+        if "explanation_en" not in df_edit.columns:
+            df_edit["explanation_en"] = df_edit.get("explanation", "")
+        if "explanation_ru" not in df_edit.columns:
+            df_edit["explanation_ru"] = df_edit.get("translation", "")
+
+        required_cols = ["word", "translation", "transcription_us", "transcription_uk", "explanation_en", "explanation_ru", "collocations", "context"]
         for col in required_cols:
             if col not in df_edit.columns:
                 df_edit[col] = ""
@@ -1577,8 +1637,10 @@ if st.session_state.cards:
             column_config={
                 "word": st.column_config.TextColumn("Слово / Фраза (EN)", required=True),
                 "translation": st.column_config.TextColumn("Перевод (RU)", required=True),
-                "transcription": st.column_config.TextColumn("Транскрипция"),
-                "explanation": st.column_config.TextColumn("Дефиниция (EN)"),
+                "transcription_us": st.column_config.TextColumn("Транскрипция US"),
+                "transcription_uk": st.column_config.TextColumn("Транскрипция GB"),
+                "explanation_en": st.column_config.TextColumn("Дефиниция (EN)"),
+                "explanation_ru": st.column_config.TextColumn("Дефиниция (RU)"),
                 "collocations": st.column_config.TextColumn("Коллокации"),
                 "context": st.column_config.TextColumn("Контекстное предложение"),
             }
@@ -1598,7 +1660,7 @@ if st.session_state.cards:
                 decks_sheet = sh_global.worksheet("Decks")
                 new_deck_id = f"deck-{int(datetime.now().timestamp())}"
                 cards_json_str = json.dumps(st.session_state.cards, ensure_ascii=False)
-                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                now_str = datetime.now().strftime("%Y-%m-%d %Y-%m-%d %H:%M:%S")
                 
                 decks_sheet.append_row([
                     new_deck_id,
@@ -1756,15 +1818,18 @@ if st.session_state.cards:
 
         # Cards print loop
         for card in st.session_state.cards:
+            tr_str = get_card_transcription(card, accent_option)
+            exp_str = get_card_explanation(card, def_lang_option)
+
             if "детская" in print_style.lower() and is_max_tariff:
                 print_html = f"""<div class="printable-content print-row-kids">
 <div class="print-col-kids-left">
     <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
-    <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{card.get('transcription', '')}</span>
+    <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{tr_str}</span>
 </div>
 <div class="print-col-kids-right">
     <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
-    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
     <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
     <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
@@ -1773,21 +1838,21 @@ if st.session_state.cards:
                 print_html = f"""<div class="printable-content print-row-premium">
 <div class="print-col-premium-left">
     <span style="font-size:19px; font-weight:bold; font-family:'Georgia', serif; color:#1a365d;">{card.get('word', '')}</span>
-    <span style="font-size:12px; color:#4a5568; margin-top:4px;">{card.get('transcription', '')}</span>
+    <span style="font-size:12px; color:#4a5568; margin-top:4px;">{tr_str}</span>
 </div>
 <div class="print-col-premium-right">
     <h4 style="color:#2b6cb0; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
-    <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+    <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
     <p style="font-size: 12px; color:#2b6cb0; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
     <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
 </div>"""
             else:
                 print_html = f"""<div class="printable-content print-row-bw">
-<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
+<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{tr_str}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
-<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
 <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
@@ -1795,19 +1860,21 @@ if st.session_state.cards:
             st.markdown(print_html, unsafe_allow_html=True)
 
     elif teacher_view_mode == "🧪 Пройти тест":
-        render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz")
+        render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
     else:
         col_exp1, col_exp2 = st.columns(2)
         with col_exp1:
             anki_list = []
             for card in st.session_state.cards:
+                tr_str = get_card_transcription(card, accent_option)
+                exp_str = get_card_explanation(card, def_lang_option)
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                     f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-                    f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{card.get('transcription', '')}</p>"
-                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {card.get('explanation', '')}</p>"
+                    f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
+                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {exp_str}</p>"
                     f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
                     f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
                     f"</div>"
@@ -1822,6 +1889,11 @@ if st.session_state.cards:
         cols = st.columns(3)
         for i, card in enumerate(st.session_state.cards):
             col_idx = i % 3
+            tr_str = get_card_transcription(card, accent_option)
+            exp_str = get_card_explanation(card, def_lang_option)
+            audio_type = "2" if "US" in accent_option else "1"
+            flag_emoji = "🇺🇸" if "US" in accent_option else "🇬🇧"
+
             with cols[col_idx]:
                 is_flipped = st.session_state.flipped.get(i, False)
                 encoded_word = urllib.parse.quote(str(card.get('word', '')))
@@ -1829,7 +1901,8 @@ if st.session_state.cards:
                 if not is_flipped:
                     front_html = f"""<div class="card-front">
 <span class="card-front-title">{card.get('word', '')}</span>
-<span class="card-front-subtitle">English Word</span>
+<span class="card-front-transcription">{tr_str}</span>
+<span class="card-front-subtitle">{accent_option.split()[0]} English</span>
 </div>"""
                     st.markdown(front_html, unsafe_allow_html=True)
                     if st.button("🔄 Перевернуть", key=f"flip_{i}", use_container_width=True):
@@ -1839,9 +1912,9 @@ if st.session_state.cards:
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
 <span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
-<span style="color: #718096; font-size: 11px;">{card.get('transcription', '')}</span>
+<span style="color: #718096; font-size: 11px;">{tr_str}</span>
 </div>
-<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {card.get('explanation', '')}</div>
+<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {exp_str}</div>
 <div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
@@ -1850,14 +1923,10 @@ if st.session_state.cards:
 {card.get('translation', '')}
 </div>
 </details>
-<div style="display: flex; gap: 8px; align-items: center; justify-content: space-between; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
+<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
     <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold;">🇺🇸</span>
-        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 28px;"></audio>
-    </div>
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold;">🇬🇧</span>
-        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 28px;"></audio>
+        <span style="font-size: 11px; font-weight: bold;">{flag_emoji}</span>
+        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
     </div>
 </div>
 </div>"""
