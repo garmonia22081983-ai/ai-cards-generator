@@ -261,7 +261,7 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 /* Главная синяя кнопка авторизации */
-button[kind="primary"], 
+button[kind="primary"],
 button[data-testid="stBaseButton-primary"] {{
     background-color: #2e6c9e !important;
     color: #ffffff !important;
@@ -270,7 +270,12 @@ button[data-testid="stBaseButton-primary"] {{
     font-weight: bold !important;
     font-size: 15px !important;
 }}
-button[kind="primary"]:hover, 
+/* Принудительно делаем весь текст и иконки внутри кнопки белыми */
+button[kind="primary"] *,
+button[data-testid="stBaseButton-primary"] * {{
+    color: #ffffff !important;
+}}
+button[kind="primary"]:hover,
 button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
