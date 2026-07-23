@@ -20,24 +20,19 @@ import time
 import tempfile
 import re
 
-# Импортируем библиотеку субтитров YouTube (как запасной вариант)
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
     YouTubeTranscriptApi = None
 
-# --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
-# --- СПИСОК EMAIL АДМИНИСТРАТОРОВ ---
 ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"
 ]
 
-# --- ИНИЦИАЛИЗАЦИЯ КУКИ-МЕНЕДЖЕРА ---
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
-# --- ИНИЦИАЛИЗАЦИЯ API-КЛЮЧА GEMINI ---
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
@@ -45,41 +40,34 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
-if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-[data-testid="stHeader"], header, [data-testid="stHeader"] > div {
-    background-color: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
-}
+@st.cache_resource
+def get_gsheets_client():
+    scopes = [
+        'https://www.googleapis.com/auth/spreadsheets',
+        'https://www.googleapis.com/auth/drive'
+    ]
+    if "GOOGLE_APPLICATION_CREDENTIALS" in st.secrets:
+        creds_dict = json.loads(st.secrets["GOOGLE_APPLICATION_CREDENTIALS"])
+        credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
+    else:
+        credentials = Credentials.from_service_account_file("credentials.json", scopes=scopes)
+    return gspread.authorize(credentials)
 
-/* Карточка авторизации */
-.auth-container {
-    background-color: #ffffff !important;
-    border: 2px solid #2563eb;
-    border-radius: 16px;
-    padding: 30px 25px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    margin-top: 0px;
-    margin-bottom: 20px;
-}
+def send_otp_email(target_email, otp_code):
+    try:
+        smtp_config = st.secrets["smtp"]
+        msg = MIMEMultipart()
+        msg['From'] = smtp_config['email']
+        msg['To'] = target_email
+        msg['Subject'] = f"Код входа в Flashcards AI: {otp_code}"
 
-.auth-header {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-input, textarea, select, 
-.stTextInput input, 
-.stTextArea textarea,
-[data-baseweb="base-input"],
-[data-baseweb="textarea"],
-[data-baseweb="select"] > div {
-    background-color: #ffffff !important;
-    color: #2d3748 !important;
-    -webkit-text-fill-color: #2d3748 !important;
-    border: 1px solid #cbd5e0 !important;
-    border-radius: 8px !important;
-}
+        body = f"""
+        <html>
+            <body style="font-family: Arial, sans-serif; color: #2d3748;">
+                <h2>Код подтверждения входа</h2>
+                <p>Ваш одноразовый код для входа в сервис <b>Flashcards AI</b>:</p>
+                <div style="background-color: #edf2f7; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #2563eb; width: 200px; margin: 15px 0;">
+                    {otp_code}
                 </div>
                 <p style="font-size: 12px; color: #718096;">Код действителен в течение 10 минут. Если вы не запрашивали вход, просто проигнорируйте это письмо.</p>
             </body>
@@ -96,8 +84,6 @@ input, textarea, select,
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
-
-# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ПОДСЧЕТА ИСПОЛЬЗОВАННЫХ КАРТОЧЕК ---
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
@@ -179,8 +165,6 @@ def get_user_tariff_and_usage(email, sh):
     except Exception:
         return tariff_name, max_cards, 0, period_start
 
-
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
 def extract_youtube_id(url):
     pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
     match = re.search(pattern, url)
@@ -188,14 +172,11 @@ def extract_youtube_id(url):
         return match.group(1) or match.group(2)
     return None
 
-
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE (СПОЧАЛА SUPADATA, ЗАТЕМ FALLBACK) ---
 def get_youtube_transcript(video_url):
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
 
-    # 1. Пробуем извлечь через SupaData API (если есть ключ)
     supa_key = st.secrets.get("SUPADATA_API_KEY", None)
     if supa_key:
         try:
@@ -209,9 +190,8 @@ def get_youtube_transcript(video_url):
                 elif isinstance(data, list):
                     return " ".join([item.get("text", "") for item in data])
         except Exception:
-            pass  # Переходим к обратному методу при сбое SupaData
+            pass
 
-    # 2. Резервный способ через youtube_transcript_api
     if not YouTubeTranscriptApi:
         return "Ошибка: Не удалось загрузить субтитры через SupaData, а резервная библиотека youtube-transcript-api не установлена."
     
@@ -222,8 +202,6 @@ def get_youtube_transcript(video_url):
     except Exception as e:
         return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, у видео отключены субтитры."
 
-
-# --- СТИЛИ ПРИЛОЖЕНИЯ (UI/UX) ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -239,41 +217,44 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f8f6f0 !important;"
 
-st.markdown(f"""
+css_template = """
 <style>
 /* Полностью убираем системную верхнюю шапку Streamlit */
-[data-testid="stHeader"], header {{
+[data-testid="stHeader"], header {
     display: none !important;
-}}
+}
 
 /* Убираем верхние отступы у основного контейнера и боковой панели */
 [data-testid="stMainBlockContainer"],
 .main .block-container,
-[data-testid="stSidebarContent"] {{
+[data-testid="stSidebarContent"] {
     padding-top: 0rem !important;
     margin-top: 0rem !important;
-}}
+}
 
-html, body, [data-testid="stAppViewContainer"], .stApp {{
-    {bg_css}
+html, body, [data-testid="stAppViewContainer"], .stApp {
+    __BG_CSS__
     background-size: cover !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
     color: #2d3748 !important;
-}}
+}
 
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {
     color: #2d3748 !important;
-}}
-
-[data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
-    background-color: transparent !important;
-    background-image: none !important;
-    box-shadow: none !important;
-}}
+}
 
 /* Карточка авторизации */
-.auth-container {{
+.auth-container {
+    background-color: #ffffff !important;
+    border: 2px solid #2563eb;
+    border-radius: 16px;
+    padding: 30px 25px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    margin-top: 0px;
+    margin-bottom: 20px;
+}
+
 .auth-header {
     text-align: center;
     margin-bottom: 20px;
@@ -284,54 +265,52 @@ input, textarea, select,
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {{
+[data-baseweb="select"] > div {
     background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
-}}
+}
 
 /* Фикс выпадающих списков (Selectbox popover) - предотвращаем обрезание элементов B2, C1, C2 */
-div[data-baseweb="popover"] {{
+div[data-baseweb="popover"] {
     z-index: 999999 !important;
-}}
+}
 
-div[data-baseweb="popover"] ul {{
+div[data-baseweb="popover"] ul {
     max-height: 320px !important;
     overflow-y: auto !important;
-}}
+}
 
-/* Спускаем кнопку немного ниже и окрашиваем в синий цвет с белым текстом */
-.stButton > button[kind="primary"] {{
+.stButton > button[kind="primary"] {
     background-color: #2563eb !important;
     color: #ffffff !important;
     margin-top: 14px !important;
     border: none !important;
-}}
-.stButton > button[kind="primary"]:hover {{
+}
+.stButton > button[kind="primary"]:hover {
     background-color: #1d4ed8 !important;
     color: #ffffff !important;
-}}
+}
 
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
     background-color: #f4efe6 !important;
     background-image: none !important;
-}}
+}
 
-.tariff-box {{
+.tariff-box {
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-}}
+}
 
-/* Интерактивные карточки */
-.card-front {{
+.card-front {
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
@@ -344,25 +323,25 @@ div[data-baseweb="popover"] ul {{
     justify-content: center;
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
-}}
+}
 
-.card-front-title {{
+.card-front-title {
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
-}}
+}
 
-.card-front-subtitle {{
+.card-front-subtitle {
     font-size: 10px;
     color: #704b4b !important;
     margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-}}
+}
 
-.card-back {{
+.card-back {
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
@@ -373,21 +352,20 @@ div[data-baseweb="popover"] ul {{
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
-}}
+}
 
-summary::-webkit-details-marker {{ display: none !important; }}
-summary {{ list-style: none !important; }}
+summary::-webkit-details-marker { display: none !important; }
+summary { list-style: none !important; }
 
-/* Стили печатных карточек */
-.print-row-bw {{
+.print-row-bw {
     display: flex;
     border: 1px dashed #ccc;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
-}}
+}
 
-.print-row-kids {{
+.print-row-kids {
     display: flex;
     border: 2px solid #ffb74d;
     border-radius: 12px;
@@ -395,9 +373,9 @@ summary {{ list-style: none !important; }}
     page-break-inside: avoid;
     background-color: #ffffff;
     overflow: hidden;
-}}
+}
 
-.print-col-kids-left {{
+.print-col-kids-left {
     width: 45%;
     padding: 15px;
     background-color: #ffe0b2;
@@ -407,16 +385,16 @@ summary {{ list-style: none !important; }}
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}}
+}
 
-.print-col-kids-right {{
+.print-col-kids-right {
     width: 55%;
     padding: 15px;
     background-color: #ffffff;
-}}
+}
 
-.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
-.print-left {{
+.print-col { width: 50%; padding: 15px; box-sizing: border-box; }
+.print-left {
     border-right: 1px dashed #ccc;
     text-align: center;
     font-weight: bold;
@@ -426,17 +404,16 @@ summary {{ list-style: none !important; }}
     justify-content: center;
     font-family: 'Georgia', serif;
     color: #1a365d;
-}}
+}
 </style>
-""", unsafe_allow_html=True)
+""".replace("__BG_CSS__", bg_css)
 
+st.markdown(css_template, unsafe_allow_html=True)
 
-# --- ФУНКЦИЯ ОТРИСОВКИ КВИЗА / ТЕСТИРОВАНИЯ ---
 def render_quiz_section(cards_data, quiz_key_prefix="quiz"):
     st.markdown("### 🧪 Интерактивный тест по колоде")
     st.caption("Выберите один из вариантов перевода для каждого слова:")
     
-    # Инициализация вопросов теста в сессии
     questions_key = f"{quiz_key_prefix}_questions"
     submitted_key = f"{quiz_key_prefix}_submitted"
     user_ans_key = f"{quiz_key_prefix}_answers"
@@ -450,7 +427,6 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz"):
             correct_ans = card.get('translation', '').strip()
             other_ans = [t for t in all_translations if t != correct_ans]
             
-            # Набираем 3 неправильных ответа из колоды (или фолбэк-заглушки при короткой колоде)
             distractors = random.sample(other_ans, min(3, len(other_ans)))
             fallback_pool = ["проверять", "выбирать", "создавать", "понимать", "изучать", "следовать"]
             while len(distractors) < 3:
@@ -477,7 +453,6 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz"):
     quiz_questions = st.session_state[questions_key]
     is_submitted = st.session_state.get(submitted_key, False)
 
-    # Форма ответов
     with st.form(key=f"{quiz_key_prefix}_form"):
         user_choices = {}
         for q in quiz_questions:
@@ -502,7 +477,6 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz"):
         st.session_state[user_ans_key] = user_choices
         st.rerun()
 
-    # Результаты тестирования
     if is_submitted:
         score = 0
         total = len(quiz_questions)
@@ -534,10 +508,6 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz"):
             st.session_state[user_ans_key] = {}
             st.rerun()
 
-
-# ==============================================================================
-# 🎓 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id)
-# ==============================================================================
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -577,7 +547,6 @@ if student_deck_id:
         st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
         st.caption(f"Всего карточек: {len(cards_data)}")
         
-        # Переключатель режимов занятий ученика
         student_mode = st.radio(
             "Выберите режим:",
             ["🎴 Интерактивные карточки", "🧪 Пройти тест", "🖨️ Версия для печати"],
@@ -603,7 +572,6 @@ if student_deck_id:
             render_quiz_section(cards_data, quiz_key_prefix=f"s_quiz_{student_deck_id}")
 
         else:
-            # 🎴 Интерактивные карточки
             anki_list_student = []
             for card in cards_data:
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
@@ -678,12 +646,6 @@ if student_deck_id:
 
     st.stop()
 
-
-# ==============================================================================
-# 👩‍🏫 2. ИНТЕРФЕЙС УЧИТЕЛЯ (АВТОРИЗАЦИЯ, ГЕНЕРАЦИЯ, СОХРАНЕНИЕ)
-# ==============================================================================
-
-# --- ИНИЦИАЛИЗАЦИЯ ПЕРЕМЕННЫХ СЕССИИ ---
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -699,8 +661,6 @@ if "pending_email" not in st.session_state:
 if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
 
-
-# --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 saved_email = cookie_manager.get(cookie="auth_email")
 
 if not saved_email:
@@ -759,15 +719,13 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
                         st.session_state.trial_expired = False
                 else:
                     reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-                    if datetime.now() > (reg_date + timedelta(days=3)):  # 3 дня доступа на генерацию
+                    if datetime.now() > (reg_date + timedelta(days=3)):
                         st.session_state.trial_expired = True
                     else:
                         st.session_state.trial_expired = False
         except Exception:
             pass
 
-
-# --- БЛОК АВТОРИЗАЦИИ ПО EMAIL И КОДУ ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
@@ -778,6 +736,7 @@ if not st.session_state.user_email:
                     <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
                     <p style="color: #4a5568; font-size: 16px; font-weight: 600; margin-top: 0;">Умный генератор двусторонних карточек</p>
                 </div>
+            </div>
             """, 
             unsafe_allow_html=True
         )
@@ -928,7 +887,7 @@ if not st.session_state.user_email:
                                 cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
                             else:
                                 reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-                                exp_date = reg_date + timedelta(days=3)  # 3 дня доступа
+                                exp_date = reg_date + timedelta(days=3)
                                 if datetime.now() > exp_date:
                                     st.session_state.trial_expired = True
                                 else:
@@ -957,14 +916,11 @@ if not st.session_state.user_email:
                 Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                 </small>
             </div>
-            </div>
             """, 
             unsafe_allow_html=True
         )
     st.stop()
 
-
-# --- КНОПКА ВЫХОДА В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
     cookie_manager.delete("auth_email")
@@ -983,8 +939,6 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
-
-# --- ФУНКЦИЯ ПАРСИНГА СТАТЕЙ ПО ССЫЛКЕ ---
 def extract_text_from_url(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -1000,18 +954,13 @@ def extract_text_from_url(url):
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
-
-# --- ЗАГРУЗКА ДАННЫХ О ТАРИФЕ И ЛИМИТАХ ---
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
-
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     
-    # Выбор модели доступен только для администратора
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     is_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
     
@@ -1039,8 +988,6 @@ with st.sidebar:
     else:
         num_cards = 0
 
-
-# --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
 is_expired = st.session_state.get("trial_expired", False)
 is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
 
@@ -1056,8 +1003,6 @@ elif is_limit_reached:
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
-
-# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1103,8 +1048,7 @@ with col_stats:
         st.caption(f"Осталось: **{remaining_cards}** карточек")
 
     st.write("---")
-    # --- БЛОК МОИ СОХРАНЕННЫЕ КОЛОДЫ В ПРАВОЙ КОЛОНКЕ ---
-    st.markdown("<h4 style='font-size: 18px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size: 16px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
     try:
         decks_sheet = sh_global.worksheet("Decks")
         d_rows = decks_sheet.get_all_values()
@@ -1135,7 +1079,6 @@ with col_stats:
                 d_cards_json = d[5]
                 d_created_str = d[6] if len(d) > 6 else ""
                 
-                # Проверка заморозки колоды (7 дней для Пробного, 60 дней для остальных)
                 is_frozen = False
                 max_freeze_days = 7 if tariff_name == "Пробный" else 60
                 if d_created_str:
@@ -1172,7 +1115,6 @@ with col_stats:
     except Exception:
         st.caption("Не удалось загрузить список колод.")
 
-# --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -1201,7 +1143,6 @@ if generate_click:
                     temp_file_path = None
                     source_url_to_save = user_input.strip()
 
-                    # 1. YOUTUBE ССЫЛКА
                     if source_type == "🎬 Ссылка на YouTube":
                         yt_transcript = get_youtube_transcript(user_input.strip())
                         if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
@@ -1210,7 +1151,6 @@ if generate_click:
                             st.stop()
                         final_prompt_content = yt_transcript
 
-                    # 2. МЕДИАФАЙЛ (MP4 / MP3)
                     elif source_type == "📁 Видео или аудио файл (до 5 мин)":
                         if uploaded_file_obj.size > 30 * 1024 * 1024:
                             st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
@@ -1225,7 +1165,6 @@ if generate_click:
                             
                         gemini_uploaded_file = genai.upload_file(path=temp_file_path)
 
-                    # 3. ВЕБ-СТАТЬЯ
                     elif source_type == "🔗 Ссылка на веб-статью":
                         scraped_text = extract_text_from_url(user_input.strip())
                         if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
@@ -1290,7 +1229,6 @@ if generate_click:
                     st.session_state.cards = cards_data
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
-                    # --- СОХРАНЕНИЕ В ИСТОРИЮ (ВКЛАДКА REQUESTS С ИСТОЧНИКОМ) ---
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
@@ -1335,12 +1273,9 @@ if generate_click:
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
-
-# --- ОТРИСОВКА, РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ КАРТОЧЕК ---
 if st.session_state.cards:
     st.write("---")
     
-    # ✏️ БЛОК РЕДАКТИРОВАНИЯ
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
@@ -1368,7 +1303,6 @@ if st.session_state.cards:
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
 
-    # 💾 БЛОК СОХРАНЕНИЯ КОЛОДЫ
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
     col_save1, col_save2 = st.columns([2, 1])
     with col_save1:
@@ -1403,7 +1337,6 @@ if st.session_state.cards:
 
     st.write("---")
 
-    # Переключатель режимов в интерфейсе преподавателя
     teacher_view_mode = st.radio(
         "Выберите режим предпросмотра:",
         ["🎴 Интерактивный тренажер", "🧪 Пройти тест", "🖨️ Режим для печати"],
@@ -1413,7 +1346,6 @@ if st.session_state.cards:
     st.write("")
 
     if teacher_view_mode == "🖨️ Режим для печати":
-        # 🌟 НАСТРОЙКИ ПЕЧАТИ
         is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
         custom_print_teacher = ""
         custom_print_note = ""
@@ -1496,7 +1428,6 @@ if st.session_state.cards:
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz")
 
     else:
-        # 🎴 Интерактивный тренажер
         col_exp1, col_exp2 = st.columns(2)
         with col_exp1:
             anki_list = []
