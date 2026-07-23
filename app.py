@@ -837,55 +837,6 @@ with st.sidebar:
         num_cards = st.slider("Сколько карточек создать?", min_value=3, max_value=15, value=6)
     else:
         num_cards = 0
-    st.write("---")
-    with st.expander("📂 Мои сохраненные колоды"):
-        try:
-            decks_sheet = sh_global.worksheet("Decks")
-            d_rows = decks_sheet.get_all_values()
-            my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
-            
-            if not my_decks:
-                st.caption("У вас пока нет сохраненных колод.")
-            else:
-                search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
-                show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
-                
-                all_my_decks_rev = list(reversed(my_decks))
-                
-                if search_q:
-                    filtered_decks = [d for d in all_my_decks_rev if search_q in d[2].lower()]
-                else:
-                    filtered_decks = all_my_decks_rev
-                    
-                display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
-                
-                if not search_q and len(my_decks) > 5 and not show_all:
-                    st.caption(f"Показано последние 5 из {len(my_decks)}.")
-                
-                for d in display_decks:
-                    d_id = d[0]
-                    d_name = d[2]
-                    d_level = d[3]
-                    d_cards_json = d[5]
-                    
-                    st.write(f"**{d_name}** ({d_level})")
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
-                            st.session_state.cards = json.loads(d_cards_json)
-                            st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
-                            st.rerun()
-                    with c2:
-                        if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
-                            st.session_state[f"show_link_{d_id}"] = not st.session_state.get(f"show_link_{d_id}", False)
-                            
-                    if st.session_state.get(f"show_link_{d_id}", False):
-                        student_link = f"{APP_URL}?deck={d_id}"
-                        st.code(student_link, language=None)
-                        
-                    st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
-        except Exception:
-            st.caption("Не удалось загрузить список колод.")
 
 # --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
 is_expired = st.session_state.get("trial_expired", False)
@@ -940,6 +891,76 @@ with col_stats:
         remaining_cards = max(0, max_cards - used_cards)
         st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
         st.caption(f"Осталось: **{remaining_cards}** карточек")
+
+    st.write("---")
+    # --- БЛОК МОИ СОХРАНЕННЫЕ КОЛОДЫ ---
+    st.subheader("📂 Мои сохраненные колоды")
+    try:
+        decks_sheet = sh_global.worksheet("Decks")
+        d_rows = decks_sheet.get_all_values()
+        my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
+        
+        if not my_decks:
+            st.caption("У вас пока нет сохраненных колод.")
+        else:
+            search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
+            show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
+            
+            all_my_decks_rev = list(reversed(my_decks))
+            
+            if search_q:
+                filtered_decks = [d for d in all_my_decks_rev if search_q in d[2].lower()]
+            else:
+                filtered_decks = all_my_decks_rev
+                
+            display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
+            
+            if not search_q and len(my_decks) > 5 and not show_all:
+                st.caption(f"Показано последние 5 из {len(my_decks)}.")
+            
+            for d in display_decks:
+                d_id = d[0]
+                d_name = d[2]
+                d_level = d[3]
+                d_cards_json = d[5]
+                d_created_str = d[6] if len(d) > 6 else ""
+                
+                # Проверка заморозки колоды (7 дней для Пробного, 60 дней для остальных)
+                is_frozen = False
+                max_freeze_days = 7 if tariff_name == "Пробный" else 60
+                if d_created_str:
+                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                        try:
+                            created_dt = datetime.strptime(d_created_str.strip(), fmt)
+                            if datetime.now() > (created_dt + timedelta(days=max_freeze_days)) and tariff_name != "АДМИНИСТРАТОР":
+                                is_frozen = True
+                            break
+                        except ValueError:
+                            continue
+
+                if is_frozen:
+                    st.write(f"❄️ **{d_name}** ({d_level}) — *Заморожена*")
+                    st.warning(f"❄️ **Колода заморожена**\nСрок хранения колоды истёк (прошло {max_freeze_days} дн.). Продлите тариф или перейдите на тариф «Практик» или «Максимум», чтобы разблокировать доступ.")
+                    st.link_button("💳 Продлить тариф", "https://flashcards-ai.ru/#tarifs", key=f"freeze_renew_{d_id}")
+                else:
+                    st.write(f"**{d_name}** ({d_level})")
+                    c1, c2 = st.columns(2)
+                    with c1:
+                        if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
+                            st.session_state.cards = json.loads(d_cards_json)
+                            st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
+                            st.rerun()
+                    with c2:
+                        if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
+                            st.session_state[f"show_link_{d_id}"] = not st.session_state.get(f"show_link_{d_id}", False)
+                            
+                    if st.session_state.get(f"show_link_{d_id}", False):
+                        student_link = f"{APP_URL}?deck={d_id}"
+                        st.code(student_link, language=None)
+                    
+                st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
+    except Exception:
+        st.caption("Не удалось загрузить список колод.")
 
 # --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
