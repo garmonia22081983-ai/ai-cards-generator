@@ -894,7 +894,7 @@ with col_stats:
 
     st.write("---")
     # --- БЛОК МОИ СОХРАНЕННЫЕ КОЛОДЫ ---
-    st.subheader("📂 Мои сохраненные колоды")
+    st.markdown("<h4 style='font-size: 18px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
     try:
         decks_sheet = sh_global.worksheet("Decks")
         d_rows = decks_sheet.get_all_values()
