@@ -241,12 +241,12 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f8f6f0 !important;"
 
-css_template = f"""
+css_template = """
 <style>
 /* Полностью убираем системную верхнюю шапку Streamlit */
-[data-testid="stHeader"], header {{
+[data-testid="stHeader"], header {
     display: none !important;
-}}
+}
 
 /* Убираем верхние отступы у основного контейнера и боковой панели */
 [data-testid="stMainBlockContainer"],
@@ -267,14 +267,15 @@ css_template = f"""
 
 html, body, [data-testid="stAppViewContainer"], .stApp {
     color: #2d3748 !important;
-}}
+    __BG_CSS__
+}
 
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {
     color: #2d3748 !important;
-}}
+}
 
 /* Карточка авторизации */
-.auth-container {{
+.auth-container {
     background-color: #ffffff !important;
     border: 2px solid #2563eb;
     border-radius: 16px;
@@ -282,25 +283,25 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
     margin-top: 0px;
     margin-bottom: 20px;
-}}
+}
 
-.auth-header {{
+.auth-header {
     text-align: center;
     margin-bottom: 20px;
-}}
+}
 
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {{
+[data-baseweb="select"] > div {
     background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
-}}
+}
 
 /* Фикс выпадающих списков (Selectbox popover) */
 div[data-baseweb="popover"] {
@@ -324,25 +325,25 @@ div[data-baseweb="popover"] [role="option"] {
 
 .stButton > button[kind="primary"] {
     color: #ffffff !important;
-}}
+}
 
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
     background-color: #f4efe6 !important;
     background-image: none !important;
-}}
+}
 
-.tariff-box {{
+.tariff-box {
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-}}
+}
 
-.card-front {{
+.card-front {
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
@@ -355,25 +356,25 @@ div[data-baseweb="popover"] [role="option"] {
     justify-content: center;
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
-}}
+}
 
-.card-front-title {{
+.card-front-title {
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
-}}
+}
 
-.card-front-subtitle {{
+.card-front-subtitle {
     font-size: 10px;
     color: #704b4b !important;
     margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-}}
+}
 
-.card-back {{
+.card-back {
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
@@ -384,23 +385,23 @@ div[data-baseweb="popover"] [role="option"] {
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
-}}
+}
 
-summary::-webkit-details-marker {{ display: none !important; }}
-summary {{ list-style: none !important; }}
+summary::-webkit-details-marker { display: none !important; }
+summary { list-style: none !important; }
 
 /* Стили для печати: Черно-белый */
-.print-row-bw {{
+.print-row-bw {
     display: flex;
     border: 1px dashed #718096;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
     border-radius: 6px;
-}}
+}
 
 /* Стили для печати: Цветной детский */
-.print-row-kids {{
+.print-row-kids {
     display: flex;
     border: 2px solid #ffb74d;
     border-radius: 12px;
@@ -409,9 +410,9 @@ summary {{ list-style: none !important; }}
     background-color: #ffffff;
     overflow: hidden;
     box-shadow: 0 4px 10px rgba(255, 183, 77, 0.15);
-}}
+}
 
-.print-col-kids-left {{
+.print-col-kids-left {
     width: 42%;
     padding: 15px;
     background-color: #ffe0b2;
@@ -421,16 +422,16 @@ summary {{ list-style: none !important; }}
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}}
+}
 
-.print-col-kids-right {{
+.print-col-kids-right {
     width: 58%;
     padding: 15px;
     background-color: #ffffff;
-}}
+}
 
 /* Стили для печати: Взрослый цветной / Премиум */
-.print-row-premium {{
+.print-row-premium {
     display: flex;
     border: 1px solid #2b6cb0;
     border-left: 6px solid #2b6cb0;
@@ -440,9 +441,9 @@ summary {{ list-style: none !important; }}
     background-color: #ffffff;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(43, 108, 176, 0.08);
-}}
+}
 
-.print-col-premium-left {{
+.print-col-premium-left {
     width: 40%;
     padding: 15px;
     background-color: #ebf8ff;
@@ -452,16 +453,16 @@ summary {{ list-style: none !important; }}
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}}
+}
 
-.print-col-premium-right {{
+.print-col-premium-right {
     width: 60%;
     padding: 15px;
     background-color: #ffffff;
-}}
+}
 
-.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
-.print-left {{
+.print-col { width: 50%; padding: 15px; box-sizing: border-box; }
+.print-left {
     border-right: 1px dashed #ccc;
     text-align: center;
     font-weight: bold;
@@ -471,16 +472,16 @@ summary {{ list-style: none !important; }}
     justify-content: center;
     font-family: 'Georgia', serif;
     color: #1a365d;
-}}
+}
 
-@media print {{
-    .print-row-bw, .print-row-kids, .print-row-premium {{
+@media print {
+    .print-row-bw, .print-row-kids, .print-row-premium {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-    }}
-}}
+    }
+}
 </style>
-"""
+""".replace("__BG_CSS__", bg_css)
 
 st.markdown(css_template, unsafe_allow_html=True)
 
