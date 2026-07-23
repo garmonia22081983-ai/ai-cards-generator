@@ -265,11 +265,24 @@ def get_youtube_transcript(video_url):
     if not video_id:
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
 
-    supa_key = st.secrets.get("SUPADATA_API_KEY", None)
+    # Flexible SupaData API key search across common naming variations in st.secrets
+    supa_key = None
+    possible_keys = ["SUPADATA_API_KEY", "supadata_api_key", "SUPADATA_KEY", "supadata_key", "supadata"]
+    for k in possible_keys:
+        if k in st.secrets:
+            val = st.secrets[k]
+            if isinstance(val, str) and val.strip():
+                supa_key = val.strip()
+                break
+            elif isinstance(val, dict) and "api_key" in val:
+                supa_key = str(val["api_key"]).strip()
+                break
+
     if supa_key:
         try:
             full_yt_url = f"https://www.youtube.com/watch?v={video_id}"
-            supa_url = f"https://api.supadata.ai/v1/transcript?url={urllib.parse.quote(full_yt_url)}&text=true"
+            encoded_url = urllib.parse.quote(full_yt_url)
+            supa_url = f"https://api.supadata.ai/v1/transcript?url={encoded_url}&text=true"
             headers = {"x-api-key": supa_key}
             res = requests.get(supa_url, headers=headers, timeout=15)
             
@@ -281,7 +294,7 @@ def get_youtube_transcript(video_url):
                     elif "text" in data and data["text"]:
                         return data["text"]
                 elif isinstance(data, list):
-                    return " ".join([item.get("text", "") for item in data])
+                    return " ".join([item.get("text", "") for item in data if isinstance(item, dict)])
             elif res.status_code == 202:
                 time.sleep(3)
                 res_async = requests.get(supa_url, headers=headers, timeout=15)
@@ -335,10 +348,6 @@ def extract_text_from_url(url):
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
 def get_media_duration(file_path):
-    """
-    Calculates the exact duration in seconds for uploaded MP4, MP3, WAV, M4A, MOV files.
-    """
-    # 1. Mutagen library check
     try:
         import mutagen
         media = mutagen.File(file_path)
@@ -347,7 +356,6 @@ def get_media_duration(file_path):
     except Exception:
         pass
 
-    # 2. MoviePy library check
     try:
         from moviepy.editor import VideoFileClip
         clip = VideoFileClip(file_path)
@@ -357,7 +365,6 @@ def get_media_duration(file_path):
     except Exception:
         pass
 
-    # 3. Standard Wave library check (for WAV files)
     try:
         with wave.open(file_path, 'rb') as wf:
             frames = wf.getnframes()
@@ -367,7 +374,6 @@ def get_media_duration(file_path):
     except Exception:
         pass
 
-    # 4. Pure Python MP4 / MOV header duration parser (mvhd atom inspection)
     try:
         with open(file_path, 'rb') as f:
             header = f.read(3 * 1024 * 1024)
@@ -1148,12 +1154,23 @@ if not st.session_state.user_email:
                     st.session_state.user_email = email
                     st.session_state.logout_requested = False
                     
+                    # Direct JS cookie write to guarantee instant cookie update
+                    components.html(f"""
+                        <script>
+                            let d = new Date();
+                            d.setTime(d.getTime() + (365*24*60*60*1000));
+                            document.cookie = "auth_email={email}; expires=" + d.toUTCString() + "; path=/;";
+                            window.parent.document.cookie = "auth_email={email}; expires=" + d.toUTCString() + "; path=/;";
+                        </script>
+                    """, height=0)
+
                     if email in clean_admin_emails:
-                        cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                        try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                        except Exception: pass
                         st.session_state.user_name = "Администратор"
                         st.session_state.trial_expired = False
                         st.success("Успешный вход!")
-                        time.sleep(0.3)
+                        time.sleep(0.4)
                         st.rerun()
                     
                     try:
@@ -1191,7 +1208,8 @@ if not st.session_state.user_email:
                                 st.session_state.user_name = user_name
                                 exp_date = datetime.now() + timedelta(days=30 if new_status == "paid" else 3)
                                 st.session_state.trial_expired = False
-                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                except Exception: pass
                         else:
                             row_num, row_data = user_row
                             reg_date_str = row_data[1]
@@ -1226,7 +1244,8 @@ if not st.session_state.user_email:
                                 else:
                                     st.session_state.trial_expired = False
                                 
-                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                except Exception: pass
                             else:
                                 reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
                                 exp_date = reg_date + timedelta(days=3)
@@ -1235,10 +1254,11 @@ if not st.session_state.user_email:
                                 else:
                                     st.session_state.trial_expired = False
                                 
-                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                except Exception: pass
                                     
                         st.success("Успешный вход!")
-                        time.sleep(0.3)
+                        time.sleep(0.4)
                         st.rerun()
                     except Exception as e:
                         st.error(f"Ошибка авторизации: {e}")
@@ -1274,12 +1294,26 @@ with st.sidebar:
         )
     with col_usr2:
         if st.button("Выйти", key="sidebar_logout_btn", use_container_width=True):
-            cookie_manager.delete("auth_email")
+            try:
+                cookie_manager.delete("auth_email")
+            except Exception:
+                pass
+            
+            # Explicit browser JS cleanup of auth_email cookie to ensure clean state
+            components.html("""
+                <script>
+                    document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    window.parent.document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                </script>
+            """, height=0)
+            
             st.session_state.user_email = None
             st.session_state.otp_sent = False
+            st.session_state.pending_email = None
+            st.session_state.generated_otp = None
             st.session_state.trial_expired = False
             st.session_state.logout_requested = True
-            time.sleep(0.3)
+            time.sleep(0.4)
             st.rerun()
 
 st.sidebar.markdown("<hr style='margin: 4px 0 8px 0;'>", unsafe_allow_html=True)
@@ -1558,7 +1592,6 @@ if generate_click:
                     tmp.write(uploaded_file_obj.read())
                     temp_file_path = tmp.name
                 
-                # Check media duration (5 minutes = 300 seconds limit)
                 duration_sec = get_media_duration(temp_file_path)
                 if duration_sec and duration_sec > 300:
                     dur_min = int(duration_sec // 60)
