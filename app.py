@@ -252,20 +252,20 @@ css_template = f"""
 [data-testid="stMainBlockContainer"],
 .main .block-container,
 [data-testid="stSidebarContent"],
-[data-testid="stSidebarUserContent"] {{
-    padding-top: 0.1rem !important;
-    margin-top: 0rem !important;
-}}
+[data-testid="stSidebarUserContent"] {
+    padding-top: 0rem !important;
+    margin-top: -0.5rem !important;
+}
 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
-    gap: 0.3rem !important;
-}}
+[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
+    display: none !important;
+}
 
-html, body, [data-testid="stAppViewContainer"], .stApp {{
-    {bg_css}
-    background-size: cover !important;
-    background-repeat: no-repeat !important;
-    background-attachment: fixed !important;
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    gap: 0.2rem !important;
+}
+
+html, body, [data-testid="stAppViewContainer"], .stApp {
     color: #2d3748 !important;
 }}
 
@@ -303,26 +303,26 @@ input, textarea, select,
 }}
 
 /* Фикс выпадающих списков (Selectbox popover) */
-div[data-baseweb="popover"] {{
+div[data-baseweb="popover"] {
     z-index: 999999 !important;
-}}
+}
 
 div[data-baseweb="popover"] > div,
 div[data-baseweb="popover"] ul,
 div[data-baseweb="popover"] [data-baseweb="menu"],
-div[data-baseweb="popover"] [role="listbox"] {{
-    max-height: 400px !important;
+div[data-baseweb="popover"] [role="listbox"] {
+    max-height: 250px !important;
     overflow-y: auto !important;
-}}
+}
 
-.stButton > button[kind="primary"] {{
-    background-color: #2563eb !important;
-    color: #ffffff !important;
-    margin-top: 14px !important;
-    border: none !important;
-}}
-.stButton > button[kind="primary"]:hover {{
-    background-color: #1d4ed8 !important;
+div[data-baseweb="popover"] li,
+div[data-baseweb="popover"] [role="option"] {
+    padding-top: 5px !important;
+    padding-bottom: 5px !important;
+    font-size: 13px !important;
+}
+
+.stButton > button[kind="primary"] {
     color: #ffffff !important;
 }}
 
@@ -978,41 +978,41 @@ if not st.session_state.user_email:
                     st.error("Неверный код.")
                     
             if st.button("Ввести другой Email", use_container_width=True):
-                st.session_state.otp_sent = False
-                st.session_state.generated_otp = None
-                st.session_state.pending_email = None
-                st.rerun()
+                        st.markdown(
+                            """
+                            <div style="margin-top: 20px; text-align: center;">
+                                <small style="color: #718096;">
+                                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                                </small>
+                            </div>
+                            """, 
+                            unsafe_allow_html=True
+                        )
+                    st.stop()
 
+# Компактный блок пользователя в самой верхней части боковой панели
+with st.sidebar:
+    col_usr1, col_usr2 = st.columns([1.7, 1])
+    with col_usr1:
         st.markdown(
-            """
-            <div style="margin-top: 20px; text-align: center;">
-                <small style="color: #718096;">
-                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
-                </small>
+            f"""
+            <div style="padding-top: 4px; font-size: 12px; font-weight: bold; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{st.session_state.user_email}">
+                👤 {st.session_state.user_email}
             </div>
-            """, 
+            """,
             unsafe_allow_html=True
         )
-    st.stop()
+    with col_usr2:
+        if st.button("Выйти", key="sidebar_logout_btn", use_container_width=True):
+            cookie_manager.delete("auth_email")
+            st.session_state.user_email = None
+            st.session_state.otp_sent = False
+            st.session_state.trial_expired = False
+            st.session_state.logout_requested = True
+            time.sleep(0.3)
+            st.rerun()
 
-st.sidebar.markdown(
-    f"""
-    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-        <span style="font-size: 13px; font-weight: bold; color: #2d3748;">👤 {st.session_state.user_email}</span>
-    </div>
-    """,
-    unsafe_allow_html=True
-)
-if st.sidebar.button("Выйти из аккаунта", key="sidebar_logout_btn", use_container_width=True):
-    cookie_manager.delete("auth_email")
-    st.session_state.user_email = None
-    st.session_state.otp_sent = False
-    st.session_state.trial_expired = False
-    st.session_state.logout_requested = True
-    time.sleep(0.3)
-    st.rerun()
-
-st.sidebar.markdown("---")
+st.sidebar.markdown("<hr style='margin: 4px 0 8px 0;'>", unsafe_allow_html=True)
 
 st.title("🎴 Умный Генератор Двусторонних Карточек")
 st.write(f"👋 **Рада видеть вас, {st.session_state.get('user_name', 'Преподаватель')}!**")
