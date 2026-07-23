@@ -292,26 +292,26 @@ input, textarea, select,
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {{
+[data-baseweb="select"] > div {
     background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
-}}
+}
+
+/* Фикс выпадающих списков (Selectbox popover) - предотвращаем обрезание элементов B2, C1, C2 */
+div[data-baseweb="popover"] {
+    z-index: 999999 !important;
+}
+
+div[data-baseweb="popover"] ul {
+    max-height: 320px !important;
+    overflow-y: auto !important;
+}
 
 /* Спускаем кнопку немного ниже и окрашиваем в синий цвет с белым текстом */
-.stButton > button[kind="primary"] {{
-    background-color: #2563eb !important;
-    color: #ffffff !important;
-    margin-top: 14px !important;
-    border: none !important;
-}}
-.stButton > button[kind="primary"]:hover {{
-    background-color: #1d4ed8 !important;
-    color: #ffffff !important;
-}}
-
+.stButton > button[kind="primary"] {
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
@@ -1008,7 +1008,15 @@ tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.
 # --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
-    model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
+    
+    # Выбор модели доступен только для администратора
+    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+    is_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
+    
+    if is_admin:
+        model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"])
+    else:
+        model_option = "gemini-3.5-flash"
     
     source_type = st.radio(
         "Что берем за основу?", 
