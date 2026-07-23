@@ -169,7 +169,13 @@ def get_user_tariff_and_usage(email, sh):
         used_cards = 0
         for r in req_rows[1:]:
             if len(r) > 1 and r[1].strip().lower() == email.lower():
-                raw_req_d = r[6].strip() if len(r) > 6 else (r[7].strip() if len(r) > 7 else "")
+                #                # Smart timestamp detection (check col 7 first, then col 6 or 8)
+                raw_req_d = ""
+                for col_idx in (6, 7, 5, 8):
+                    if len(r) > col_idx and any(c.isdigit() for c in r[col_idx]):
+                        raw_req_d = r[col_idx].strip()
+                        break
+
                 req_d = None
                 for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
                     try:
@@ -180,7 +186,12 @@ def get_user_tariff_and_usage(email, sh):
                 
                 if req_d and req_d >= filter_start:
                     try:
-                        card_val = r[4].strip() if len(r) > 4 else "0"
+                        # Smart card count detection (find integer column in range E-F)
+                        card_val = "0"
+                        if len(r) > 4 and r[4].strip().isdigit():
+                            card_val = r[4].strip()
+                        elif len(r) > 5 and r[5].strip().isdigit():
+                            card_val = r[5].strip()
                         used_cards += int(card_val)
                     except ValueError:
                         pass
@@ -667,6 +678,11 @@ def get_card_explanation(card, def_lang_choice):
     else:
         return card.get('explanation_en', card.get('explanation', ''))
 
+def get_card_explanation_label(def_lang_choice):
+    if "русском" in str(def_lang_choice).lower():
+        return "Значение слова:"
+    return "Definition:"
+
 def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺🇸 US (Американский)"):
     st.markdown("### 🧪 Интерактивный тест по колоде")
     st.caption("Выберите один из вариантов перевода для каждого слова:")
@@ -822,11 +838,12 @@ if student_deck_id:
             for card in cards_data:
                 tr_str = get_card_transcription(card, s_accent)
                 exp_str = get_card_explanation(card, s_def_lang)
+                exp_lbl = get_card_explanation_label(s_def_lang)
                 print_html = f"""<div class="printable-content print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{tr_str}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
-<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
 <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
@@ -841,12 +858,13 @@ if student_deck_id:
             for card in cards_data:
                 tr_str = get_card_transcription(card, s_accent)
                 exp_str = get_card_explanation(card, s_def_lang)
+                exp_lbl = get_card_explanation_label(s_def_lang)
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                     f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
                     f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {exp_str}</p>"
+                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
                     f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
                     f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
                     f"</div>"
@@ -866,6 +884,7 @@ if student_deck_id:
                 col_idx = i % 3
                 tr_str = get_card_transcription(card, s_accent)
                 exp_str = get_card_explanation(card, s_def_lang)
+                exp_lbl = get_card_explanation_label(s_def_lang)
                 audio_type = "2" if "US" in s_accent else "1"
                 flag_emoji = "🇺🇸" if "US" in s_accent else "🇬🇧"
 
@@ -889,7 +908,7 @@ if student_deck_id:
 <span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
 <span style="color: #718096; font-size: 11px;">{tr_str}</span>
 </div>
-<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {exp_str}</div>
+<div style="font-size: 12px; margin-bottom: 5px;"><b>{exp_lbl}</b> {exp_str}</div>
 <div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
@@ -1562,16 +1581,18 @@ if generate_click:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
                         
-                        requests_sheet = sh_global.worksheet("Requests")
+                        #                        requests_sheet = sh_global.worksheet("Requests")
+                        # Column Order: ID (A), UserEmail (B), SourceText (C), Level (D), NumCards (E), Status (F), Timestamp (G), source_type (H), source_url (I)
                         requests_sheet.append_row([
                             request_id, 
                             st.session_state.user_email, 
-                            source_type,
                             source_url_to_save[:250], 
                             student_level, 
                             len(cards_data), 
                             "Completed", 
-                            now_gen_str
+                            now_gen_str,
+                            source_type,
+                            source_url_to_save[:250]
                         ])
                         
                         cards_sheet = sh_global.worksheet("Cards")
@@ -1820,6 +1841,7 @@ if st.session_state.cards:
         for card in st.session_state.cards:
             tr_str = get_card_transcription(card, accent_option)
             exp_str = get_card_explanation(card, def_lang_option)
+            exp_lbl = get_card_explanation_label(def_lang_option)
 
             if "детская" in print_style.lower() and is_max_tariff:
                 print_html = f"""<div class="printable-content print-row-kids">
@@ -1829,7 +1851,7 @@ if st.session_state.cards:
 </div>
 <div class="print-col-kids-right">
     <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
-    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
+    <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
     <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
     <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
@@ -1842,7 +1864,7 @@ if st.session_state.cards:
 </div>
 <div class="print-col-premium-right">
     <h4 style="color:#2b6cb0; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
-    <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
+    <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
     <p style="font-size: 12px; color:#2b6cb0; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
     <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
@@ -1852,7 +1874,7 @@ if st.session_state.cards:
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{tr_str}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
-<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {exp_str}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
 <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
@@ -1869,12 +1891,13 @@ if st.session_state.cards:
             for card in st.session_state.cards:
                 tr_str = get_card_transcription(card, accent_option)
                 exp_str = get_card_explanation(card, def_lang_option)
+                exp_lbl = get_card_explanation_label(def_lang_option)
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                     f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
                     f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>Definition:</b> {exp_str}</p>"
+                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
                     f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>Collocations:</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
                     f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>Context:</i> {card.get('context', '')}</p>"
                     f"</div>"
@@ -1891,6 +1914,7 @@ if st.session_state.cards:
             col_idx = i % 3
             tr_str = get_card_transcription(card, accent_option)
             exp_str = get_card_explanation(card, def_lang_option)
+            exp_lbl = get_card_explanation_label(def_lang_option)
             audio_type = "2" if "US" in accent_option else "1"
             flag_emoji = "🇺🇸" if "US" in accent_option else "🇬🇧"
 
@@ -1914,7 +1938,7 @@ if st.session_state.cards:
 <span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
 <span style="color: #718096; font-size: 11px;">{tr_str}</span>
 </div>
-<div style="font-size: 12px; margin-bottom: 5px;"><b>Definition:</b> {exp_str}</div>
+<div style="font-size: 12px; margin-bottom: 5px;"><b>{exp_lbl}</b> {exp_str}</div>
 <div style="font-size: 12px; margin-bottom: 6px;"><b>Collocations:</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>Context:</b> <i>{card.get('context', '')}</i></div>
 <details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
