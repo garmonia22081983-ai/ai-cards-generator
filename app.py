@@ -273,45 +273,46 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
 
 /* Карточка авторизации */
 .auth-container {{
-    background-color: #ffffff !important;
-    border: 2px solid #2563eb;
-    border-radius: 16px;
-    padding: 30px 25px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    margin-top: 0px;
-    margin-bottom: 20px;
-}}
-
-.auth-header {{
+.auth-header {
     text-align: center;
     margin-bottom: 20px;
-}}
+}
 
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {
+[data-baseweb="select"] > div {{
     background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
-}
+}}
 
 /* Фикс выпадающих списков (Selectbox popover) - предотвращаем обрезание элементов B2, C1, C2 */
-div[data-baseweb="popover"] {
+div[data-baseweb="popover"] {{
     z-index: 999999 !important;
-}
+}}
 
-div[data-baseweb="popover"] ul {
+div[data-baseweb="popover"] ul {{
     max-height: 320px !important;
     overflow-y: auto !important;
-}
+}}
 
 /* Спускаем кнопку немного ниже и окрашиваем в синий цвет с белым текстом */
-.stButton > button[kind="primary"] {
+.stButton > button[kind="primary"] {{
+    background-color: #2563eb !important;
+    color: #ffffff !important;
+    margin-top: 14px !important;
+    border: none !important;
+}}
+.stButton > button[kind="primary"]:hover {{
+    background-color: #1d4ed8 !important;
+    color: #ffffff !important;
+}}
+
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
