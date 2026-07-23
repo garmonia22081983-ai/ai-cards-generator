@@ -1151,24 +1151,47 @@ with col_main:
     )
 
 with col_stats:
+    badge_bg = "#2563eb"
+    if tariff_name == "АДМИНИСТРАТОР":
+        badge_bg = "#d97706"
+    elif tariff_name == "Максимум":
+        badge_bg = "#7c3aed"
+    elif tariff_name == "Практик":
+        badge_bg = "#2563eb"
+    else:
+        badge_bg = "#64748b"
+
+    remaining_cards = max(0, max_cards - used_cards) if tariff_name != "АДМИНИСТРАТОР" else 999999
+
     st.markdown(
         f"""
         <div class="tariff-box">
-            <h3 style="margin-top:0; font-size:18px;">📊 Твой тариф и лимиты</h3>
-            <p style="color:#718096; font-size:13px; margin-bottom:12px;">Тариф: <b>{tariff_name.upper()}</b></p>
-        </div>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin:0; font-size:16px; color:#1e293b;">📊 Ваш лимит</h3>
+                <span style="background-color: {badge_bg}; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">
+                    {tariff_name.upper()}
+                </span>
+            </div>
         """, 
         unsafe_allow_html=True
     )
     
     if tariff_name == "АДМИНИСТРАТОР":
-        st.success("👑 Безлимитный доступ")
+        st.success("👑 Безлимитный доступ (Админ)")
+        st.markdown("</div>", unsafe_allow_html=True)
     else:
         progress_val = min(float(used_cards) / float(max_cards), 1.0)
         st.progress(progress_val)
-        remaining_cards = max(0, max_cards - used_cards)
-        st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
-        st.caption(f"Осталось: **{remaining_cards}** карточек")
+        st.markdown(
+            f"""
+            <div style="margin-top: 8px;">
+                <p style="margin: 2px 0; font-size: 14px;">Осталось: <b style="font-size: 18px; color: #2563eb;">{remaining_cards}</b> карточек</p>
+                <p style="margin: 2px 0; color: #64748b; font-size: 12px;">Использовано: <b>{used_cards}</b> из <b>{max_cards}</b></p>
+            </div>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
 
     st.write("---")
     st.markdown("<h4 style='font-size: 15px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
@@ -1485,8 +1508,21 @@ if st.session_state.cards:
                 )
                 custom_print_note = st.text_input("Задание / Заметка для ученика:", placeholder="Например: Составьте 3 предложения с новыми словами").strip()
         else:
-            st.info("💡 **Совет:** На тарифе **«Максимум»** доступны цветной детский и стильный взрослый дизайны печати с полем для задания ученику.")
-            st.link_button("👑 Перейти на тариф «Максимум»", "https://flashcards-ai.ru/#tarifs")
+            st.markdown(
+                """
+                <div style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); border: 2px solid #2563eb; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                        <span style="font-size: 20px;">🎨</span>
+                        <h4 style="margin: 0; color: #1e3a8a; font-size: 15px; font-weight: bold;">Цветная печать и задания доступны на тарифе «Максимум»</h4>
+                    </div>
+                    <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
+                        Перейдите на тариф <b>«Максимум»</b>, чтобы разблокировать <b>яркий детский стиль (Kids Style)</b>, <b>стильный взрослый премиум-дизайн</b> и добавлять <b>персональные задания для учеников</b> прямо на печатных листах!
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            st.link_button("👑 Перейти на тариф «Максимум»", "https://flashcards-ai.ru/#tarifs", type="primary")
             st.write("")
 
         # Шапка печатного листа
@@ -1496,7 +1532,9 @@ if st.session_state.cards:
                 f"""
                 <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 15px; font-weight: bold; color: #d84315;">🦁 English Worksheet</span>
+                        <span style="font-size: 16px; font-weight: bold; color: #d84315; display: flex; align-items: center; gap: 6px;">
+                            <span>🎨 🦁</span> <span>English Worksheet</span>
+                        </span>
                         <span style="font-size: 12px; color: #666; font-weight: 500;">Name: _________________ | Date: ___/___/2026</span>
                     </div>
                     {note_str}
