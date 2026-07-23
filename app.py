@@ -23,11 +23,6 @@ import html
 import wave
 import streamlit.components.v1 as components
 
-try:
-    from youtube_transcript_api import YouTubeTranscriptApi
-except ImportError:
-    YouTubeTranscriptApi = None
-
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 ADMIN_EMAILS = [
@@ -199,138 +194,6 @@ def get_user_tariff_and_usage(email, sh):
 
     except Exception:
         return tariff_name, max_cards, 0, period_start
-
-def extract_youtube_id(url):
-    pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
-    match = re.search(pattern, url)
-    if match:
-        return match.group(1) or match.group(2)
-    return None
-
-def scrape_youtube_captions_fallback(video_id):
-    try:
-        url = f"https://www.youtube.com/watch?v={video_id}"
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-            'Accept-Language': 'en-US,en;q=0.9'
-        }
-        res = requests.get(url, headers=headers, timeout=10)
-        if res.status_code != 200:
-            return None
-        
-        match = re.search(r'ytInitialPlayerResponse\s*=\s*({.+?});(?:var|</script>)', res.text)
-        if not match:
-            match = re.search(r'ytInitialPlayerResponse\s*=\s*({.+?});', res.text)
-        if not match:
-            return None
-
-        player_data = json.loads(match.group(1))
-        captions = player_data.get('captions', {}).get('playerCaptionsTracklistRenderer', {}).get('captionTracks', [])
-        
-        if not captions:
-            return None
-        
-        target_track = None
-        for track in captions:
-            lang = track.get('languageCode', '')
-            if lang.startswith('en'):
-                target_track = track
-                break
-        if not target_track:
-            target_track = captions[0]
-            
-        base_url = target_track.get('baseUrl')
-        if not base_url:
-            return None
-            
-        xml_res = requests.get(base_url, headers=headers, timeout=10)
-        if xml_res.status_code == 200:
-            soup = BeautifulSoup(xml_res.text, 'xml')
-            text_elements = soup.find_all(['text', 'p', 's'])
-            if not text_elements:
-                soup = BeautifulSoup(xml_res.text, 'html.parser')
-                text_elements = soup.find_all('text')
-            
-            lines = [t.get_text() for t in text_elements if t.get_text().strip()]
-            extracted = " ".join(lines)
-            extracted = html.unescape(extracted)
-            if len(extracted.strip()) > 50:
-                return extracted
-    except Exception:
-        pass
-    return None
-
-def get_youtube_transcript(video_url):
-    video_id = extract_youtube_id(video_url)
-    if not video_id:
-        return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
-
-    # Flexible SupaData API key search across common naming variations in st.secrets
-    supa_key = None
-    possible_keys = ["SUPADATA_API_KEY", "supadata_api_key", "SUPADATA_KEY", "supadata_key", "supadata"]
-    for k in possible_keys:
-        if k in st.secrets:
-            val = st.secrets[k]
-            if isinstance(val, str) and val.strip():
-                supa_key = val.strip()
-                break
-            elif isinstance(val, dict) and "api_key" in val:
-                supa_key = str(val["api_key"]).strip()
-                break
-
-    if supa_key:
-        try:
-            full_yt_url = f"https://www.youtube.com/watch?v={video_id}"
-            encoded_url = urllib.parse.quote(full_yt_url)
-            supa_url = f"https://api.supadata.ai/v1/transcript?url={encoded_url}&text=true"
-            headers = {"x-api-key": supa_key}
-            res = requests.get(supa_url, headers=headers, timeout=15)
-            
-            if res.status_code in (200, 201):
-                data = res.json()
-                if isinstance(data, dict):
-                    if "content" in data and data["content"]:
-                        return data["content"]
-                    elif "text" in data and data["text"]:
-                        return data["text"]
-                elif isinstance(data, list):
-                    return " ".join([item.get("text", "") for item in data if isinstance(item, dict)])
-            elif res.status_code == 202:
-                time.sleep(3)
-                res_async = requests.get(supa_url, headers=headers, timeout=15)
-                if res_async.status_code == 200:
-                    data = res_async.json()
-                    if isinstance(data, dict) and "content" in data:
-                        return data["content"]
-        except Exception:
-            pass
-
-    if YouTubeTranscriptApi:
-        try:
-            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            try:
-                t = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
-                data = t.fetch()
-                text = " ".join([item['text'] for item in data])
-                if text.strip(): return text
-            except Exception:
-                pass
-                
-            try:
-                t = transcript_list.find_generated_transcript(['en', 'en-US', 'en-GB'])
-                data = t.fetch()
-                text = " ".join([item['text'] for item in data])
-                if text.strip(): return text
-            except Exception:
-                pass
-        except Exception:
-            pass
-
-    scraped_text = scrape_youtube_captions_fallback(video_id)
-    if scraped_text:
-        return scraped_text
-
-    return "Не удалось автоматически извлечь субтитры: у видео отсутствуют английские субтитры или доступ к ним ограничен YouTube."
 
 def extract_text_from_url(url):
     try:
@@ -1154,7 +1017,7 @@ if not st.session_state.user_email:
                     st.session_state.user_email = email
                     st.session_state.logout_requested = False
                     
-                    # Direct JS cookie write to guarantee instant cookie update
+                    # Direct JS cookie write
                     components.html(f"""
                         <script>
                             let d = new Date();
@@ -1299,7 +1162,6 @@ with st.sidebar:
             except Exception:
                 pass
             
-            # Explicit browser JS cleanup of auth_email cookie to ensure clean state
             components.html("""
                 <script>
                     document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
@@ -1346,7 +1208,6 @@ with st.sidebar:
         [
             "✍️ Готовый список слов",
             "📝 Текст / Отрывок статьи / Субтитры", 
-            "🎬 Ссылка на YouTube",
             "📁 Видео или аудио файл (до 5 мин)",
             "🔗 Ссылка на веб-статью"
         ],
@@ -1404,8 +1265,7 @@ with col_main:
         user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
     elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
         user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
-    elif source_type == "🎬 Ссылка на YouTube":
-        user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
+        st.caption("💡 **Совет:** Если вы хотите создать карточки по видео с YouTube, откройте ролик на YouTube, нажмите под ним кнопку **«Показать текст видео» (Show transcript)**, скопируйте текст и вставьте его сюда.")
     elif source_type == "📁 Видео или аудио файл (до 5 мин)":
         uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
         st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
@@ -1571,16 +1431,7 @@ if generate_click:
             temp_file_path = None
             source_url_to_save = user_input.strip()
 
-            if source_type == "🎬 Ссылка на YouTube":
-                with st.spinner("Извлекаем субтитры из видео YouTube..."):
-                    yt_transcript = get_youtube_transcript(user_input.strip())
-                if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
-                    st.error(f"🛑 {yt_transcript}")
-                    st.info("💡 **Рекомендация:** Убедитесь, что у видео есть английские субтитры. Если субтитров нет, скачайте фрагмент и загрузите его через опцию **«📁 Видео или аудио файл»** — Gemini распознает речь напрямую!")
-                    st.stop()
-                final_prompt_content = yt_transcript
-
-            elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+            if source_type == "📁 Видео или аудио файл (до 5 мин)":
                 if uploaded_file_obj.size > 30 * 1024 * 1024:
                     st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
                     st.stop()
