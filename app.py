@@ -511,13 +511,37 @@ summary { list-style: none !important; }
 }
 
 @media print {
+    /* Скрываем интерфейс Streamlit при печати и экспорте в PDF */
+    [data-testid="stSidebar"],
+    header,
+    footer,
+    .stButton,
+    .stRadio,
+    .stSelectbox,
+    .stTextInput,
+    .stExpander,
+    .stAlert,
+    iframe {
+        display: none !important;
+    }
+
+    body, html, [data-testid="stAppViewContainer"], .stApp {
+        background-color: #ffffff !important;
+        background-image: none !important;
+    }
+
+    * {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+
     .print-row-bw, .print-row-kids, .print-row-premium {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
 }
 </style>
-""".replace("__BG_CSS__", bg_css)
+"""
 
 st.markdown(css_template, unsafe_allow_html=True)
 
@@ -1497,16 +1521,41 @@ if st.session_state.cards:
         print_style = "🖨️ Черно-белая (Экономный режим)"
 
         if is_max_tariff:
-            with st.expander("👑 Настройка стиля и задания для распечатки (Тариф Максимум)", expanded=True):
-                print_style = st.selectbox(
-                    "Выберите стиль оформления:", 
+            st.markdown(
+                """
+                <div style="background: #fffdf5; border: 2px solid #f59e0b; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);">
+                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
+                        <span style="font-size: 20px;">👑</span>
+                        <h4 style="margin: 0; color: #92400e; font-size: 16px; font-weight: bold;">Настройка дизайна распечатки и задания (Тариф «Максимум»)</h4>
+                    </div>
+                    <p style="margin: 0 0 12px 0; font-size: 13px; color: #78350f;">
+                        Выберите внешний вид листа и добавьте инструкцию для ученика. Изменения применятся мгновенно!
+                    </p>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            col_st1, col_st2 = st.columns([1.5, 1])
+            with col_st1:
+                print_style = st.radio(
+                    "🎨 **Выберите стиль оформления листа:**", 
                     [
-                        "🖨️ Черно-белая (Экономный режим)", 
-                        "🎨 Цветная детская (Kids Style)", 
-                        "💼 Взрослый цветной (Премиум / Стильный)"
-                    ]
+                        "🖨️ Черно-белая (Эконом)", 
+                        "🎨 Детская цветная (Kids Style)", 
+                        "💼 Взрослый цветной (Премиум)"
+                    ],
+                    horizontal=True,
+                    key="max_print_style_radio"
                 )
-                custom_print_note = st.text_input("Задание / Заметка для ученика:", placeholder="Например: Составьте 3 предложения с новыми словами").strip()
+            with col_st2:
+                custom_print_note = st.text_input(
+                    "📝 **Задание / Инструкция для ученика:**", 
+                    placeholder="Например: Составьте 3 предложения с новыми словами",
+                    key="max_print_note_input"
+                ).strip()
+            
+            st.write("")
         else:
             st.markdown(
                 """
@@ -1524,6 +1573,20 @@ if st.session_state.cards:
             )
             st.link_button("👑 Перейти на тариф «Максимум»", "https://flashcards-ai.ru/#tarifs", type="primary")
             st.write("")
+
+        # Кнопка быстрой печати и сохранения в PDF
+        import streamlit.components.v1 as components
+        components.html(
+            """
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 16px; border: 1px solid #cbd5e0; border-radius: 10px; margin-bottom: 15px;">
+                <span style="font-size: 13px; color: #4a5568;">💡 <b>Совет:</b> Чтобы сохранить файл на диск, в окне печати выберите принтер <b>«Сохранить как PDF»</b>.</span>
+                <button onclick="window.parent.print()" style="background-color: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; font-family: sans-serif; display: flex; align-items: center; gap: 6px;">
+                    📄 Распечатать / Сохранить в PDF
+                </button>
+            </div>
+            """,
+            height=65
+        )
 
         # Шапка печатного листа
         if "детская" in print_style and is_max_tariff:
