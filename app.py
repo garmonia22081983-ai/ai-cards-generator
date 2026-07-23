@@ -793,7 +793,17 @@ tariff_name, max_cards, used_cards, period_start, retention_days = get_user_tari
 # --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
-    model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
+   # Проверяем, является ли текущий пользователь администратором
+    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+    is_admin_user = st.session_state.user_email and (st.session_state.user_email.lower() in clean_admin_emails)
+
+    # Задаем список моделей в зависимости от прав доступа
+    if is_admin_user:
+        available_models = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
+    else:
+        available_models = ["gemini-3.5-flash"]
+
+    model_option = st.selectbox("Нейросеть:", available_models, index=0)
     
     source_type = st.radio(
         "Что берем за основу?", 
