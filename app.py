@@ -51,7 +51,6 @@ if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
 api_key = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=api_key)
 
-
 # --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
 def get_gsheets_client():
     scopes = [
@@ -62,7 +61,6 @@ def get_gsheets_client():
     creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
     return gspread.authorize(creds)
 
-
 # --- ФУНКЦИЯ ОТПРАВКИ EMAIL С КОДОМ (SMTP) ---
 def send_otp_email(target_email, code):
     try:
@@ -71,7 +69,6 @@ def send_otp_email(target_email, code):
         msg['From'] = f"Flashcards AI <{smtp_config['email']}>"
         msg['To'] = target_email
         msg['Subject'] = f"{code} — Ваш код входа в Генератор Карточек"
-
         body = f"""
         <html>
             <body style="font-family: Arial, sans-serif; color: #2d3748; padding: 20px;">
@@ -85,7 +82,6 @@ def send_otp_email(target_email, code):
         </html>
         """
         msg.attach(MIMEText(body, 'html'))
-
         server = smtplib.SMTP_SSL(smtp_config['server'], int(smtp_config['port']))
         server.login(smtp_config['email'], smtp_config['password'])
         server.send_message(msg)
@@ -95,15 +91,15 @@ def send_otp_email(target_email, code):
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
-
-# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ПОДСЧЕТА ИСПОЛЬЗОВАННЫХ КАРТОЧЕК ---
+# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА, ЛИМИТОВ И СРОКА ХРАНЕНИЯ КОЛОД ---
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
-        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365)
+        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365), 999999
 
     tariff_name = "Пробный"
     max_cards = 45
+    retention_days = 7
     period_start = datetime.now() - timedelta(days=3)
 
     try:
@@ -133,9 +129,11 @@ def get_user_tariff_and_usage(email, sh):
             if "Максимум" in product_str or "1190" in str(found_payment):
                 tariff_name = "Максимум"
                 max_cards = 3000
+                retention_days = 999999
             else:
                 tariff_name = "Практик"
                 max_cards = 300
+                retention_days = 60
         else:
             users_sheet = sh.worksheet("Users")
             u_rows = users_sheet.get_all_values()
@@ -173,11 +171,10 @@ def get_user_tariff_and_usage(email, sh):
                     except ValueError:
                         pass
 
-        return tariff_name, max_cards, used_cards, period_start
+        return tariff_name, max_cards, used_cards, period_start, retention_days
 
     except Exception:
-        return tariff_name, max_cards, 0, period_start
-
+        return tariff_name, max_cards, 0, period_start, retention_days
 
 # --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
 def extract_youtube_id(url):
@@ -187,25 +184,42 @@ def extract_youtube_id(url):
         return match.group(1) or match.group(2)
     return None
 
-
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ЧЕРЕЗ SUPADATA API ---
 def get_youtube_transcript(video_url):
-    if not YouTubeTranscriptApi:
-        return "Ошибка: Библиотека youtube-transcript-api не установлена."
-    
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
-    try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
-        text = " ".join([item['text'] for item in transcript_list])
-        return text
-    except Exception as e:
-        return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
+    supadata_key = st.secrets.get("SUPADATA_API_KEY", None)
+    
+    if supadata_key:
+        try:
+            endpoint = f"https://api.supadata.ai/v1/youtube/transcript?videoId={video_id}&text=true"
+            headers = {"x-api-key": supadata_key}
+            resp = requests.get(endpoint, headers=headers, timeout=15)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get("content", "")
+                if isinstance(content, list):
+                    return " ".join([item.get("text", "") for item in content])
+                elif isinstance(content, str) and content.strip():
+                    return content
+            elif resp.status_code == 404:
+                return "Ошибка: У этого видео отсутствуют субтитры."
+        except Exception:
+            pass
 
+    if YouTubeTranscriptApi:
+        try:
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
+            return " ".join([item['text'] for item in transcript_list])
+        except Exception as e:
+            return f"Не удалось извлечь субтитры: {e}."
+            
+    return "Не удалось получить субтитры. Попробуйте скачать аудио/видео фрагмент и загрузить его файлом."
 
-# --- СТИЛИ ПРИЛОЖЕНИЯ (ТОЧНАЯ СТИЛИЗАЦИЯ КАРТОЧКИ АВТОРИЗАЦИИ) ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -230,24 +244,20 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     background-attachment: fixed !important;
     color: #2d3748 !important;
 }}
-
-/* Поднимаем всё содержимое выше, убираем пустоту сверху */
 .main .block-container {{
     padding-top: 1.5rem !important;
     padding-bottom: 2rem !important;
 }}
-
 h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
 }}
-
 [data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
 }}
 
-/* Главная синяя кнопка (как на Фото 2) */
+/* Главная синяя кнопка */
 button[kind="primary"], 
 button[data-testid="stBaseButton-primary"] {{
     background-color: #2e6c9e !important;
@@ -256,21 +266,24 @@ button[data-testid="stBaseButton-primary"] {{
     border-radius: 8px !important;
     font-weight: bold !important;
     font-size: 15px !important;
+    width: 100% !important;
+}}
+
+/* БЕЛЫЙ ТЕКСТ И ИКОНКИ НА КНОПКЕ */
+button[kind="primary"] *, 
+button[data-testid="stBaseButton-primary"] *,
+button[kind="primary"] p,
+button[data-testid="stBaseButton-primary"] p,
+button[kind="primary"] span,
+button[data-testid="stBaseButton-primary"] span {{
+    color: #ffffff !important;
+    -webkit-text-fill-color: #ffffff !important;
 }}
 
 button[kind="primary"]:hover, 
 button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
-}}
-
-/* ЭДОИНАЯ БЕЛАЯ КАРТОЧКА АВТОРИЗАЦИИ (Фото 2) */
-div[data-testid="stColumn"]:nth-of-type(2) {{
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 20px !important;
-    padding: 30px 25px 20px 25px !important;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05) !important;
 }}
 
 input, textarea, select, 
@@ -285,7 +298,6 @@ input, textarea, select,
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
 }}
-
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
@@ -293,7 +305,6 @@ input, textarea, select,
     background-color: #f4efe6 !important;
     background-image: none !important;
 }}
-
 .tariff-box {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
@@ -301,7 +312,6 @@ input, textarea, select,
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
 }}
-
 /* Интерактивные карточки */
 .card-front {{
     background-color: #e3b5b5 !important;
@@ -317,14 +327,12 @@ input, textarea, select,
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
 }}
-
 .card-front-title {{
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
 }}
-
 .card-front-subtitle {{
     font-size: 10px;
     color: #704b4b !important;
@@ -333,7 +341,6 @@ input, textarea, select,
     letter-spacing: 1px;
     font-weight: 600;
 }}
-
 .card-back {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
@@ -346,10 +353,8 @@ input, textarea, select,
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
 }}
-
 summary::-webkit-details-marker {{ display: none !important; }}
 summary {{ list-style: none !important; }}
-
 /* Стили печатных карточек */
 .print-row-bw {{
     display: flex;
@@ -358,7 +363,6 @@ summary {{ list-style: none !important; }}
     page-break-inside: avoid;
     background-color: #ffffff;
 }}
-
 .print-row-kids {{
     display: flex;
     border: 2px solid #ffb74d;
@@ -368,7 +372,6 @@ summary {{ list-style: none !important; }}
     background-color: #ffffff;
     overflow: hidden;
 }}
-
 .print-col-kids-left {{
     width: 45%;
     padding: 15px;
@@ -380,13 +383,11 @@ summary {{ list-style: none !important; }}
     justify-content: center;
     align-items: center;
 }}
-
 .print-col-kids-right {{
     width: 55%;
     padding: 15px;
     background-color: #ffffff;
 }}
-
 .print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
 .print-left {{
     border-right: 1px dashed #ccc;
@@ -401,7 +402,6 @@ summary {{ list-style: none !important; }}
 }}
 </style>
 """, unsafe_allow_html=True)
-
 
 # ==============================================================================
 # 🎓 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id)
@@ -467,9 +467,7 @@ if student_deck_id:
             
         with col_s_exp2:
             student_print_mode = st.checkbox("🖨️ Включить режим для печати", key="s_print_mode")
-
         st.write("---")
-
         if student_print_mode:
             for card in cards_data:
                 print_html = f"""<div class="print-row-bw">
@@ -532,17 +530,13 @@ if student_deck_id:
                         if st.button("👈 Показать слово", key=f"s_unflip_{i}", use_container_width=True):
                             st.session_state.student_flipped[i] = False
                             st.rerun()
-
     except Exception as e:
         st.error(f"Ошибка загрузки колоды: {e}")
-
     st.stop()
-
 
 # ==============================================================================
 # 👩‍🏫 2. ИНТЕРФЕЙС УЧИТЕЛЯ (АВТОРИЗАЦИЯ, ГЕНЕРАЦИЯ, СОХРАНЕНИЕ)
 # ==============================================================================
-
 # --- ИНИЦИАЛИЗАЦИЯ ПЕРЕМЕННЫХ СЕССИИ ---
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
@@ -559,13 +553,10 @@ if "pending_email" not in st.session_state:
 if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
 
-
 # --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 saved_email = cookie_manager.get(cookie="auth_email")
-
 if not saved_email:
     st.session_state.logout_requested = False
-
 if saved_email and not st.session_state.user_email and not st.session_state.logout_requested:
     email = str(saved_email).strip().lower()
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
@@ -626,11 +617,13 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-
-# --- БЛОК АВТОРИЗАЦИИ (ЕНОЕ ОKНО, КАК НА ФОТО 2) ---
+# --- БЛОК АВТОРИЗАЦИИ (БЕЛАЯ ПЛАШКА ЧЕРЕЗ HTML-ОБЁРТКУ) ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
+        # Открываем плотный белый HTML-блок с тенью и кремовой рамкой
+        st.markdown('<div style="background-color: #ffffff !important; padding: 35px 30px; border-radius: 16px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); border: 1px solid #ebdcc5;">', unsafe_allow_html=True)
+        
         st.markdown(
             """
             <div style="text-align: center; margin-bottom: 22px;">
@@ -690,7 +683,6 @@ if not st.session_state.user_email:
                                 st.session_state.pending_email = email
                                 st.session_state.otp_sent = True
                                 st.rerun()
-
         else:
             st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
             st.caption("Проверьте папку «Спам», если письма нет в течение минуты.")
@@ -793,7 +785,7 @@ if not st.session_state.user_email:
                                     st.session_state.trial_expired = False
                                 
                                 cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                                    
+                                        
                         st.success("Успешный вход!")
                         time.sleep(0.3)
                         st.rerun()
@@ -807,7 +799,7 @@ if not st.session_state.user_email:
                 st.session_state.generated_otp = None
                 st.session_state.pending_email = None
                 st.rerun()
-
+                
         st.markdown(
             """
             <div style="margin-top: 18px; text-align: center;">
@@ -818,8 +810,10 @@ if not st.session_state.user_email:
             """, 
             unsafe_allow_html=True
         )
-    st.stop()
-
+        
+        # Закрываем HTML-обёртку карточки авторизации
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.stop()
 
 # --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
@@ -840,7 +834,6 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
-
 # --- ФУНКЦИЯ ПАРСИНГА СТАТЕЙ ПО ССЫЛКЕ ---
 def extract_text_from_url(url):
     try:
@@ -857,17 +850,23 @@ def extract_text_from_url(url):
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
-
 # --- ЗАГРУЗКА ДАННЫХ О ТАРИФЕ И ЛИМИТАХ ---
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
-
+tariff_name, max_cards, used_cards, period_start, retention_days = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 # --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
-    model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
+    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+    is_admin_user = st.session_state.user_email and (st.session_state.user_email.lower() in clean_admin_emails)
+
+    if is_admin_user:
+        available_models = ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"]
+    else:
+        available_models = ["gemini-3.5-flash"]
+
+    model_option = st.selectbox("Нейросеть:", available_models, index=0)
     
     source_type = st.radio(
         "Что берем за основу?", 
@@ -888,77 +887,22 @@ with st.sidebar:
     else:
         num_cards = 0
 
-    st.write("---")
-    with st.expander("📂 Мои сохраненные колоды"):
-        try:
-            decks_sheet = sh_global.worksheet("Decks")
-            d_rows = decks_sheet.get_all_values()
-            my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
-            
-            if not my_decks:
-                st.caption("У вас пока нет сохраненных колод.")
-            else:
-                search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
-                show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
-                
-                all_my_decks_rev = list(reversed(my_decks))
-                
-                if search_q:
-                    filtered_decks = [d for d in all_my_decks_rev if search_q in d[2].lower()]
-                else:
-                    filtered_decks = all_my_decks_rev
-                    
-                display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
-                
-                if not search_q and len(my_decks) > 5 and not show_all:
-                    st.caption(f"Показано последние 5 из {len(my_decks)}.")
-                
-                for d in display_decks:
-                    d_id = d[0]
-                    d_name = d[2]
-                    d_level = d[3]
-                    d_cards_json = d[5]
-                    
-                    st.write(f"**{d_name}** ({d_level})")
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
-                            st.session_state.cards = json.loads(d_cards_json)
-                            st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
-                            st.rerun()
-                    with c2:
-                        if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
-                            st.session_state[f"show_link_{d_id}"] = not st.session_state.get(f"show_link_{d_id}", False)
-                            
-                    if st.session_state.get(f"show_link_{d_id}", False):
-                        student_link = f"{APP_URL}?deck={d_id}"
-                        st.code(student_link, language=None)
-                        
-                    st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
-        except Exception:
-            st.caption("Не удалось загрузить список колод.")
-
-
 # --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
 is_expired = st.session_state.get("trial_expired", False)
 is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
-
 button_disabled = is_expired or is_limit_reached
 
 if is_expired:
     st.warning("🛑 **Срок действия вашей подписки окончен.**")
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы продолжить создавать новые колоды, пожалуйста, продлите тариф.")
     st.link_button("💳 Посмотреть тарифы и продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
-
 elif is_limit_reached:
     st.warning(f"🛑 **Вы исчерпали лимит карточек ({max_cards} шт.) по тарифу «{tariff_name}».**")
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
-
 # --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
-
 user_input = ""
 uploaded_file_obj = None
 
@@ -1001,6 +945,78 @@ with col_stats:
         st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
         st.caption(f"Осталось: **{remaining_cards}** карточек")
 
+    # --- ПЕРЕНЕСЕННЫЙ И ОБНОВЛЕННЫЙ БЛОК СОХРАНЕННЫХ КОЛОД ---
+    st.write("---")
+    with st.expander("📂 Мои сохраненные колоды", expanded=True):
+        try:
+            decks_sheet = sh_global.worksheet("Decks")
+            d_rows = decks_sheet.get_all_values()
+            
+            raw_my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
+            
+            my_decks = []
+            now_dt = datetime.now()
+            
+            for d in raw_my_decks:
+                deck_created_str = d[6].strip() if len(d) > 6 else ""
+                deck_dt = None
+                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                    try:
+                        deck_dt = datetime.strptime(deck_created_str, fmt)
+                        break
+                    except ValueError:
+                        pass
+                
+                if deck_dt and retention_days < 999999:
+                    if now_dt <= (deck_dt + timedelta(days=retention_days)):
+                        my_decks.append(d)
+                else:
+                    my_decks.append(d)
+            
+            if not my_decks:
+                st.caption("У вас пока нет активных сохраненных колод.")
+            else:
+                search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
+                show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
+                
+                all_my_decks_rev = list(reversed(my_decks))
+                
+                if search_q:
+                    filtered_decks = [d for d in all_my_decks_rev if search_q in d[2].lower()]
+                else:
+                    filtered_decks = all_my_decks_rev
+                    
+                display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
+                
+                if not search_q and len(my_decks) > 5 and not show_all:
+                    st.caption(f"Показано последние 5 из {len(my_decks)}.")
+                
+                for d in display_decks:
+                    d_id = d[0]
+                    d_name = d[2]
+                    d_level = d[3]
+                    d_cards_json = d[5]
+                    
+                    st.write(f"**{d_name}** ({d_level})")
+                    
+                    c1, c2 = st.columns([1, 1], gap="small")
+                    with c1:
+                        if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
+                            st.session_state.cards = json.loads(d_cards_json)
+                            st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
+                            st.rerun()
+                    with c2:
+                        if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
+                            st.session_state[f"show_link_{d_id}"] = not st.session_state.get(f"show_link_{d_id}", False)
+                            
+                    if st.session_state.get(f"show_link_{d_id}", False):
+                        student_link = f"{APP_URL}?deck={d_id}"
+                        st.code(student_link, language=None)
+                        
+                    st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
+        except Exception:
+            st.caption("Не удалось загрузить список колод.")
+
 # --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
     is_valid_input = False
@@ -1008,7 +1024,6 @@ if generate_click:
         is_valid_input = (uploaded_file_obj is not None)
     else:
         is_valid_input = bool(user_input.strip())
-
     if not is_valid_input:
         st.warning("Пожалуйста, заполните поле ввода или загрузите файл!")
     else:
@@ -1016,7 +1031,6 @@ if generate_click:
         if source_type == "✍️ Готовый список слов":
             words_list = [w.strip() for w in user_input.replace("\n", ",").split(",") if w.strip()]
             actual_requested = len(words_list)
-
         if tariff_name != "АДМИНИСТРАТОР" and (used_cards + actual_requested) > max_cards:
             rem = max(0, max_cards - used_cards)
             st.error(f"🛑 Превышен лимит тарифа! У вас осталось **{rem}** карточек, а вы пытаетесь сгенерировать **{actual_requested}**.")
@@ -1029,8 +1043,6 @@ if generate_click:
                     gemini_uploaded_file = None
                     temp_file_path = None
                     source_url_to_save = user_input.strip()
-
-                    # 1. YOUTUBE ССЫЛКА
                     if source_type == "🎬 Ссылка на YouTube":
                         yt_transcript = get_youtube_transcript(user_input.strip())
                         if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
@@ -1038,8 +1050,6 @@ if generate_click:
                             st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео или аудио файл».")
                             st.stop()
                         final_prompt_content = yt_transcript
-
-                    # 2. МЕДИАФАЙЛ (MP4 / MP3)
                     elif source_type == "📁 Видео или аудио файл (до 5 мин)":
                         if uploaded_file_obj.size > 30 * 1024 * 1024:
                             st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
@@ -1053,18 +1063,15 @@ if generate_click:
                             temp_file_path = tmp.name
                             
                         gemini_uploaded_file = genai.upload_file(path=temp_file_path)
-
-                    # 3. ВЕБ-СТАТЬЯ
                     elif source_type == "🔗 Ссылка на веб-статью":
                         scraped_text = extract_text_from_url(user_input.strip())
                         if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
                             st.error(scraped_text)
                             st.stop()
                         final_prompt_content = scraped_text
-                    
                     else:
                         final_prompt_content = user_input.strip()
-
+                    
                     model = genai.GenerativeModel(model_option)
                     
                     if source_type == "✍️ Готовый список слов":
@@ -1094,12 +1101,10 @@ if generate_click:
                         - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
-
                     if gemini_uploaded_file:
                         response = model.generate_content([prompt_text, gemini_uploaded_file])
                     else:
                         response = model.generate_content([prompt_text, final_prompt_content])
-
                     text_response = response.text.strip()
                     
                     backtick_triple = chr(96) * 3
@@ -1112,14 +1117,12 @@ if generate_click:
                             if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
                                 text_response = clean_chunk
                                 break
-
                     text_response = text_response.strip()
                     cards_data = json.loads(text_response)
                     
                     st.session_state.cards = cards_data
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
-                    # --- СОХРАНЕНИЕ В ИСТОРИЮ (ВКЛАДКА REQUESTS С ИСТОЧНИКОМ) ---
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
@@ -1157,19 +1160,16 @@ if generate_click:
                     if temp_file_path and os.path.exists(temp_file_path):
                         try: os.remove(temp_file_path)
                         except Exception: pass
-
                     st.success(f"Успешно! Создано карточек: {len(cards_data)}")
                     time.sleep(1)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
-
 # --- ОТРИСОВКА, РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ КАРТОЧЕК ---
 if st.session_state.cards:
     st.write("---")
     
-    # ✏️ БЛОК РЕДАКТИРОВАНИЯ
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
@@ -1196,8 +1196,7 @@ if st.session_state.cards:
             }
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
-
-    # 💾 БЛОК СОХРАНЕНИЯ КОЛОДЫ
+        
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
     col_save1, col_save2 = st.columns([2, 1])
     with col_save1:
@@ -1229,10 +1228,8 @@ if st.session_state.cards:
                 st.code(share_url, language=None)
             except Exception as save_err:
                 st.error(f"Ошибка сохранения колоды: {save_err}")
-
     st.write("---")
-
-    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ ---
+    
     col_exp1, col_exp2 = st.columns(2)
     
     with col_exp1:
@@ -1256,13 +1253,11 @@ if st.session_state.cards:
         
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
-
-    # 🌟 НАСТРОЙКИ ПЕЧАТИ
+        
     is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
     custom_print_teacher = ""
     custom_print_note = ""
     print_style = "🖨️ Черно-белая (Экономный режим)"
-
     if print_mode:
         if is_max_tariff:
             with st.expander("👑 Настройка брендирования распечатки (Тариф Максимум)", expanded=True):
@@ -1279,8 +1274,7 @@ if st.session_state.cards:
                     custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English Class with Anna").strip()
                 with col_p2:
                     custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
-
-        # 1. Шапка ДЕТСКОГО стиля
+        
         if "детская" in print_style and is_max_tariff:
             teacher_title = custom_print_teacher if custom_print_teacher else "English Class"
             note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
@@ -1296,8 +1290,6 @@ if st.session_state.cards:
                 """,
                 unsafe_allow_html=True
             )
-
-        # 2. Шапка СТИЛЬНОГО ПРЕМИУМ стиля
         elif "стильная" in print_style and is_max_tariff:
             teacher_title = custom_print_teacher if custom_print_teacher else "English Worksheet"
             note_str = f"<p style='margin:3px 0 0 0; color:#718096; font-size:12px;'>{custom_print_note}</p>" if custom_print_note else ""
@@ -1313,8 +1305,7 @@ if st.session_state.cards:
                 """,
                 unsafe_allow_html=True
             )
-
-        # Отрисовка карточек
+            
         for card in st.session_state.cards:
             if "детская" in print_style and is_max_tariff:
                 print_html = f"""<div class="print-row-kids">
