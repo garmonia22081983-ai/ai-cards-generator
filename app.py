@@ -48,7 +48,7 @@ def get_gsheets_client():
     ]
     creds_dict = None
     
-    # 1. Проверяем наличие ключей в st.secrets
+    # Check st.secrets
     sec_keys = ["GOOGLE_APPLICATION_CREDENTIALS", "gcp_service_account"]
     for sec_key in sec_keys:
         if sec_key in st.secrets:
@@ -70,7 +70,6 @@ def get_gsheets_client():
         credentials = Credentials.from_service_account_info(creds_dict, scopes=scopes)
         return gspread.authorize(credentials)
 
-    # 2. Резервный вариант — локальный файл credentials.json (если он существует)
     if os.path.exists("credentials.json"):
         credentials = Credentials.from_service_account_file("credentials.json", scopes=scopes)
         return gspread.authorize(credentials)
@@ -242,40 +241,40 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f8f6f0 !important;"
 
-css_template = """
+css_template = f"""
 <style>
 /* Полностью убираем системную верхнюю шапку Streamlit */
-[data-testid="stHeader"], header {
+[data-testid="stHeader"], header {{
     display: none !important;
-}
+}}
 
 /* Убираем верхние отступы у основного контейнера и боковой панели */
 [data-testid="stMainBlockContainer"],
 .main .block-container,
 [data-testid="stSidebarContent"],
-[data-testid="stSidebarUserContent"] {
-    padding-top: 0.2rem !important;
+[data-testid="stSidebarUserContent"] {{
+    padding-top: 0.1rem !important;
     margin-top: 0rem !important;
-}
+}}
 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
-    gap: 0.4rem !important;
-}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+    gap: 0.3rem !important;
+}}
 
-html, body, [data-testid="stAppViewContainer"], .stApp {
-    __BG_CSS__
+html, body, [data-testid="stAppViewContainer"], .stApp {{
+    {bg_css}
     background-size: cover !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
     color: #2d3748 !important;
-}
+}}
 
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
-}
+}}
 
 /* Карточка авторизации */
-.auth-container {
+.auth-container {{
     background-color: #ffffff !important;
     border: 2px solid #2563eb;
     border-radius: 16px;
@@ -283,66 +282,66 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
     margin-top: 0px;
     margin-bottom: 20px;
-}
+}}
 
-.auth-header {
+.auth-header {{
     text-align: center;
     margin-bottom: 20px;
-}
+}}
 
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {
+[data-baseweb="select"] > div {{
     background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
-}
+}}
 
-/* Фикс выпадающих списков (Selectbox popover) - предотвращаем обрезание элементов B2, C1, C2 */
-div[data-baseweb="popover"] {
+/* Фикс выпадающих списков (Selectbox popover) */
+div[data-baseweb="popover"] {{
     z-index: 999999 !important;
-}
+}}
 
 div[data-baseweb="popover"] ul,
 div[data-baseweb="popover"] [data-baseweb="menu"],
-div[data-baseweb="popover"] [role="listbox"] {
+div[data-baseweb="popover"] [role="listbox"] {{
     max-height: 220px !important;
     overflow-y: auto !important;
-}
+}}
 
-.stButton > button[kind="primary"] {
+.stButton > button[kind="primary"] {{
     background-color: #2563eb !important;
     color: #ffffff !important;
     margin-top: 14px !important;
     border: none !important;
-}
-.stButton > button[kind="primary"]:hover {
+}}
+.stButton > button[kind="primary"]:hover {{
     background-color: #1d4ed8 !important;
     color: #ffffff !important;
-}
+}}
 
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
     background-color: #f4efe6 !important;
     background-image: none !important;
-}
+}}
 
-.tariff-box {
+.tariff-box {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-}
+}}
 
-.card-front {
+.card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
@@ -355,25 +354,25 @@ div[data-baseweb="popover"] [role="listbox"] {
     justify-content: center;
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
-}
+}}
 
-.card-front-title {
+.card-front-title {{
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
-}
+}}
 
-.card-front-subtitle {
+.card-front-subtitle {{
     font-size: 10px;
     color: #704b4b !important;
     margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-}
+}}
 
-.card-back {
+.card-back {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
@@ -384,20 +383,23 @@ div[data-baseweb="popover"] [role="listbox"] {
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
-}
+}}
 
-summary::-webkit-details-marker { display: none !important; }
-summary { list-style: none !important; }
+summary::-webkit-details-marker {{ display: none !important; }}
+summary {{ list-style: none !important; }}
 
-.print-row-bw {
+/* Стили для печати: Черно-белый */
+.print-row-bw {{
     display: flex;
-    border: 1px dashed #ccc;
+    border: 1px dashed #718096;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
-}
+    border-radius: 6px;
+}}
 
-.print-row-kids {
+/* Стили для печати: Цветной детский */
+.print-row-kids {{
     display: flex;
     border: 2px solid #ffb74d;
     border-radius: 12px;
@@ -405,10 +407,11 @@ summary { list-style: none !important; }
     page-break-inside: avoid;
     background-color: #ffffff;
     overflow: hidden;
-}
+    box-shadow: 0 4px 10px rgba(255, 183, 77, 0.15);
+}}
 
-.print-col-kids-left {
-    width: 45%;
+.print-col-kids-left {{
+    width: 42%;
     padding: 15px;
     background-color: #ffe0b2;
     border-right: 2px dashed #ffb74d;
@@ -417,16 +420,47 @@ summary { list-style: none !important; }
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}
+}}
 
-.print-col-kids-right {
-    width: 55%;
+.print-col-kids-right {{
+    width: 58%;
     padding: 15px;
     background-color: #ffffff;
-}
+}}
 
-.print-col { width: 50%; padding: 15px; box-sizing: border-box; }
-.print-left {
+/* Стили для печати: Взрослый цветной / Премиум */
+.print-row-premium {{
+    display: flex;
+    border: 1px solid #2b6cb0;
+    border-left: 6px solid #2b6cb0;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+    background-color: #ffffff;
+    overflow: hidden;
+    box-shadow: 0 4px 12px rgba(43, 108, 176, 0.08);
+}}
+
+.print-col-premium-left {{
+    width: 40%;
+    padding: 15px;
+    background-color: #ebf8ff;
+    border-right: 1px solid #bee3f8;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}}
+
+.print-col-premium-right {{
+    width: 60%;
+    padding: 15px;
+    background-color: #ffffff;
+}}
+
+.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
+.print-left {{
     border-right: 1px dashed #ccc;
     text-align: center;
     font-weight: bold;
@@ -436,9 +470,16 @@ summary { list-style: none !important; }
     justify-content: center;
     font-family: 'Georgia', serif;
     color: #1a365d;
-}
+}}
+
+@media print {{
+    .print-row-bw, .print-row-kids, .print-row-premium {{
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }}
+}}
 </style>
-""".replace("__BG_CSS__", bg_css)
+"""
 
 st.markdown(css_template, unsafe_allow_html=True)
 
@@ -953,18 +994,24 @@ if not st.session_state.user_email:
         )
     st.stop()
 
-c_side_top1, c_side_top2 = st.sidebar.columns([2.2, 1])
-with c_side_top1:
-    st.caption(f"👤 **{st.session_state.user_email}**")
-with c_side_top2:
-    if st.button("Выйти", key="sidebar_logout_btn"):
-        cookie_manager.delete("auth_email")
-        st.session_state.user_email = None
-        st.session_state.otp_sent = False
-        st.session_state.trial_expired = False
-        st.session_state.logout_requested = True
-        time.sleep(0.3)
-        st.rerun()
+st.sidebar.markdown(
+    f"""
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <span style="font-size: 13px; font-weight: bold; color: #2d3748;">👤 {st.session_state.user_email}</span>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
+if st.sidebar.button("Выйти из аккаунта", key="sidebar_logout_btn", use_container_width=True):
+    cookie_manager.delete("auth_email")
+    st.session_state.user_email = None
+    st.session_state.otp_sent = False
+    st.session_state.trial_expired = False
+    st.session_state.logout_requested = True
+    time.sleep(0.3)
+    st.rerun()
+
+st.sidebar.markdown("---")
 
 st.title("🎴 Умный Генератор Двусторонних Карточек")
 st.write(f"👋 **Рада видеть вас, {st.session_state.get('user_name', 'Преподаватель')}!**")
@@ -1083,7 +1130,7 @@ with col_stats:
         st.caption(f"Осталось: **{remaining_cards}** карточек")
 
     st.write("---")
-    st.markdown("<h4 style='font-size: 16px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
+    st.markdown("<h4 style='font-size: 15px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
     try:
         decks_sheet = sh_global.worksheet("Decks")
         d_rows = decks_sheet.get_all_values()
@@ -1382,50 +1429,48 @@ if st.session_state.cards:
 
     if teacher_view_mode == "🖨️ Режим для печати":
         is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
-        custom_print_teacher = ""
         custom_print_note = ""
         print_style = "🖨️ Черно-белая (Экономный режим)"
 
         if is_max_tariff:
-            with st.expander("👑 Настройка брендирования распечатки (Тариф Максимум)", expanded=True):
+            with st.expander("👑 Настройка стиля и задания для распечатки (Тариф Максимум)", expanded=True):
                 print_style = st.selectbox(
                     "Выберите стиль оформления:", 
                     [
                         "🖨️ Черно-белая (Экономный режим)", 
-                        "🎨 Цветная детская (Игровая / Пастельная)", 
-                        "💼 Цветная стильная (Премиум)"
+                        "🎨 Цветная детская (Kids Style)", 
+                        "💼 Взрослый цветной (Премиум / Стильный)"
                     ]
                 )
-                col_p1, col_p2 = st.columns(2)
-                with col_p1:
-                    custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English Class with Anna").strip()
-                with col_p2:
-                    custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
+                custom_print_note = st.text_input("Задание / Заметка для ученика:", placeholder="Например: Составьте 3 предложения с новыми словами").strip()
+        else:
+            st.info("💡 **Совет:** На тарифе **«Максимум»** доступны цветной детский и стильный взрослый дизайны печати с полем для задания ученику.")
+            st.link_button("👑 Перейти на тариф «Максимум»", "https://flashcards-ai.ru/#tarifs")
+            st.write("")
 
+        # Шапка печатного листа
         if "детская" in print_style and is_max_tariff:
-            teacher_title = custom_print_teacher if custom_print_teacher else "English Class"
-            note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
+            note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
                 f"""
                 <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 16px; font-weight: bold; color: #d84315;">🦁 {teacher_title}</span>
-                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: ______________________ | Date: ___/___/2026</span>
+                        <span style="font-size: 15px; font-weight: bold; color: #d84315;">🦁 English Worksheet</span>
+                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: _________________ | Date: ___/___/2026</span>
                     </div>
                     {note_str}
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-        elif "стильная" in print_style and is_max_tariff:
-            teacher_title = custom_print_teacher if custom_print_teacher else "English Worksheet"
-            note_str = f"<p style='margin:3px 0 0 0; color:#718096; font-size:12px;'>{custom_print_note}</p>" if custom_print_note else ""
+        elif "Взрослый" in print_style and is_max_tariff:
+            note_str = f"<p style='margin:4px 0 0 0; color:#2b6cb0; font-size:12px;'><b>Task:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
                 f"""
-                <div style="border-bottom: 2px solid #1a365d; padding: 12px 15px; margin-bottom: 20px; background: #ffffff; border-radius: 8px;">
+                <div style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <h3 style="margin:0; color:#1a365d; font-family:'Georgia', serif;">{teacher_title}</h3>
-                        <span style="font-size: 12px; color: #718096;">Name: ______________________ | Date: ___/___/2026</span>
+                        <h3 style="margin:0; color:#2b6cb0; font-family:'Georgia', serif;">Worksheet</h3>
+                        <span style="font-size: 12px; color: #718096;">Name: _________________ | Date: ___/___/2026</span>
                     </div>
                     {note_str}
                 </div>
@@ -1433,6 +1478,7 @@ if st.session_state.cards:
                 unsafe_allow_html=True
             )
 
+        # Вывод карточек для печати
         for card in st.session_state.cards:
             if "детская" in print_style and is_max_tariff:
                 print_html = f"""<div class="print-row-kids">
@@ -1444,6 +1490,19 @@ if st.session_state.cards:
     <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
     <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
     <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
+    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
+</div>
+</div>"""
+            elif "Взрослый" in print_style and is_max_tariff:
+                print_html = f"""<div class="print-row-premium">
+<div class="print-col-premium-left">
+    <span style="font-size:19px; font-weight:bold; font-family:'Georgia', serif; color:#1a365d;">{card.get('word', '')}</span>
+    <span style="font-size:12px; color:#4a5568; margin-top:4px;">{card.get('transcription', '')}</span>
+</div>
+<div class="print-col-premium-right">
+    <h4 style="color:#2b6cb0; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
+    <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
+    <p style="font-size: 12px; color:#2b6cb0; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
     <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
 </div>"""
