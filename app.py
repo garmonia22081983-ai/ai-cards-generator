@@ -19,6 +19,7 @@ import extra_streamlit_components as stx
 import time
 import tempfile
 import re
+import html
 import streamlit.components.v1 as components
 
 try:
@@ -196,11 +197,66 @@ def extract_youtube_id(url):
         return match.group(1) or match.group(2)
     return None
 
+def scrape_youtube_captions_fallback(video_id):
+    """Direct player scraping fallback if API is throttled or missing auto-captions."""
+    try:
+        url = f"https://www.youtube.com/watch?v={video_id}"
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+            'Accept-Language': 'en-US,en;q=0.9'
+        }
+        res = requests.get(url, headers=headers, timeout=10)
+        if res.status_code != 200:
+            return None
+        
+        match = re.search(r'ytInitialPlayerResponse\s*=\s*({.+?});(?:var|</script>)', res.text)
+        if not match:
+            match = re.search(r'ytInitialPlayerResponse\s*=\s*({.+?});', res.text)
+        if not match:
+            return None
+
+        player_data = json.loads(match.group(1))
+        captions = player_data.get('captions', {}).get('playerCaptionsTracklistRenderer', {}).get('captionTracks', [])
+        
+        if not captions:
+            return None
+        
+        target_track = None
+        for track in captions:
+            lang = track.get('languageCode', '')
+            if lang.startswith('en'):
+                target_track = track
+                break
+        if not target_track:
+            target_track = captions[0]
+            
+        base_url = target_track.get('baseUrl')
+        if not base_url:
+            return None
+            
+        xml_res = requests.get(base_url, headers=headers, timeout=10)
+        if xml_res.status_code == 200:
+            soup = BeautifulSoup(xml_res.text, 'xml')
+            text_elements = soup.find_all(['text', 'p', 's'])
+            if not text_elements:
+                soup = BeautifulSoup(xml_res.text, 'html.parser')
+                text_elements = soup.find_all('text')
+            
+            lines = [t.get_text() for t in text_elements if t.get_text().strip()]
+            extracted = " ".join(lines)
+            extracted = html.unescape(extracted)
+            if len(extracted.strip()) > 50:
+                return extracted
+    except Exception:
+        pass
+    return None
+
 def get_youtube_transcript(video_url):
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
 
+    # Tier 1: SupaData API (if configured)
     supa_key = st.secrets.get("SUPADATA_API_KEY", None)
     if supa_key:
         try:
@@ -216,20 +272,45 @@ def get_youtube_transcript(video_url):
         except Exception:
             pass
 
-    if not YouTubeTranscriptApi:
-        return "Не удалось автоматически извлечь субтитры: библиотека извлечения субтитров не установлена."
-    
-    try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
-        text = " ".join([item['text'] for item in transcript_list])
-        if not text.strip():
-            return "Не удалось автоматически извлечь субтитры: у видео отсутствуют или отключены английские субтитры."
-        return text
-    except Exception as e:
-        err_msg = str(e)
-        if "no element found" in err_msg or "xml" in err_msg.lower():
-            return "Не удалось автоматически извлечь субтитры: YouTube ограничил прямой доступ к субтитрам для этого видео или у видео отсутствуют английские субтитры."
-        return "Не удалось автоматически извлечь субтитры: у видео отсутствуют или отключены английские субтитры."
+    # Tier 2: YouTubeTranscriptApi with smart list_transcripts search
+    if YouTubeTranscriptApi:
+        try:
+            transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+            
+            # Try manual english
+            try:
+                t = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
+                data = t.fetch()
+                text = " ".join([item['text'] for item in data])
+                if text.strip(): return text
+            except Exception:
+                pass
+                
+            # Try auto-generated english
+            try:
+                t = transcript_list.find_generated_transcript(['en', 'en-US', 'en-GB'])
+                data = t.fetch()
+                text = " ".join([item['text'] for item in data])
+                if text.strip(): return text
+            except Exception:
+                pass
+                
+            # Fallback to direct fetch
+            try:
+                data = YouTubeTranscriptApi.get_transcript(video_id)
+                text = " ".join([item['text'] for item in data])
+                if text.strip(): return text
+            except Exception:
+                pass
+        except Exception:
+            pass
+
+    # Tier 3: Direct Web Scraper Fallback
+    scraped_text = scrape_youtube_captions_fallback(video_id)
+    if scraped_text:
+        return scraped_text
+
+    return "Не удалось автоматически извлечь субтитры: у видео отсутствуют английские субтитры или доступ к ним ограничен YouTube."
 
 def extract_text_from_url(url):
     try:
@@ -441,6 +522,7 @@ div[data-baseweb="popover"] [role="option"] {{
 summary::-webkit-details-marker {{ display: none !important; }}
 summary {{ list-style: none !important; }}
 
+/* Print styles */
 .print-row-bw {{
     display: flex;
     border: 1px dashed #718096;
@@ -1596,7 +1678,6 @@ if st.session_state.cards:
             st.link_button("👑 Перейти на тариф «Максимум»", "https://flashcards-ai.ru/#tarifs", type="primary")
             st.write("")
 
-        # Кнопка печати и сохранения в PDF
         components.html(
             """
             <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 16px; border: 1px solid #cbd5e0; border-radius: 10px; margin-bottom: 15px;">
@@ -1611,7 +1692,7 @@ if st.session_state.cards:
 
         name_display = student_name_input if student_name_input else "_________________"
         
-        # Шапка печатного листа
+        # Header formatting
         if "детская" in print_style.lower() and is_max_tariff:
             note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
@@ -1657,7 +1738,7 @@ if st.session_state.cards:
                 unsafe_allow_html=True
             )
 
-        # Вывод карточек для печати
+        # Cards print loop
         for card in st.session_state.cards:
             if "детская" in print_style.lower() and is_max_tariff:
                 print_html = f"""<div class="printable-content print-row-kids">
