@@ -252,9 +252,14 @@ css_template = """
 /* Убираем верхние отступы у основного контейнера и боковой панели */
 [data-testid="stMainBlockContainer"],
 .main .block-container,
-[data-testid="stSidebarContent"] {
-    padding-top: 0rem !important;
+[data-testid="stSidebarContent"],
+[data-testid="stSidebarUserContent"] {
+    padding-top: 0.2rem !important;
     margin-top: 0rem !important;
+}
+
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+    gap: 0.4rem !important;
 }
 
 html, body, [data-testid="stAppViewContainer"], .stApp {
@@ -306,7 +311,7 @@ div[data-baseweb="popover"] {
 div[data-baseweb="popover"] ul,
 div[data-baseweb="popover"] [data-baseweb="menu"],
 div[data-baseweb="popover"] [role="listbox"] {
-    max-height: 420px !important;
+    max-height: 220px !important;
     overflow-y: auto !important;
 }
 
@@ -948,15 +953,18 @@ if not st.session_state.user_email:
         )
     st.stop()
 
-st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
-if st.sidebar.button("Выйти из аккаунта"):
-    cookie_manager.delete("auth_email")
-    st.session_state.user_email = None
-    st.session_state.otp_sent = False
-    st.session_state.trial_expired = False
-    st.session_state.logout_requested = True
-    time.sleep(0.3)
-    st.rerun()
+c_side_top1, c_side_top2 = st.sidebar.columns([2.2, 1])
+with c_side_top1:
+    st.caption(f"👤 **{st.session_state.user_email}**")
+with c_side_top2:
+    if st.button("Выйти", key="sidebar_logout_btn"):
+        cookie_manager.delete("auth_email")
+        st.session_state.user_email = None
+        st.session_state.otp_sent = False
+        st.session_state.trial_expired = False
+        st.session_state.logout_requested = True
+        time.sleep(0.3)
+        st.rerun()
 
 st.title("🎴 Умный Генератор Двусторонних Карточек")
 st.write(f"👋 **Рада видеть вас, {st.session_state.get('user_name', 'Преподаватель')}!**")
