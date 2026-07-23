@@ -511,23 +511,41 @@ summary { list-style: none !important; }
 }
 
 @media print {
-    /* Скрываем интерфейс Streamlit при печати и экспорте в PDF */
+    /* Скрываем интерфейс Streamlit и элементы главной страницы при печати и экспорте в PDF */
     [data-testid="stSidebar"],
     header,
     footer,
+    [data-testid="stHeader"],
     .stButton,
     .stRadio,
     .stSelectbox,
     .stTextInput,
+    .stTextArea,
     .stExpander,
     .stAlert,
+    .stDataFrame,
+    [data-testid="stDataEditor"],
+    .tariff-box,
     iframe {
         display: none !important;
+    }
+
+    /* Скрываем все блоки главной страницы, не относящиеся к печатным карточкам */
+    .main .block-container > div > div:not(:has(.printable-content)) {
+        display: none !important;
+    }
+
+    [data-testid="stMainBlockContainer"],
+    .main .block-container {
+        padding-top: 0rem !important;
+        margin-top: 0rem !important;
     }
 
     body, html, [data-testid="stAppViewContainer"], .stApp {
         background-color: #ffffff !important;
         background-image: none !important;
+        padding: 0 !important;
+        margin: 0 !important;
     }
 
     * {
@@ -535,7 +553,7 @@ summary { list-style: none !important; }
         print-color-adjust: exact !important;
     }
 
-    .print-row-bw, .print-row-kids, .print-row-premium {
+    .printable-content {
         page-break-inside: avoid !important;
         break-inside: avoid !important;
     }
@@ -692,7 +710,7 @@ if student_deck_id:
 
         if student_mode == "🖨️ Версия для печати":
             for card in cards_data:
-                print_html = f"""<div class="print-row-bw">
+                print_html = f"""<div class="printable-content print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
@@ -1589,11 +1607,11 @@ if st.session_state.cards:
         )
 
         # Шапка печатного листа
-        if "детская" in print_style and is_max_tariff:
+        if "детская" in print_style.lower() and is_max_tariff:
             note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
                 f"""
-                <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
+                <div class="printable-content" style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
                     <div style="display: flex; justify-content: space-between; align-items: center;">
                         <span style="font-size: 16px; font-weight: bold; color: #d84315; display: flex; align-items: center; gap: 6px;">
                             <span>🎨 🦁</span> <span>English Worksheet</span>
@@ -1605,13 +1623,27 @@ if st.session_state.cards:
                 """,
                 unsafe_allow_html=True
             )
-        elif "Взрослый" in print_style and is_max_tariff:
+        elif "взрослый" in print_style.lower() and is_max_tariff:
             note_str = f"<p style='margin:4px 0 0 0; color:#2b6cb0; font-size:12px;'><b>Task:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
                 f"""
-                <div style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
+                <div class="printable-content" style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
                         <h3 style="margin:0; color:#2b6cb0; font-family:'Georgia', serif;">Worksheet</h3>
+                        <span style="font-size: 12px; color: #718096;">Name: _________________ | Date: ___/___/2026</span>
+                    </div>
+                    {note_str}
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+        else:
+            note_str = f"<p style='margin:4px 0 0 0; color:#2d3748; font-size:12px;'><b>Task:</b> {custom_print_note}</p>" if custom_print_note else ""
+            st.markdown(
+                f"""
+                <div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
+                        <h3 style="margin:0; color:#2d3748; font-family:'Georgia', serif;">Worksheet</h3>
                         <span style="font-size: 12px; color: #718096;">Name: _________________ | Date: ___/___/2026</span>
                     </div>
                     {note_str}
@@ -1622,8 +1654,8 @@ if st.session_state.cards:
 
         # Вывод карточек для печати
         for card in st.session_state.cards:
-            if "детская" in print_style and is_max_tariff:
-                print_html = f"""<div class="print-row-kids">
+            if "детская" in print_style.lower() and is_max_tariff:
+                print_html = f"""<div class="printable-content print-row-kids">
 <div class="print-col-kids-left">
     <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
     <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{card.get('transcription', '')}</span>
@@ -1635,8 +1667,8 @@ if st.session_state.cards:
     <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
 </div>"""
-            elif "Взрослый" in print_style and is_max_tariff:
-                print_html = f"""<div class="print-row-premium">
+            elif "взрослый" in print_style.lower() and is_max_tariff:
+                print_html = f"""<div class="printable-content print-row-premium">
 <div class="print-col-premium-left">
     <span style="font-size:19px; font-weight:bold; font-family:'Georgia', serif; color:#1a365d;">{card.get('word', '')}</span>
     <span style="font-size:12px; color:#4a5568; margin-top:4px;">{card.get('transcription', '')}</span>
@@ -1649,7 +1681,7 @@ if st.session_state.cards:
 </div>
 </div>"""
             else:
-                print_html = f"""<div class="print-row-bw">
+                print_html = f"""<div class="printable-content print-row-bw">
 <div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{card.get('transcription', '')}</span></div>
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
