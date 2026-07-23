@@ -26,7 +26,7 @@ try:
 except ImportError:
     YouTubeTranscriptApi = None
 
-# --- АДРЕС ПРИЛОЖЕНИЯ ---
+# --- АДРЕС ТВОЕГО ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 # --- СПИСОК EMAIL АДМИНИСТРАТОРОВ ---
@@ -91,7 +91,7 @@ def send_otp_email(target_email, code):
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
-# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ЛИМИТОВ ---
+# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА, ЛИМИТОВ И СРОКА ХРАНЕНИЯ КОЛОД ---
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
@@ -99,8 +99,8 @@ def get_user_tariff_and_usage(email, sh):
 
     tariff_name = "Пробный"
     max_cards = 45
-    retention_days = 7
-    period_start = datetime.now() - timedelta(days=3)
+    retention_days = 7  # Срок жизни ссылок и материалов по Пробному тарифу
+    period_start = datetime.now() - timedelta(days=3)  # Доступ к генерации — 3 дня
 
     try:
         payments_sheet = sh.worksheet("Payments")
@@ -129,11 +129,11 @@ def get_user_tariff_and_usage(email, sh):
             if "Максимум" in product_str or "1190" in str(found_payment):
                 tariff_name = "Максимум"
                 max_cards = 3000
-                retention_days = 999999
+                retention_days = 999999  # Вечный архив
             else:
                 tariff_name = "Практик"
                 max_cards = 300
-                retention_days = 60
+                retention_days = 60  # Увеличенный архив — 60 дней
         else:
             users_sheet = sh.worksheet("Users")
             u_rows = users_sheet.get_all_values()
@@ -176,7 +176,7 @@ def get_user_tariff_and_usage(email, sh):
     except Exception:
         return tariff_name, max_cards, 0, period_start, retention_days
 
-# --- ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
 def extract_youtube_id(url):
     pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
     match = re.search(pattern, url)
@@ -184,12 +184,14 @@ def extract_youtube_id(url):
         return match.group(1) or match.group(2)
     return None
 
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ЧЕРЕЗ SUPADATA API ---
 def get_youtube_transcript(video_url):
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
     supadata_key = st.secrets.get("SUPADATA_API_KEY", None)
+    
     if supadata_key:
         try:
             endpoint = f"https://api.supadata.ai/v1/youtube/transcript?videoId={video_id}&text=true"
@@ -215,8 +217,9 @@ def get_youtube_transcript(video_url):
         except Exception as e:
             return f"Не удалось извлечь субтитры: {e}."
             
-    return "Не удалось получить субтитры."
+    return "Не удалось получить субтитры. Попробуйте скачать аудио/видео фрагмент и загрузить его файлом."
 
+# --- СТИЛИ ПРИЛОЖЕНИЯ ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -232,46 +235,46 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f8f6f0 !important;"
 
-st.markdown("""
+st.markdown(f"""
 <style>
-html, body, [data-testid="stAppViewContainer"], .stApp {
+html, body, [data-testid="stAppViewContainer"], .stApp {{
+    {bg_css}
     background-size: cover !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
     color: #2d3748 !important;
-}
-.main .block-container {
+}}
+.main .block-container {{
     padding-top: 1.5rem !important;
     padding-bottom: 2rem !important;
-}
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {
+}}
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
-}
-[data-testid="stHeader"], header, [data-testid="stHeader"] > div {
+}}
+[data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
-}
+}}
 
-/* 1. СТОП ПРОЗРАЧНОСТИ: ДЕЛАЕМ КАРТОЧКУ АВТОРИЗАЦИИ БЕЛОЙ И ПЛОТНОЙ */
-div[data-testid="stVerticalBlockBorderWrapper"] {
+/* УЮТНАЯ И СТИЛЬНАЯ КАРТОЧКА АВТОРИЗАЦИИ В ТОН ПРИЛОЖЕНИЯ */
+div[data-testid="stVerticalBlockBorderWrapper"] {{
     background-color: #ffffff !important;
     background: #ffffff !important;
-    opacity: 1 !important;
-    border: 2px solid #94a3b8 !important;
-    border-radius: 20px !important;
-    padding: 40px 35px !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.1) !important;
-}
+    border: 1px solid #ebdcc5 !important;
+    border-radius: 16px !important;
+    padding: 30px !important;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04) !important;
+}}
 
-/* Сбрасываем серый фон у всех внутренних слоев контейнера */
-div[data-testid="stVerticalBlockBorderWrapper"] div {
+/* Убираем внутреннюю прозрачность контейнера */
+div[data-testid="stVerticalBlockBorderWrapper"] div {{
     background-color: transparent !important;
-}
+}}
 
 /* Главная синяя кнопка */
 button[kind="primary"], 
-button[data-testid="stBaseButton-primary"] {
+button[data-testid="stBaseButton-primary"] {{
     background-color: #2e6c9e !important;
     color: #ffffff !important;
     border: none !important;
@@ -279,7 +282,7 @@ button[data-testid="stBaseButton-primary"] {
     font-weight: bold !important;
     font-size: 15px !important;
     width: 100% !important;
-}
+}}
 
 /* БЕЛЫЙ ТЕКСТ И ИКОНКИ НА КНОПКЕ */
 button[kind="primary"] *, 
@@ -287,45 +290,45 @@ button[data-testid="stBaseButton-primary"] *,
 button[kind="primary"] p,
 button[data-testid="stBaseButton-primary"] p,
 button[kind="primary"] span,
-button[data-testid="stBaseButton-primary"] span {
+button[data-testid="stBaseButton-primary"] span {{
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
-}
+}}
 
 button[kind="primary"]:hover, 
-button[data-testid="stBaseButton-primary"]:hover {
+button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
-}
+}}
 
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {
+[data-baseweb="select"] > div {{
     background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
-}
+}}
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
     background-color: #f4efe6 !important;
     background-image: none !important;
-}
-.tariff-box {
+}}
+.tariff-box {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-}
+}}
 /* Интерактивные карточки */
-.card-front {
+.card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
@@ -338,22 +341,22 @@ input, textarea, select,
     justify-content: center;
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
-}
-.card-front-title {
+}}
+.card-front-title {{
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
-}
-.card-front-subtitle {
+}}
+.card-front-subtitle {{
     font-size: 10px;
     color: #704b4b !important;
     margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-}
-.card-back {
+}}
+.card-back {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
@@ -364,18 +367,18 @@ input, textarea, select,
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
-}
-summary::-webkit-details-marker { display: none !important; }
-summary { list-style: none !important; }
+}}
+summary::-webkit-details-marker {{ display: none !important; }}
+summary {{ list-style: none !important; }}
 /* Стили печатных карточек */
-.print-row-bw {
+.print-row-bw {{
     display: flex;
     border: 1px dashed #ccc;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
-}
-.print-row-kids {
+}}
+.print-row-kids {{
     display: flex;
     border: 2px solid #ffb74d;
     border-radius: 12px;
@@ -383,8 +386,8 @@ summary { list-style: none !important; }
     page-break-inside: avoid;
     background-color: #ffffff;
     overflow: hidden;
-}
-.print-col-kids-left {
+}}
+.print-col-kids-left {{
     width: 45%;
     padding: 15px;
     background-color: #ffe0b2;
@@ -394,14 +397,14 @@ summary { list-style: none !important; }
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}
-.print-col-kids-right {
+}}
+.print-col-kids-right {{
     width: 55%;
     padding: 15px;
     background-color: #ffffff;
-}
-.print-col { width: 50%; padding: 15px; box-sizing: border-box; }
-.print-left {
+}}
+.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
+.print-left {{
     border-right: 1px dashed #ccc;
     text-align: center;
     font-weight: bold;
@@ -411,7 +414,7 @@ summary { list-style: none !important; }
     justify-content: center;
     font-family: 'Georgia', serif;
     color: #1a365d;
-}
+}}
 </style>
 """, unsafe_allow_html=True)
 
@@ -629,7 +632,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-# --- БЛОК АВТОРИЗАЦИИ (БЕЛАЯ ПЛАШКА С РАМКОЙ КАК НА МАКЕТЕ) ---
+# --- БЛОК АВТОРИЗАЦИИ ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
