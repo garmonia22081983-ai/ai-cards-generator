@@ -20,6 +20,7 @@ import time
 import tempfile
 import re
 import html
+import wave
 import streamlit.components.v1 as components
 
 try:
@@ -169,7 +170,6 @@ def get_user_tariff_and_usage(email, sh):
         used_cards = 0
         for r in req_rows[1:]:
             if len(r) > 1 and r[1].strip().lower() == email.lower():
-                #                # Smart timestamp detection (check col 7 first, then col 6 or 8)
                 raw_req_d = ""
                 for col_idx in (6, 7, 5, 8):
                     if len(r) > col_idx and any(c.isdigit() for c in r[col_idx]):
@@ -186,7 +186,6 @@ def get_user_tariff_and_usage(email, sh):
                 
                 if req_d and req_d >= filter_start:
                     try:
-                        # Smart card count detection (find integer column in range E-F)
                         card_val = "0"
                         if len(r) > 4 and r[4].strip().isdigit():
                             card_val = r[4].strip()
@@ -269,22 +268,33 @@ def get_youtube_transcript(video_url):
     supa_key = st.secrets.get("SUPADATA_API_KEY", None)
     if supa_key:
         try:
-            supa_url = f"https://api.supadata.ai/v1/youtube/transcript?videoId={video_id}&text=true"
+            full_yt_url = f"https://www.youtube.com/watch?v={video_id}"
+            supa_url = f"https://api.supadata.ai/v1/transcript?url={urllib.parse.quote(full_yt_url)}&text=true"
             headers = {"x-api-key": supa_key}
-            res = requests.get(supa_url, headers=headers, timeout=10)
-            if res.status_code == 200:
+            res = requests.get(supa_url, headers=headers, timeout=15)
+            
+            if res.status_code in (200, 201):
                 data = res.json()
-                if isinstance(data, dict) and "content" in data and data["content"]:
-                    return data["content"]
+                if isinstance(data, dict):
+                    if "content" in data and data["content"]:
+                        return data["content"]
+                    elif "text" in data and data["text"]:
+                        return data["text"]
                 elif isinstance(data, list):
                     return " ".join([item.get("text", "") for item in data])
+            elif res.status_code == 202:
+                time.sleep(3)
+                res_async = requests.get(supa_url, headers=headers, timeout=15)
+                if res_async.status_code == 200:
+                    data = res_async.json()
+                    if isinstance(data, dict) and "content" in data:
+                        return data["content"]
         except Exception:
             pass
 
     if YouTubeTranscriptApi:
         try:
             transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
-            
             try:
                 t = transcript_list.find_transcript(['en', 'en-US', 'en-GB'])
                 data = t.fetch()
@@ -296,13 +306,6 @@ def get_youtube_transcript(video_url):
             try:
                 t = transcript_list.find_generated_transcript(['en', 'en-US', 'en-GB'])
                 data = t.fetch()
-                text = " ".join([item['text'] for item in data])
-                if text.strip(): return text
-            except Exception:
-                pass
-                
-            try:
-                data = YouTubeTranscriptApi.get_transcript(video_id)
                 text = " ".join([item['text'] for item in data])
                 if text.strip(): return text
             except Exception:
@@ -330,6 +333,61 @@ def extract_text_from_url(url):
         return f"Ошибка загрузки сайта: Статус {response.status_code}"
     except Exception as e:
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
+
+def get_media_duration(file_path):
+    """
+    Calculates the exact duration in seconds for uploaded MP4, MP3, WAV, M4A, MOV files.
+    """
+    # 1. Mutagen library check
+    try:
+        import mutagen
+        media = mutagen.File(file_path)
+        if media is not None and hasattr(media, 'info') and hasattr(media.info, 'length'):
+            return float(media.info.length)
+    except Exception:
+        pass
+
+    # 2. MoviePy library check
+    try:
+        from moviepy.editor import VideoFileClip
+        clip = VideoFileClip(file_path)
+        dur = float(clip.duration)
+        clip.close()
+        return dur
+    except Exception:
+        pass
+
+    # 3. Standard Wave library check (for WAV files)
+    try:
+        with wave.open(file_path, 'rb') as wf:
+            frames = wf.getnframes()
+            rate = wf.getframerate()
+            if rate > 0:
+                return frames / float(rate)
+    except Exception:
+        pass
+
+    # 4. Pure Python MP4 / MOV header duration parser (mvhd atom inspection)
+    try:
+        with open(file_path, 'rb') as f:
+            header = f.read(3 * 1024 * 1024)
+            idx = header.find(b'mvhd')
+            if idx != -1:
+                version = header[idx + 8]
+                if version == 0 and len(header) >= idx + 28:
+                    timescale = int.from_bytes(header[idx+20:idx+24], 'big')
+                    duration = int.from_bytes(header[idx+24:idx+28], 'big')
+                    if timescale > 0 and duration > 0:
+                        return duration / float(timescale)
+                elif version == 1 and len(header) >= idx + 40:
+                    timescale = int.from_bytes(header[idx+28:idx+32], 'big')
+                    duration = int.from_bytes(header[idx+32:idx+40], 'big')
+                    if timescale > 0 and duration > 0:
+                        return duration / float(timescale)
+    except Exception:
+        pass
+
+    return None
 
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
@@ -457,10 +515,6 @@ div[data-baseweb="popover"] [role="option"] {{
     padding-top: 5px !important;
     padding-bottom: 5px !important;
     font-size: 13px !important;
-}}
-
-.stButton > button[kind="primary"] {{
-    color: #ffffff !important;
 }}
 
 [data-testid="stSidebar"], 
@@ -667,13 +721,13 @@ summary {{ list-style: none !important; }}
 st.markdown(css_template, unsafe_allow_html=True)
 
 def get_card_transcription(card, accent_choice):
-    if "US" in accent_choice:
+    if "US" in str(accent_choice):
         return card.get('transcription_us', card.get('transcription', ''))
     else:
         return card.get('transcription_uk', card.get('transcription', ''))
 
 def get_card_explanation(card, def_lang_choice):
-    if "русском" in def_lang_choice.lower():
+    if "русском" in str(def_lang_choice).lower():
         return card.get('explanation_ru', card.get('explanation', ''))
     else:
         return card.get('explanation_en', card.get('explanation', ''))
@@ -1497,12 +1551,24 @@ if generate_click:
                     st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
                     st.stop()
                     
-                file_ext = os.path.splitext(uploaded_file_obj.name)[1]
+                file_ext = os.path.splitext(uploaded_file_obj.name)[1].lower()
                 source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(uploaded_file_obj.size/1024/1024, 1)} MB)"
                 
                 with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
                     tmp.write(uploaded_file_obj.read())
                     temp_file_path = tmp.name
+                
+                # Check media duration (5 minutes = 300 seconds limit)
+                duration_sec = get_media_duration(temp_file_path)
+                if duration_sec and duration_sec > 300:
+                    dur_min = int(duration_sec // 60)
+                    dur_rem_sec = int(duration_sec % 60)
+                    st.error(f"🛑 **Длительность файла слишком большая: {dur_min} мин {dur_rem_sec} сек.**")
+                    st.info("Максимально допустимая длина файла — **5 минут**. Пожалуйста, обрежьте видео/аудио и загрузите фрагмент заново.")
+                    if temp_file_path and os.path.exists(temp_file_path):
+                        try: os.remove(temp_file_path)
+                        except Exception: pass
+                    st.stop()
                     
                 gemini_uploaded_file = genai.upload_file(path=temp_file_path)
 
@@ -1581,7 +1647,7 @@ if generate_click:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
                         
-                        #                        requests_sheet = sh_global.worksheet("Requests")
+                        requests_sheet = sh_global.worksheet("Requests")
                         # Column Order: ID (A), UserEmail (B), SourceText (C), Level (D), NumCards (E), Status (F), Timestamp (G), source_type (H), source_url (I)
                         requests_sheet.append_row([
                             request_id, 
@@ -1633,7 +1699,6 @@ if st.session_state.cards:
         
         df_edit = pd.DataFrame(st.session_state.cards)
         
-        # Normalize fields for table editing
         if "transcription_us" not in df_edit.columns:
             df_edit["transcription_us"] = df_edit.get("transcription", "")
         if "transcription_uk" not in df_edit.columns:
@@ -1681,7 +1746,7 @@ if st.session_state.cards:
                 decks_sheet = sh_global.worksheet("Decks")
                 new_deck_id = f"deck-{int(datetime.now().timestamp())}"
                 cards_json_str = json.dumps(st.session_state.cards, ensure_ascii=False)
-                now_str = datetime.now().strftime("%Y-%m-%d %Y-%m-%d %H:%M:%S")
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                 
                 decks_sheet.append_row([
                     new_deck_id,
