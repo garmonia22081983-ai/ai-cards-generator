@@ -20,7 +20,6 @@ import time
 import tempfile
 import re
 
-# Библиотека субтитров YouTube (резервный импорт)
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
@@ -50,7 +49,6 @@ api_key = st.secrets["GEMINI_API_KEY"]
 genai.configure(api_key=api_key)
 
 
-# --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К GOOGLE ТАБЛИЦАМ ---
 def get_gsheets_client():
     """Подключение к Google Таблицам с использованием сервисного аккаунта."""
     scopes = [
@@ -62,7 +60,6 @@ def get_gsheets_client():
     return gspread.authorize(creds)
 
 
-# --- ФУНКЦИЯ ОТПРАВКИ ОДНОРАЗОВОГО КОДА НА EMAIL ---
 def send_otp_email(target_email, code):
     """Отправка одноразового кода авторизации на email через SMTP."""
     try:
@@ -96,7 +93,6 @@ def send_otp_email(target_email, code):
         return False
 
 
-# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ПОДСЧЕТА ЛИМИТОВ ---
 def get_user_tariff_and_usage(email, sh):
     """Определение текущего тарифа пользователя и подсчет использованных карточек."""
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
@@ -180,7 +176,6 @@ def get_user_tariff_and_usage(email, sh):
         return tariff_name, max_cards, 0, period_start
 
 
-# --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE ID ---
 def extract_youtube_id(url):
     """Извлечение ID видео из ссылки YouTube."""
     pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
@@ -190,7 +185,6 @@ def extract_youtube_id(url):
     return None
 
 
-# --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ YOUTUBE ЧЕРЕЗ SUPADATA API ---
 def get_youtube_transcript(video_url):
     """Извлечение субтитров YouTube через защищенный сервис SupaData API."""
     supadata_key = st.secrets.get("SUPADATA_API_KEY", "")
@@ -257,9 +251,9 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     padding-top: 1.5rem !important;
 }}
 
-/* Четкая белоснежная 100% непрозрачная плашка авторизации с контрастной рамкой и глубокой тенью */
+/* Четкая белоснежная 100% непрозрачная плашка авторизации с контрастной синей рамкой и глубокой тенью */
 [data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stContainer"] {
+[data-testid="stContainer"] {{
     background-color: #ffffff !important;
     background: #ffffff !important;
     border: 2px solid #2563eb !important;
@@ -268,7 +262,7 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     margin-top: 10px !important;
     opacity: 1 !important;
-}
+}}
 
 /* Синяя кнопка входа с ярким белоснежным текстом */
 .stButton > button[kind="primary"] {{
@@ -421,9 +415,6 @@ summary {{ list-style: none !important; }}
 """, unsafe_allow_html=True)
 
 
-# ==============================================================================
-# 🎓 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id)
-# ==============================================================================
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -611,9 +602,6 @@ if student_deck_id:
     st.stop()
 
 
-# ==============================================================================
-# 👩‍🏫 2. ИНТЕРФЕЙС УЧИТЕЛЯ (АВТОРИЗАЦИЯ, ГЕНЕРАЦИЯ, СОХРАНЕНИЕ)
-# ==============================================================================
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -630,7 +618,6 @@ if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
 
 
-# --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 saved_email = cookie_manager.get(cookie="auth_email")
 
 if not saved_email:
@@ -715,7 +702,7 @@ if not st.session_state.user_email:
                 st.write("**Ваш Email:**")
                 email_input = st.text_input("", placeholder="example@gmail.com", label_visibility="collapsed")
                 
-                # Дополнительный отступ перед кнопкой, чтобы она не прилипала к полю ввода
+                # Дополнительный отступ перед кнопкой
                 st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
                 
                 if st.button("Получить код входа", type="primary", use_container_width=True):
@@ -855,7 +842,6 @@ if not st.session_state.user_email:
     st.stop()
 
 
-# --- КНОПКА ВЫХОДА И СПИСОК КОЛОД В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
     cookie_manager.delete("auth_email")
@@ -891,13 +877,10 @@ def extract_text_from_url(url):
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
 
-# --- ЗАГРУЗКА ДАННЫХ О ТАРИФЕ И ЛИМИТАХ ---
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
-
-# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
@@ -972,7 +955,6 @@ with st.sidebar:
             st.caption("Не удалось загрузить список колод.")
 
 
-# --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
 is_expired = st.session_state.get("trial_expired", False)
 is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
 
@@ -989,7 +971,6 @@ elif is_limit_reached:
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
 
-# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1228,7 +1209,6 @@ if st.session_state.cards:
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
 
-    # --- БЛОК СОХРАНЕНИЯ КОЛОДЫ ---
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
     col_save1, col_save2 = st.columns([2, 1])
     with col_save1:
@@ -1263,7 +1243,6 @@ if st.session_state.cards:
 
     st.write("---")
 
-    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ ---
     col_exp1, col_exp2 = st.columns(2)
     
     with col_exp1:
@@ -1288,7 +1267,6 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
-    # --- НАСТРОЙКИ ПЕЧАТИ ---
     is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
     custom_print_teacher = ""
     custom_print_note = ""
