@@ -259,16 +259,16 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
 
 /* Четкая белоснежная 100% непрозрачная плашка авторизации с контрастной рамкой и глубокой тенью */
 [data-testid="stVerticalBlockBorderWrapper"],
-[data-testid="stContainer"] {{
+[data-testid="stContainer"] {
     background-color: #ffffff !important;
     background: #ffffff !important;
-    border: 1px solid #d1d5db !important;
+    border: 2px solid #2563eb !important;
     border-radius: 24px !important;
-    padding: 38px 32px !important;
+    padding: 38px 32px 42px 32px !important;
     box-shadow: 0 20px 45px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08) !important;
     margin-top: 10px !important;
     opacity: 1 !important;
-}}
+}
 
 /* Синяя кнопка входа с ярким белоснежным текстом */
 .stButton > button[kind="primary"] {{
@@ -715,6 +715,9 @@ if not st.session_state.user_email:
                 st.write("**Ваш Email:**")
                 email_input = st.text_input("", placeholder="example@gmail.com", label_visibility="collapsed")
                 
+                # Дополнительный отступ перед кнопкой, чтобы она не прилипала к полю ввода
+                st.markdown("<div style='margin-top: 16px;'></div>", unsafe_allow_html=True)
+                
                 if st.button("Получить код входа", type="primary", use_container_width=True):
                     if "@" not in email_input or "." not in email_input:
                         st.error("Пожалуйста, введите корректный адрес почты.")
@@ -841,7 +844,7 @@ if not st.session_state.user_email:
 
             st.markdown(
                 """
-                <div style="margin-top: 22px; text-align: center;">
+                <div style="margin-top: 26px; margin-bottom: 12px; text-align: center;">
                     <small style="color: #64748b; font-size: 13px;">
                     Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2563eb; text-decoration: underline;">Политику конфиденциальности</a>.
                     </small>
