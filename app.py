@@ -20,6 +20,12 @@ import time
 import tempfile
 import re
 
+# Импортируем библиотеку субтитров YouTube через SupaData API
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except ImportError:
+    YouTubeTranscriptApi = None
+
 # --- АДРЕС ПРИЛОЖЕНИЯ (БЕЗ СЛЭША НА КОНЦЕ) ---
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
@@ -173,6 +179,15 @@ def get_user_tariff_and_usage(email, sh):
         return tariff_name, max_cards, 0, period_start
 
 
+def extract_youtube_id(url):
+    """Извлечение ID видео из ссылки YouTube."""
+    pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
+    match = re.search(pattern, url)
+    if match:
+        return match.group(1) or match.group(2)
+    return None
+
+
 def get_youtube_transcript(video_url):
     """Извлечение субтитров YouTube через внешний защищенный сервис SupaData API."""
     supadata_key = st.secrets.get("SUPADATA_API_KEY", "")
@@ -234,19 +249,20 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
+/* Карточка авторизации */
 .auth-container {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    padding: 30px 25px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    border-radius: 20px;
+    padding: 35px 30px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.04);
     margin-top: 20px;
     margin-bottom: 20px;
 }}
 
 .auth-header {{
     text-align: center;
-    margin-bottom: 20px;
+    margin-bottom: 25px;
 }}
 
 input, textarea, select, 
@@ -278,6 +294,7 @@ input, textarea, select,
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
 }}
 
+/* Интерактивные карточки */
 .card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
@@ -325,6 +342,7 @@ input, textarea, select,
 summary::-webkit-details-marker {{ display: none !important; }}
 summary {{ list-style: none !important; }}
 
+/* Стили печатных карточек */
 .print-row-bw {{
     display: flex;
     border: 1px dashed #ccc;
@@ -653,16 +671,17 @@ if not st.session_state.user_email:
             """
             <div class="auth-container">
                 <div class="auth-header">
-                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
+                    <div style="font-size: 38px; margin-bottom: 8px;">🎓</div>
+                    <h2 style="margin: 0 0 5px 0; color: #1a365d; font-size: 26px; font-weight: bold;">Flashcards AI</h2>
+                    <p style="color: #718096; font-size: 13px; margin-top: 0;">Умный генератор карточек для преподавателей</p>
                 </div>
             """, 
             unsafe_allow_html=True
         )
         
         if not st.session_state.otp_sent:
-            st.write("**Вход в Личный Кабинет**")
-            email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
+            st.write("**Ваш Email:**")
+            email_input = st.text_input("", placeholder="example@gmail.com", label_visibility="collapsed")
             
             if st.button("Получить код входа", type="primary", use_container_width=True):
                 if "@" not in email_input or "." not in email_input:
