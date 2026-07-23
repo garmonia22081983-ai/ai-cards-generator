@@ -979,17 +979,20 @@ if not st.session_state.user_email:
                     st.error("Неверный код.")
                     
             if st.button("Ввести другой Email", use_container_width=True):
-                        st.markdown(
-                            """
-                            <div style="margin-top: 20px; text-align: center;">
-                                <small style="color: #718096;">
-                                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
-                                </small>
-                            </div>
-                            """, 
-                            unsafe_allow_html=True
-                        )
-                    st.stop()
+                st.session_state.otp_sent = False
+                st.rerun()
+
+        st.markdown(
+            """
+            <div style="margin-top: 20px; text-align: center;">
+                <small style="color: #718096;">
+                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                </small>
+            </div>
+            """, 
+            unsafe_allow_html=True
+        )
+        st.stop()
 
 # Компактный блок пользователя в самой верхней части боковой панели
 with st.sidebar:
