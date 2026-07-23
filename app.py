@@ -257,19 +257,20 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
-/* УЮТНАЯ И СТИЛЬНАЯ КАРТОЧКА АВТОРИЗАЦИИ В ТОН ПРИЛОЖЕНИЯ */
-div[data-testid="stVerticalBlockBorderWrapper"] {{
+/* 100% ПЛОТНАЯ БЕЛАЯ КАРТОЧКА АВТОРИЗАЦИИ БЕЗ СЕРОЙ ПРОЗРАЧНОСТИ */
+[data-testid="stVerticalBlockBorderWrapper"],
+[data-testid="stVerticalBlockBorderWrapper"] div,
+[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] {{
     background-color: #ffffff !important;
     background: #ffffff !important;
+    opacity: 1 !important;
+}}
+
+[data-testid="stVerticalBlockBorderWrapper"] {{
     border: 1px solid #ebdcc5 !important;
     border-radius: 16px !important;
     padding: 30px !important;
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.04) !important;
-}}
-
-/* Убираем внутреннюю прозрачность контейнера */
-div[data-testid="stVerticalBlockBorderWrapper"] div {{
-    background-color: transparent !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06) !important;
 }}
 
 /* Главная синяя кнопка */
