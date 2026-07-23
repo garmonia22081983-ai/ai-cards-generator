@@ -1167,7 +1167,7 @@ with col_stats:
         f"""
         <div class="tariff-box">
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin:0; font-size:16px; color:#1e293b;">📊 Ваш лимит</h3>
+                <h3 style="margin:0; font-size:16px; color:#1e293b;">📊 Ваш тариф</h3>
                 <span style="background-color: {badge_bg}; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">
                     {tariff_name.upper()}
                 </span>
