@@ -221,7 +221,7 @@ def get_youtube_transcript(video_url):
             
     return "Не удалось получить субтитры. Попробуйте скачать аудио/видео фрагмент и загрузить его файлом."
 
-# --- СТИЛИ ПРИЛОЖЕНИЯ (ТОЧНАЯ СТИЛИЗАЦИЯ КАРТОЧКИ АВТОРИЗАЦИИ) ---
+# --- СТИЛИ ПРИЛОЖЕНИЯ ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
         data = f.read()
@@ -260,6 +260,16 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
+/* СТИЛИЗАЦИЯ ЕДИНОЙ БЕЛОЙ КАРТОЧКИ АВТОРИЗАЦИИ */
+.auth-container {{
+    background-color: #ffffff !important;
+    border: 1px solid #ebdcc5 !important;
+    border-radius: 16px !important;
+    padding: 30px !important;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.06) !important;
+    margin-top: 20px !important;
+}}
+
 /* Главная синяя кнопка */
 button[kind="primary"], 
 button[data-testid="stBaseButton-primary"] {{
@@ -286,16 +296,6 @@ button[kind="primary"]:hover,
 button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
-}}
-
-/* ПЛОТНАЯ БЕЛОСНЕЖНАЯ КАРТОЧКА АВТОРИЗАЦИИ */
-.auth-white-card {{
-    background-color: #ffffff !important;
-    background: #ffffff !important;
-    border: 1px solid #ebdcc5 !important;
-    border-radius: 16px !important;
-    padding: 30px !important;
-    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.08) !important;
 }}
 
 input, textarea, select, 
@@ -629,11 +629,13 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-# --- БЛОК АВТОРИЗАЦИИ (БЕЛАЯ НЕПРОЗРАЧНАЯ ПЛАШКА) ---
+# --- БЛОК АВТОРИЗАЦИИ (ЕДИНАЯ БЕЛАЯ КАРТОЧКА) ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
-        st.markdown('<div class="auth-white-card">', unsafe_allow_html=True)
+        # Открываем единую белую плашку
+        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
+        
         st.markdown(
             """
             <div style="text-align: center; margin-bottom: 22px;">
@@ -809,6 +811,7 @@ if not st.session_state.user_email:
                 st.session_state.generated_otp = None
                 st.session_state.pending_email = None
                 st.rerun()
+                
         st.markdown(
             """
             <div style="margin-top: 18px; text-align: center;">
@@ -819,6 +822,8 @@ if not st.session_state.user_email:
             """, 
             unsafe_allow_html=True
         )
+        
+        # Закрываем белую карточку
         st.markdown('</div>', unsafe_allow_html=True)
     st.stop()
 
