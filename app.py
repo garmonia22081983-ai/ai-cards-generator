@@ -905,13 +905,7 @@ with col_main:
         disabled=button_disabled
     )
     st.markdown('</div>', unsafe_allow_html=True)
-        generate_click = st.button(
-        "Создать карточки ✨", 
-        type="primary", 
-        disabled=button_disabled
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
+    
 with col_stats:
     st.markdown(
         f"""
