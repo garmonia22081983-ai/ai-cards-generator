@@ -80,17 +80,21 @@ def send_otp_email(target_email, code):
     except Exception as e:
         st.error(f"Ошибка отправки письма: {e}")
         return False
-# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА И ПОДСЧЕТА ИСПОЛЬЗОВАННЫХ КАРТОЧЕК ---
+# --- ФУНКЦИЯ ОПРЕДЕЛЕНИЯ ТАРИФА, ЛИМИТОВ И СРОКА ХРАНЕНИЯ КОЛОД ---
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
-        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365)
+        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365), 999999
+
     tariff_name = "Пробный"
     max_cards = 45
-    period_start = datetime.now() - timedelta(days=3)
+    retention_days = 7  # Срок жизни ссылок и материалов по Пробному тарифу
+    period_start = datetime.now() - timedelta(days=3)  # Доступ к генерации — 3 дня
+
     try:
         payments_sheet = sh.worksheet("Payments")
         payments_rows = payments_sheet.get_all_values()
+
         found_payment = None
         for p_row in reversed(payments_rows[1:]):
             if len(p_row) > 1 and p_row[1].strip().lower() == email.lower():
@@ -99,6 +103,7 @@ def get_user_tariff_and_usage(email, sh):
                 if product_name or price_val:
                     found_payment = p_row
                     break
+
         if found_payment:
             product_str = found_payment[5].strip() if len(found_payment) > 5 else ""
             raw_d = found_payment[11].strip() if len(found_payment) > 11 else ""
@@ -109,12 +114,15 @@ def get_user_tariff_and_usage(email, sh):
                     break
                 except ValueError:
                     continue
+
             if "Максимум" in product_str or "1190" in str(found_payment):
                 tariff_name = "Максимум"
                 max_cards = 3000
+                retention_days = 999999  # Вечный архив
             else:
                 tariff_name = "Практик"
                 max_cards = 300
+                retention_days = 60  # Увеличенный архив — 60 дней
         else:
             users_sheet = sh.worksheet("Users")
             u_rows = users_sheet.get_all_values()
@@ -128,6 +136,7 @@ def get_user_tariff_and_usage(email, sh):
                         except ValueError:
                             continue
                     break
+
         filter_start = period_start - timedelta(days=1)
         requests_sheet = sh.worksheet("Requests")
         req_rows = requests_sheet.get_all_values()
@@ -150,9 +159,12 @@ def get_user_tariff_and_usage(email, sh):
                         used_cards += int(card_val)
                     except ValueError:
                         pass
-        return tariff_name, max_cards, used_cards, period_start
+
+        return tariff_name, max_cards, used_cards, period_start, retention_days
+
     except Exception:
-        return tariff_name, max_cards, 0, period_start
+        return tariff_name, max_cards, 0, period_start, retention_days
+        
 # --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
 def extract_youtube_id(url):
     pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
