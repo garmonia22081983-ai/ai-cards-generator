@@ -303,8 +303,10 @@ div[data-baseweb="popover"] {
     z-index: 999999 !important;
 }
 
-div[data-baseweb="popover"] ul {
-    max-height: 320px !important;
+div[data-baseweb="popover"] ul,
+div[data-baseweb="popover"] [data-baseweb="menu"],
+div[data-baseweb="popover"] [role="listbox"] {
+    max-height: 420px !important;
     overflow-y: auto !important;
 }
 
