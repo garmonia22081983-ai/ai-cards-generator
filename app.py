@@ -207,6 +207,19 @@ else:
 
 st.markdown(f"""
 <style>
+/* Полностью убираем системную верхнюю шапку Streamlit */
+[data-testid="stHeader"], header {{
+    display: none !important;
+}}
+
+/* Убираем верхние отступы у основного контейнера и боковой панели */
+[data-testid="stMainBlockContainer"],
+.main .block-container,
+[data-testid="stSidebarContent"] {{
+    padding-top: 0rem !important;
+    margin-top: 0rem !important;
+}}
+
 html, body, [data-testid="stAppViewContainer"], .stApp {{
     {bg_css}
     background-size: cover !important;
