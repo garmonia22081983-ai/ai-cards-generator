@@ -307,10 +307,11 @@ div[data-baseweb="popover"] {{
     z-index: 999999 !important;
 }}
 
+div[data-baseweb="popover"] > div,
 div[data-baseweb="popover"] ul,
 div[data-baseweb="popover"] [data-baseweb="menu"],
 div[data-baseweb="popover"] [role="listbox"] {{
-    max-height: 220px !important;
+    max-height: 400px !important;
     overflow-y: auto !important;
 }}
 
