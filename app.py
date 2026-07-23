@@ -901,20 +901,25 @@ with col_main:
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
 
-    # Локальный стиль для оранжевой кнопки генератора
+    # Точный стиль, перебивающий синий цвет Streamlit
     st.markdown("""
         <style>
-        .orange-gen-btn button {
+        div.orange-gen-btn button[kind="primary"],
+        div.orange-gen-btn button[data-testid="stBaseButton-primary"],
+        div.orange-gen-btn button {
             background-color: #e67e22 !important;
+            border-color: #e67e22 !important;
             color: #ffffff !important;
-            border: none !important;
             border-radius: 8px !important;
             font-weight: bold !important;
             font-size: 16px !important;
             width: 100% !important;
         }
-        .orange-gen-btn button:hover {
+        div.orange-gen-btn button[kind="primary"]:hover,
+        div.orange-gen-btn button[data-testid="stBaseButton-primary"]:hover,
+        div.orange-gen-btn button:hover {
             background-color: #d35400 !important;
+            border-color: #d35400 !important;
         }
         </style>
     """, unsafe_allow_html=True)
