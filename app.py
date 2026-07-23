@@ -19,6 +19,7 @@ import extra_streamlit_components as stx
 import time
 import tempfile
 import re
+import streamlit.components.v1 as components
 
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
@@ -48,7 +49,6 @@ def get_gsheets_client():
     ]
     creds_dict = None
     
-    # Check st.secrets
     sec_keys = ["GOOGLE_APPLICATION_CREDENTIALS", "gcp_service_account"]
     for sec_key in sec_keys:
         if sec_key in st.secrets:
@@ -74,7 +74,7 @@ def get_gsheets_client():
         credentials = Credentials.from_service_account_file("credentials.json", scopes=scopes)
         return gspread.authorize(credentials)
 
-    st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам! Добавьте секрет GOOGLE_APPLICATION_CREDENTIALS в настройки Streamlit Secrets.")
+    st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам!")
     st.stop()
 
 def send_otp_email(target_email, otp_code):
@@ -93,7 +93,7 @@ def send_otp_email(target_email, otp_code):
                 <div style="background-color: #edf2f7; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #2563eb; width: 200px; margin: 15px 0;">
                     {otp_code}
                 </div>
-                <p style="font-size: 12px; color: #718096;">Код действителен в течение 10 минут. Если вы не запрашивали вход, просто проигнорируйте это письмо.</p>
+                <p style="font-size: 12px; color: #718096;">Код действителен в течение 10 минут.</p>
             </body>
         </html>
         """
@@ -217,14 +217,34 @@ def get_youtube_transcript(video_url):
             pass
 
     if not YouTubeTranscriptApi:
-        return "Ошибка: Не удалось загрузить субтитры через SupaData, а резервная библиотека youtube-transcript-api не установлена."
+        return "Не удалось автоматически извлечь субтитры: библиотека извлечения субтитров не установлена."
     
     try:
         transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
         text = " ".join([item['text'] for item in transcript_list])
+        if not text.strip():
+            return "Не удалось автоматически извлечь субтитры: у видео отсутствуют или отключены английские субтитры."
         return text
     except Exception as e:
-        return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, у видео отключены субтитры."
+        err_msg = str(e)
+        if "no element found" in err_msg or "xml" in err_msg.lower():
+            return "Не удалось автоматически извлечь субтитры: YouTube ограничил прямой доступ к субтитрам для этого видео или у видео отсутствуют английские субтитры."
+        return "Не удалось автоматически извлечь субтитры: у видео отсутствуют или отключены английские субтитры."
+
+def extract_text_from_url(url):
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
+        response = requests.get(url, headers=headers, timeout=10)
+        if response.status_code == 200:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            for script in soup(["script", "style"]): script.decompose()
+            text = soup.get_text()
+            lines = (line.strip() for line in text.splitlines())
+            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
+            return '\n'.join(chunk for chunk in chunks if chunk)[:8000]
+        return f"Ошибка загрузки сайта: Статус {response.status_code}"
+    except Exception as e:
+        return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
@@ -241,77 +261,73 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f8f6f0 !important;"
 
-css_template = """
+css_template = f"""
 <style>
-/* Полностью убираем системную верхнюю шапку Streamlit */
-[data-testid="stHeader"], header {
+[data-testid="stHeader"], header {{
     display: none !important;
-}
+}}
 
-/* Корректируем верхний отступ основного контейнера и боковой панели, чтобы почта не срезалась */
 [data-testid="stMainBlockContainer"],
-.main .block-container {
+.main .block-container {{
     padding-top: 1.2rem !important;
     margin-top: 0rem !important;
-}
+}}
 
 [data-testid="stSidebarContent"],
-[data-testid="stSidebarUserContent"] {
+[data-testid="stSidebarUserContent"] {{
     padding-top: 1rem !important;
     margin-top: 0rem !important;
-}
+}}
 
-[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {
+[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {{
     display: none !important;
-}
+}}
 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
     gap: 0.2rem !important;
-}
+}}
 
-html, body, [data-testid="stAppViewContainer"], .stApp {
+html, body, [data-testid="stAppViewContainer"], .stApp {{
     color: #2d3748 !important;
-    __BG_CSS__
-}
+    {bg_css}
+}}
 
-/* Фикс синей темы для кнопок, радио-переключателей и слайдеров (убираем оранжевый дефолт) */
-:root {
+:root {{
     --primary-color: #2563eb !important;
-}
+}}
 
 div[data-baseweb="radio"] input:checked + div,
-div[data-baseweb="radio"] div[aria-checked="true"] {
+div[data-baseweb="radio"] div[aria-checked="true"] {{
     border-color: #2563eb !important;
     background-color: #2563eb !important;
-}
+}}
 
-div[role="radiogroup"] label div[aria-checked="true"] {
+div[role="radiogroup"] label div[aria-checked="true"] {{
     border-color: #2563eb !important;
     background-color: #2563eb !important;
-}
+}}
 
-span[data-baseweb="radio"] div {
+span[data-baseweb="radio"] div {{
     border-color: #2563eb !important;
-}
+}}
 
-.stButton > button[kind="primary"] {
+.stButton > button[kind="primary"] {{
     background-color: #2563eb !important;
     border-color: #2563eb !important;
     color: #ffffff !important;
-}
+}}
 
-.stButton > button[kind="primary"]:hover {
+.stButton > button[kind="primary"]:hover {{
     background-color: #1d4ed8 !important;
     border-color: #1d4ed8 !important;
     color: #ffffff !important;
-}
+}}
 
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     color: #2d3748 !important;
-}
+}}
 
-/* Карточка авторизации */
-.auth-container {
+.auth-container {{
     background-color: #ffffff !important;
     border: 2px solid #2563eb;
     border-radius: 16px;
@@ -319,67 +335,66 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
     margin-top: 0px;
     margin-bottom: 20px;
-}
+}}
 
-.auth-header {
+.auth-header {{
     text-align: center;
     margin-bottom: 20px;
-}
+}}
 
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {
+[data-baseweb="select"] > div {{
     background-color: #ffffff !important;
     color: #2d3748 !important;
     -webkit-text-fill-color: #2d3748 !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 8px !important;
-}
+}}
 
-/* Фикс выпадающих списков (Selectbox popover) */
-div[data-baseweb="popover"] {
+div[data-baseweb="popover"] {{
     z-index: 999999 !important;
-}
+}}
 
 div[data-baseweb="popover"] > div,
 div[data-baseweb="popover"] ul,
 div[data-baseweb="popover"] [data-baseweb="menu"],
-div[data-baseweb="popover"] [role="listbox"] {
+div[data-baseweb="popover"] [role="listbox"] {{
     max-height: 250px !important;
     overflow-y: auto !important;
-}
+}}
 
 div[data-baseweb="popover"] li,
-div[data-baseweb="popover"] [role="option"] {
+div[data-baseweb="popover"] [role="option"] {{
     padding-top: 5px !important;
     padding-bottom: 5px !important;
     font-size: 13px !important;
-}
+}}
 
-.stButton > button[kind="primary"] {
+.stButton > button[kind="primary"] {{
     color: #ffffff !important;
-}
+}}
 
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
     background-color: #f4efe6 !important;
     background-image: none !important;
-}
+}}
 
-.tariff-box {
+.tariff-box {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-}
+}}
 
-.card-front {
+.card-front {{
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
@@ -392,25 +407,25 @@ div[data-baseweb="popover"] [role="option"] {
     justify-content: center;
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
-}
+}}
 
-.card-front-title {
+.card-front-title {{
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
-}
+}}
 
-.card-front-subtitle {
+.card-front-subtitle {{
     font-size: 10px;
     color: #704b4b !important;
     margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-}
+}}
 
-.card-back {
+.card-back {{
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
@@ -421,23 +436,21 @@ div[data-baseweb="popover"] [role="option"] {
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
-}
+}}
 
-summary::-webkit-details-marker { display: none !important; }
-summary { list-style: none !important; }
+summary::-webkit-details-marker {{ display: none !important; }}
+summary {{ list-style: none !important; }}
 
-/* Стили для печати: Черно-белый */
-.print-row-bw {
+.print-row-bw {{
     display: flex;
     border: 1px dashed #718096;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
     border-radius: 6px;
-}
+}}
 
-/* Стили для печати: Цветной детский */
-.print-row-kids {
+.print-row-kids {{
     display: flex;
     border: 2px solid #ffb74d;
     border-radius: 12px;
@@ -446,9 +459,9 @@ summary { list-style: none !important; }
     background-color: #ffffff;
     overflow: hidden;
     box-shadow: 0 4px 10px rgba(255, 183, 77, 0.15);
-}
+}}
 
-.print-col-kids-left {
+.print-col-kids-left {{
     width: 42%;
     padding: 15px;
     background-color: #ffe0b2;
@@ -458,16 +471,15 @@ summary { list-style: none !important; }
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}
+}}
 
-.print-col-kids-right {
+.print-col-kids-right {{
     width: 58%;
     padding: 15px;
     background-color: #ffffff;
-}
+}}
 
-/* Стили для печати: Взрослый цветной / Премиум */
-.print-row-premium {
+.print-row-premium {{
     display: flex;
     border: 1px solid #2b6cb0;
     border-left: 6px solid #2b6cb0;
@@ -477,9 +489,9 @@ summary { list-style: none !important; }
     background-color: #ffffff;
     overflow: hidden;
     box-shadow: 0 4px 12px rgba(43, 108, 176, 0.08);
-}
+}}
 
-.print-col-premium-left {
+.print-col-premium-left {{
     width: 40%;
     padding: 15px;
     background-color: #ebf8ff;
@@ -489,16 +501,16 @@ summary { list-style: none !important; }
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}
+}}
 
-.print-col-premium-right {
+.print-col-premium-right {{
     width: 60%;
     padding: 15px;
     background-color: #ffffff;
-}
+}}
 
-.print-col { width: 50%; padding: 15px; box-sizing: border-box; }
-.print-left {
+.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
+.print-left {{
     border-right: 1px dashed #ccc;
     text-align: center;
     font-weight: bold;
@@ -508,10 +520,9 @@ summary { list-style: none !important; }
     justify-content: center;
     font-family: 'Georgia', serif;
     color: #1a365d;
-}
+}}
 
-@media print {
-    /* Скрываем интерфейс Streamlit и элементы главной страницы при печати и экспорте в PDF */
+@media print {{
     [data-testid="stSidebar"],
     header,
     footer,
@@ -526,38 +537,37 @@ summary { list-style: none !important; }
     .stDataFrame,
     [data-testid="stDataEditor"],
     .tariff-box,
-    iframe {
+    iframe {{
         display: none !important;
-    }
+    }}
 
-    /* Скрываем все блоки главной страницы, не относящиеся к печатным карточкам */
-    .main .block-container > div > div:not(:has(.printable-content)) {
+    .main .block-container > div > div:not(:has(.printable-content)) {{
         display: none !important;
-    }
+    }}
 
     [data-testid="stMainBlockContainer"],
-    .main .block-container {
+    .main .block-container {{
         padding-top: 0rem !important;
         margin-top: 0rem !important;
-    }
+    }}
 
-    body, html, [data-testid="stAppViewContainer"], .stApp {
+    body, html, [data-testid="stAppViewContainer"], .stApp {{
         background-color: #ffffff !important;
         background-image: none !important;
         padding: 0 !important;
         margin: 0 !important;
-    }
+    }}
 
-    * {
+    * {{
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
-    }
+    }}
 
-    .printable-content {
+    .printable-content {{
         page-break-inside: avoid !important;
         break-inside: avoid !important;
-    }
-}
+    }}
+}}
 </style>
 """
 
@@ -1072,7 +1082,6 @@ if not st.session_state.user_email:
         )
         st.stop()
 
-# Компактный блок пользователя в самой верхней части боковой панели
 with st.sidebar:
     col_usr1, col_usr2 = st.columns([1.7, 1])
     with col_usr1:
@@ -1104,27 +1113,12 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
-def extract_text_from_url(url):
-    try:
-        headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
-        response = requests.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            for script in soup(["script", "style"]): script.decompose()
-            text = soup.get_text()
-            lines = (line.strip() for line in text.splitlines())
-            chunks = (phrase.strip() for line in lines for phrase in line.split("  "))
-            return '\n'.join(chunk for chunk in chunks if chunk)[:8000]
-        return f"Ошибка загрузки сайта: Статус {response.status_code}"
-    except Exception as e:
-        return f"Не удалось прочитать ссылку автоматически: {str(e)}"
-
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 with st.sidebar:
-    st.header("⚙️ Настройки generation")
+    st.header("⚙️ Настройки генерации")
     
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     is_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
@@ -1324,45 +1318,47 @@ if generate_click:
             st.info("Пожалуйста, уменьшите количество карточек в слайдере или перейдите на более старший тариф.")
             st.link_button("💳 Посмотреть тарифы", "https://flashcards-ai.ru/#tarifs")
         else:
+            final_prompt_content = ""
+            gemini_uploaded_file = None
+            temp_file_path = None
+            source_url_to_save = user_input.strip()
+
+            if source_type == "🎬 Ссылка на YouTube":
+                with st.spinner("Извлекаем субтитры из видео YouTube..."):
+                    yt_transcript = get_youtube_transcript(user_input.strip())
+                if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
+                    st.error(f"🛑 {yt_transcript}")
+                    st.info("💡 **Рекомендация:** Убедитесь, что у видео есть английские субтитры. Если субтитров нет, скачайте фрагмент и загрузите его через опцию **«📁 Видео или аудио файл»** — Gemini распознает речь напрямую!")
+                    st.stop()
+                final_prompt_content = yt_transcript
+
+            elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+                if uploaded_file_obj.size > 30 * 1024 * 1024:
+                    st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
+                    st.stop()
+                    
+                file_ext = os.path.splitext(uploaded_file_obj.name)[1]
+                source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(uploaded_file_obj.size/1024/1024, 1)} MB)"
+                
+                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+                    tmp.write(uploaded_file_obj.read())
+                    temp_file_path = tmp.name
+                    
+                gemini_uploaded_file = genai.upload_file(path=temp_file_path)
+
+            elif source_type == "🔗 Ссылка на веб-статью":
+                with st.spinner("Загружаем текст статьи..."):
+                    scraped_text = extract_text_from_url(user_input.strip())
+                if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
+                    st.error(scraped_text)
+                    st.stop()
+                final_prompt_content = scraped_text
+            
+            else:
+                final_prompt_content = user_input.strip()
+
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
                 try:
-                    final_prompt_content = ""
-                    gemini_uploaded_file = None
-                    temp_file_path = None
-                    source_url_to_save = user_input.strip()
-
-                    if source_type == "🎬 Ссылка на YouTube":
-                        yt_transcript = get_youtube_transcript(user_input.strip())
-                        if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
-                            st.error(yt_transcript)
-                            st.info("💡 Совет: если у видео нет субтитров на YouTube, вы можете вырезать нужный фрагмент и загрузить его через опцию «📁 Видео или аудио файл».")
-                            st.stop()
-                        final_prompt_content = yt_transcript
-
-                    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
-                        if uploaded_file_obj.size > 30 * 1024 * 1024:
-                            st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
-                            st.stop()
-                            
-                        file_ext = os.path.splitext(uploaded_file_obj.name)[1]
-                        source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(uploaded_file_obj.size/1024/1024, 1)} MB)"
-                        
-                        with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
-                            tmp.write(uploaded_file_obj.read())
-                            temp_file_path = tmp.name
-                            
-                        gemini_uploaded_file = genai.upload_file(path=temp_file_path)
-
-                    elif source_type == "🔗 Ссылка на веб-статью":
-                        scraped_text = extract_text_from_url(user_input.strip())
-                        if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
-                            st.error(scraped_text)
-                            st.stop()
-                        final_prompt_content = scraped_text
-                    
-                    else:
-                        final_prompt_content = user_input.strip()
-
                     model = genai.GenerativeModel(model_option)
                     
                     if source_type == "✍️ Готовый список слов":
@@ -1536,6 +1532,8 @@ if st.session_state.cards:
     if teacher_view_mode == "🖨️ Режим для печати":
         is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
         custom_print_note = ""
+        student_name_input = ""
+        date_input_str = "___/___/2026"
         print_style = "🖨️ Черно-белая (Экономный режим)"
 
         if is_max_tariff:
@@ -1547,7 +1545,7 @@ if st.session_state.cards:
                         <h4 style="margin: 0; color: #92400e; font-size: 16px; font-weight: bold;">Настройка дизайна распечатки и задания (Тариф «Максимум»)</h4>
                     </div>
                     <p style="margin: 0 0 12px 0; font-size: 13px; color: #78350f;">
-                        Выберите внешний вид листа и добавьте инструкцию для ученика. Изменения применятся мгновенно!
+                        Выберите внешний вид листа, введите имя ученика, дату и добавьте инструкцию. Изменения применятся мгновенно!
                     </p>
                 </div>
                 """,
@@ -1573,6 +1571,12 @@ if st.session_state.cards:
                     key="max_print_note_input"
                 ).strip()
             
+            col_hdr1, col_hdr2 = st.columns(2)
+            with col_hdr1:
+                student_name_input = st.text_input("👤 **Имя ученика (для печати):**", placeholder="Оставьте пустым для черты _______", key="ws_student_name").strip()
+            with col_hdr2:
+                date_input_str = st.text_input("📅 **Дата (для печати):**", value="___/___/2026", key="ws_date_str").strip()
+
             st.write("")
         else:
             st.markdown(
@@ -1592,8 +1596,7 @@ if st.session_state.cards:
             st.link_button("👑 Перейти на тариф «Максимум»", "https://flashcards-ai.ru/#tarifs", type="primary")
             st.write("")
 
-        # Кнопка быстрой печати и сохранения в PDF
-        import streamlit.components.v1 as components
+        # Кнопка печати и сохранения в PDF
         components.html(
             """
             <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 16px; border: 1px solid #cbd5e0; border-radius: 10px; margin-bottom: 15px;">
@@ -1606,6 +1609,8 @@ if st.session_state.cards:
             height=65
         )
 
+        name_display = student_name_input if student_name_input else "_________________"
+        
         # Шапка печатного листа
         if "детская" in print_style.lower() and is_max_tariff:
             note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
@@ -1616,7 +1621,7 @@ if st.session_state.cards:
                         <span style="font-size: 16px; font-weight: bold; color: #d84315; display: flex; align-items: center; gap: 6px;">
                             <span>🎨 🦁</span> <span>English Worksheet</span>
                         </span>
-                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: _________________ | Date: ___/___/2026</span>
+                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: {name_display} | Date: {date_input_str}</span>
                     </div>
                     {note_str}
                 </div>
@@ -1630,7 +1635,7 @@ if st.session_state.cards:
                 <div class="printable-content" style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
                         <h3 style="margin:0; color:#2b6cb0; font-family:'Georgia', serif;">Worksheet</h3>
-                        <span style="font-size: 12px; color: #718096;">Name: _________________ | Date: ___/___/2026</span>
+                        <span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
                     </div>
                     {note_str}
                 </div>
@@ -1644,7 +1649,7 @@ if st.session_state.cards:
                 <div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
                         <h3 style="margin:0; color:#2d3748; font-family:'Georgia', serif;">Worksheet</h3>
-                        <span style="font-size: 12px; color: #718096;">Name: _________________ | Date: ___/___/2026</span>
+                        <span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
                     </div>
                     {note_str}
                 </div>
