@@ -20,6 +20,7 @@ import time
 import tempfile
 import re
 
+# Проверка наличия библиотеки для субтитров YouTube
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
@@ -33,8 +34,10 @@ ADMIN_EMAILS = [
     "garmonia.22081983@gmail.com"
 ]
 
+# Инициализация менеджера куки для сохранения сессии на 365 дней
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 
+# Настройка API ключа Google Gemini
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
 else:
@@ -226,25 +229,25 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f8f6f0 !important;"
 
-st.markdown(f"""
-<style>
-html, body, [data-testid="stAppViewContainer"], .stApp {{
-    {bg_css}
+# Безопасное формирование CSS с гарантийным отсутствием синтаксических ошибок f-string
+css_content = """<style>
+html, body, [data-testid="stAppViewContainer"], .stApp {
+    """ + bg_css + """
     background-size: cover !important;
     background-repeat: no-repeat !important;
     background-attachment: fixed !important;
     color: #2d3748 !important;
-}}
+}
 
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
+h1, h2, h3, h4, h5, h6, p, span, label, li, div {
     color: #2d3748 !important;
-}}
+}
 
-[data-testid="stHeader"], header, [data-testid="stHeader"] > div {{
+[data-testid="stHeader"], header, [data-testid="stHeader"] > div {
     background-color: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
-}}
+}
 
 /* Уменьшаем верхний отступ страницы, чтобы плашка встала выше */
 [data-testid="stMainBlockContainer"] {
@@ -280,46 +283,46 @@ div[data-testid="stVerticalBlockBorderWrapper"] [data-testid="stVerticalBlock"] 
     padding: 10px 16px !important;
     box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25) !important;
     transition: all 0.2s ease-in-out !important;
-}}
+}
 
-.stButton > button[kind="primary"]:hover {{
+.stButton > button[kind="primary"]:hover {
     background-color: #1d4ed8 !important;
     color: #ffffff !important;
     -webkit-text-fill-color: #ffffff !important;
     box-shadow: 0 6px 16px rgba(29, 78, 216, 0.35) !important;
-}}
+}
 
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
 [data-baseweb="base-input"],
 [data-baseweb="textarea"],
-[data-baseweb="select"] > div {{
+[data-baseweb="select"] > div {
     background-color: #ffffff !important;
     color: #1e293b !important;
     -webkit-text-fill-color: #1e293b !important;
     border: 1px solid #cbd5e0 !important;
     border-radius: 10px !important;
-}}
+}
 
 [data-testid="stSidebar"], 
 .stSidebar, 
 [data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
     background-color: #f4efe6 !important;
     background-image: none !important;
-}}
+}
 
-.tariff-box {{
+.tariff-box {
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
     padding: 16px;
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
-}}
+}
 
 /* Интерактивные карточки */
-.card-front {{
+.card-front {
     background-color: #e3b5b5 !important;
     border: 1px solid #d49f9f;
     border-radius: 12px;
@@ -332,25 +335,25 @@ input, textarea, select,
     justify-content: center;
     align-items: center;
     box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
-}}
+}
 
-.card-front-title {{
+.card-front-title {
     font-size: 22px;
     font-weight: bold;
     font-family: 'Georgia', serif;
     color: #4a2e2e !important;
-}}
+}
 
-.card-front-subtitle {{
+.card-front-subtitle {
     font-size: 10px;
     color: #704b4b !important;
     margin-top: 12px;
     text-transform: uppercase;
     letter-spacing: 1px;
     font-weight: 600;
-}}
+}
 
-.card-back {{
+.card-back {
     background-color: #ffffff !important;
     border: 1px solid #ebdcc5;
     border-radius: 12px;
@@ -361,21 +364,21 @@ input, textarea, select,
     justify-content: space-between;
     box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
     color: #2d3748 !important;
-}}
+}
 
-summary::-webkit-details-marker {{ display: none !important; }}
-summary {{ list-style: none !important; }}
+summary::-webkit-details-marker { display: none !important; }
+summary { list-style: none !important; }
 
 /* Стили печатных карточек */
-.print-row-bw {{
+.print-row-bw {
     display: flex;
     border: 1px dashed #ccc;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
-}}
+}
 
-.print-row-kids {{
+.print-row-kids {
     display: flex;
     border: 2px solid #ffb74d;
     border-radius: 12px;
@@ -383,9 +386,9 @@ summary {{ list-style: none !important; }}
     page-break-inside: avoid;
     background-color: #ffffff;
     overflow: hidden;
-}}
+}
 
-.print-col-kids-left {{
+.print-col-kids-left {
     width: 45%;
     padding: 15px;
     background-color: #ffe0b2;
@@ -395,16 +398,16 @@ summary {{ list-style: none !important; }}
     flex-direction: column;
     justify-content: center;
     align-items: center;
-}}
+}
 
-.print-col-kids-right {{
+.print-col-kids-right {
     width: 55%;
     padding: 15px;
     background-color: #ffffff;
-}}
+}
 
-.print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
-.print-left {{
+.print-col { width: 50%; padding: 15px; box-sizing: border-box; }
+.print-left {
     border-right: 1px dashed #ccc;
     text-align: center;
     font-weight: bold;
@@ -414,9 +417,10 @@ summary {{ list-style: none !important; }}
     justify-content: center;
     font-family: 'Georgia', serif;
     color: #1a365d;
-}}
-</style>
-""", unsafe_allow_html=True)
+}
+</style>"""
+
+st.markdown(css_content, unsafe_allow_html=True)
 
 
 student_deck_id = None
