@@ -172,21 +172,42 @@ def extract_youtube_id(url):
     if match:
         return match.group(1) or match.group(2)
     return None
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ЧЕРЕЗ SUPADATA API ---
 def get_youtube_transcript(video_url):
-    if not YouTubeTranscriptApi:
-        return "Ошибка: Библиотека youtube-transcript-api не установлена."
-    
     video_id = extract_youtube_id(video_url)
     if not video_id:
         return "Ошибка: Не удалось распознать ссылку на YouTube. Проверьте правильность URL."
     
-    try:
-        transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
-        text = " ".join([item['text'] for item in transcript_list])
-        return text
-    except Exception as e:
-        return f"Не удалось автоматически извлечь субтитры: {e}. Возможно, автор отключил субтитры у этого видео."
+    # 1. Проверяем наличие ключа SUPADATA в Secrets
+    supadata_key = st.secrets.get("SUPADATA_API_KEY", None)
+    
+    if supadata_key:
+        try:
+            endpoint = f"https://api.supadata.ai/v1/youtube/transcript?videoId={video_id}&text=true"
+            headers = {"x-api-key": supadata_key}
+            resp = requests.get(endpoint, headers=headers, timeout=15)
+            
+            if resp.status_code == 200:
+                data = resp.json()
+                content = data.get("content", "")
+                if isinstance(content, list):
+                    return " ".join([item.get("text", "") for item in content])
+                elif isinstance(content, str) and content.strip():
+                    return content
+            elif resp.status_code == 404:
+                return "Ошибка: У этого видео отсутствуют субтитры."
+        except Exception as e:
+            pass # Если вызов SupaData завершился сбоем, пробуем резервный метод ниже
+
+    # 2. Резервный метод через локальную библиотеку (если ключа нет или API временно недоступен)
+    if YouTubeTranscriptApi:
+        try:
+            transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
+            return " ".join([item['text'] for item in transcript_list])
+        except Exception as e:
+            return f"Не удалось извлечь субтитры: {e}. Возможно, автор отключил субтитры или YouTube заблокировал доступ."
+            
+    return "Не удалось получить субтитры. Попробуйте скачать аудио/видео фрагмент и загрузить его файлом."
 # --- СТИЛИ ПРИЛОЖЕНИЯ (ТОЧНАЯ СТИЛИЗАЦИЯ КАРТОЧКИ АВТОРИЗАЦИИ) ---
 def get_base64_of_bin_file(bin_file):
     with open(bin_file, 'rb') as f:
