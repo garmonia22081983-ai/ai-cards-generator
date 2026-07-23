@@ -99,8 +99,8 @@ def get_user_tariff_and_usage(email, sh):
 
     tariff_name = "Пробный"
     max_cards = 45
-    retention_days = 7
-    period_start = datetime.now() - timedelta(days=3)
+    retention_days = 7  # Срок жизни ссылок и материалов по Пробному тарифу
+    period_start = datetime.now() - timedelta(days=3)  # Доступ к генерации — 3 дня
 
     try:
         payments_sheet = sh.worksheet("Payments")
@@ -129,11 +129,11 @@ def get_user_tariff_and_usage(email, sh):
             if "Максимум" in product_str or "1190" in str(found_payment):
                 tariff_name = "Максимум"
                 max_cards = 3000
-                retention_days = 999999
+                retention_days = 999999  # Вечный архив
             else:
                 tariff_name = "Практик"
                 max_cards = 300
-                retention_days = 60
+                retention_days = 60  # Увеличенный архив — 60 дней
         else:
             users_sheet = sh.worksheet("Users")
             u_rows = users_sheet.get_all_values()
@@ -184,7 +184,7 @@ def extract_youtube_id(url):
         return match.group(1) or match.group(2)
     return None
 
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ЧЕРЕЗ SUPADATA API ---
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE (С SUPADATA И РЕЗЕРВОМ) ---
 def get_youtube_transcript(video_url):
     video_id = extract_youtube_id(video_url)
     if not video_id:
@@ -215,7 +215,7 @@ def get_youtube_transcript(video_url):
             transcript_list = YouTubeTranscriptApi.get_transcript(video_id, languages=['en', 'en-US', 'en-GB'])
             return " ".join([item['text'] for item in transcript_list])
         except Exception as e:
-            return f"Не удалось извлечь субтитры: {e}."
+            return f"Не удалось извлечь субтитры: {e}. Возможно, автор отключил субтитры или YouTube заблокировал доступ."
             
     return "Не удалось получить субтитры. Попробуйте скачать аудио/видео фрагмент и загрузить его файлом."
 
@@ -257,6 +257,22 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
+/* ИДЕАЛЬНАЯ БЕЛАЯ ПЛАШКА АВТОРИЗАЦИИ */
+.auth-container {{
+    background-color: #ffffff !important;
+    border: 1px solid #ebdcc5 !important;
+    border-radius: 16px !important;
+    padding: 30px 25px !important;
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.06) !important;
+    margin-top: 20px !important;
+    margin-bottom: 20px !important;
+}}
+
+.auth-header {{
+    text-align: center;
+    margin-bottom: 20px;
+}}
+
 /* Главная синяя кнопка */
 button[kind="primary"], 
 button[data-testid="stBaseButton-primary"] {{
@@ -269,7 +285,7 @@ button[data-testid="stBaseButton-primary"] {{
     width: 100% !important;
 }}
 
-/* БЕЛЫЙ ТЕКСТ И ИКОНКИ НА КНОПКЕ */
+/* ПРИНУДИТЕЛЬНО БЕЛЫЙ ТЕКСТ И ИКОНКИ НА ВСЕХ СИНИХ КНОПКАХ */
 button[kind="primary"] *, 
 button[data-testid="stBaseButton-primary"] *,
 button[kind="primary"] p,
@@ -617,16 +633,14 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-# --- БЛОК АВТОРИЗАЦИИ (БЕЛАЯ ПЛАШКА ЧЕРЕЗ HTML-ОБЁРТКУ) ---
+# --- БЛОК АВТОРИЗАЦИИ (БЕЛАЯ ПЛАШКА ЧЕРЕЗ .auth-container) ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
-        # Открываем плотный белый HTML-блок с тенью и кремовой рамкой
-        st.markdown('<div style="background-color: #ffffff !important; padding: 35px 30px; border-radius: 16px; box-shadow: 0 8px 25px rgba(0,0,0,0.06); border: 1px solid #ebdcc5;">', unsafe_allow_html=True)
-        
+        st.markdown('<div class="auth-container">', unsafe_allow_html=True)
         st.markdown(
             """
-            <div style="text-align: center; margin-bottom: 22px;">
+            <div class="auth-header">
                 <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
                 <p style="color: #718096; font-size: 13.5px; margin-top: 0;">Умный генератор карточек для преподавателей</p>
             </div>
@@ -807,13 +821,11 @@ if not st.session_state.user_email:
                 Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                 </small>
             </div>
+            </div>
             """, 
             unsafe_allow_html=True
         )
-        
-        # Закрываем HTML-обёртку карточки авторизации
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.stop()
+    st.stop()
 
 # --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
@@ -887,65 +899,6 @@ with st.sidebar:
     else:
         num_cards = 0
 
-# --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
-is_expired = st.session_state.get("trial_expired", False)
-is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
-button_disabled = is_expired or is_limit_reached
-
-if is_expired:
-    st.warning("🛑 **Срок действия вашей подписки окончен.**")
-    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы продолжить создавать новые колоды, пожалуйста, продлите тариф.")
-    st.link_button("💳 Посмотреть тарифы и продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
-elif is_limit_reached:
-    st.warning(f"🛑 **Вы исчерпали лимит карточек ({max_cards} шт.) по тарифу «{tariff_name}».**")
-    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
-    st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
-
-# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
-col_main, col_stats = st.columns([1.6, 1], gap="medium")
-user_input = ""
-uploaded_file_obj = None
-
-with col_main:
-    if source_type == "✍️ Готовый список слов":
-        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
-    elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
-        user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
-    elif source_type == "🎬 Ссылка на YouTube":
-        user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
-    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
-        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
-        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
-    elif source_type == "🔗 Ссылка на веб-статью":
-        user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
-
-    generate_click = st.button(
-        "Создать карточки ✨", 
-        type="primary", 
-        disabled=button_disabled
-    )
-
-with col_stats:
-    st.markdown(
-        f"""
-        <div class="tariff-box">
-            <h3 style="margin-top:0; font-size:18px;">📊 Твой тариф и лимиты</h3>
-            <p style="color:#718096; font-size:13px; margin-bottom:12px;">Тариф: <b>{tariff_name.upper()}</b></p>
-        </div>
-        """, 
-        unsafe_allow_html=True
-    )
-    
-    if tariff_name == "АДМИНИСТРАТОР":
-        st.success("👑 Безлимитный доступ")
-    else:
-        progress_val = min(float(used_cards) / float(max_cards), 1.0)
-        st.progress(progress_val)
-        remaining_cards = max(0, max_cards - used_cards)
-        st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
-        st.caption(f"Осталось: **{remaining_cards}** карточек")
-
-    # --- ПЕРЕНЕСЕННЫЙ И ОБНОВЛЕННЫЙ БЛОК СОХРАНЕННЫХ КОЛОД ---
     st.write("---")
     with st.expander("📂 Мои сохраненные колоды", expanded=True):
         try:
@@ -1016,6 +969,64 @@ with col_stats:
                     st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
         except Exception:
             st.caption("Не удалось загрузить список колод.")
+
+# --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
+is_expired = st.session_state.get("trial_expired", False)
+is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
+button_disabled = is_expired or is_limit_reached
+
+if is_expired:
+    st.warning("🛑 **Срок действия вашей подписки окончен.**")
+    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы продолжить создавать новые колоды, пожалуйста, продлите тариф.")
+    st.link_button("💳 Посмотреть тарифы и продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
+elif is_limit_reached:
+    st.warning(f"🛑 **Вы исчерпали лимит карточек ({max_cards} шт.) по тарифу «{tariff_name}».**")
+    st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
+    st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
+
+# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
+col_main, col_stats = st.columns([1.6, 1], gap="medium")
+user_input = ""
+uploaded_file_obj = None
+
+with col_main:
+    if source_type == "✍️ Готовый список слов":
+        user_input = st.text_area("Введите конкретные слова или фразы через запятую:", height=120)
+    elif source_type == "📝 Текст / Отрывок статьи / Субтитры":
+        user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
+    elif source_type == "🎬 Ссылка на YouTube":
+        user_input = st.text_input("Вставьте URL-ссылку на YouTube видео (например, https://www.youtube.com/watch?v=...):")
+    elif source_type == "📁 Видео или аудио файл (до 5 мин)":
+        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
+        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
+    elif source_type == "🔗 Ссылка на веб-статью":
+        user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
+
+    generate_click = st.button(
+        "Создать карточки ✨", 
+        type="primary", 
+        disabled=button_disabled
+    )
+
+with col_stats:
+    st.markdown(
+        f"""
+        <div class="tariff-box">
+            <h3 style="margin-top:0; font-size:18px;">📊 Твой тариф и лимиты</h3>
+            <p style="color:#718096; font-size:13px; margin-bottom:12px;">Тариф: <b>{tariff_name.upper()}</b></p>
+        </div>
+        """, 
+        unsafe_allow_html=True
+    )
+    
+    if tariff_name == "АДМИНИСТРАТОР":
+        st.success("👑 Безлимитный доступ")
+    else:
+        progress_val = min(float(used_cards) / float(max_cards), 1.0)
+        st.progress(progress_val)
+        remaining_cards = max(0, max_cards - used_cards)
+        st.write(f"Создано: **{used_cards}** из **{max_cards}** карточек")
+        st.caption(f"Осталось: **{remaining_cards}** карточек")
 
 # --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
