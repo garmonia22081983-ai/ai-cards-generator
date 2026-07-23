@@ -889,12 +889,14 @@ with col_main:
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
    st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
+   st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
     generate_click = st.button(
         "Создать карточки ✨", 
         type="primary", 
         disabled=button_disabled
     )
     st.markdown('</div>', unsafe_allow_html=True)
+
 with col_stats:
     st.markdown(
         f"""
