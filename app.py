@@ -46,39 +46,40 @@ else:
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
 if "GOOGLE_APPLICATION_CREDENTIALS" in os.environ:
-    del os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+[data-testid="stHeader"], header, [data-testid="stHeader"] > div {
+    background-color: transparent !important;
+    background-image: none !important;
+    box-shadow: none !important;
+}
 
-api_key = st.secrets["GEMINI_API_KEY"]
-genai.configure(api_key=api_key)
+/* Карточка авторизации */
+.auth-container {
+    background-color: #ffffff !important;
+    border: 2px solid #2563eb;
+    border-radius: 16px;
+    padding: 30px 25px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+    margin-top: 0px;
+    margin-bottom: 20px;
+}
 
+.auth-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
 
-# --- ФУНКЦИЯ ДЛЯ ПОДКЛЮЧЕНИЯ К ГУГЛ-ТАБЛИЦЕ ---
-def get_gsheets_client():
-    scopes = [
-        "https://www.googleapis.com/auth/spreadsheets",
-        "https://www.googleapis.com/auth/drive"
-    ]
-    creds_info = st.secrets["gcp_service_account"]
-    creds = Credentials.from_service_account_info(creds_info, scopes=scopes)
-    return gspread.authorize(creds)
-
-
-# --- ФУНКЦИЯ ОТПРАВКИ EMAIL С КОДОМ (SMTP) ---
-def send_otp_email(target_email, code):
-    try:
-        smtp_config = st.secrets["smtp"]
-        msg = MIMEMultipart()
-        msg['From'] = f"Flashcards AI <{smtp_config['email']}>"
-        msg['To'] = target_email
-        msg['Subject'] = f"{code} — Ваш код входа в Генератор Карточек"
-
-        body = f"""
-        <html>
-            <body style="font-family: Arial, sans-serif; color: #2d3748; padding: 20px;">
-                <h2 style="color: #2e6c9e;">🔑 Вход в Генератор Карточек</h2>
-                <p>Ваш одноразовый код для авторизации:</p>
-                <div style="background-color: #f7fafc; border: 1px dashed #cbd5e0; padding: 15px; text-align: center; font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #1a365d; border-radius: 8px; margin: 15px 0;">
-                    {code}
+input, textarea, select, 
+.stTextInput input, 
+.stTextArea textarea,
+[data-baseweb="base-input"],
+[data-baseweb="textarea"],
+[data-baseweb="select"] > div {
+    background-color: #ffffff !important;
+    color: #2d3748 !important;
+    -webkit-text-fill-color: #2d3748 !important;
+    border: 1px solid #cbd5e0 !important;
+    border-radius: 8px !important;
+}
                 </div>
                 <p style="font-size: 12px; color: #718096;">Код действителен в течение 10 минут. Если вы не запрашивали вход, просто проигнорируйте это письмо.</p>
             </body>
