@@ -701,102 +701,102 @@ if not st.session_state.user_email:
                 
                 user_code = st.text_input("6-значный код из письма:", max_chars=6)
                 
-                if st.button("Подтвердить и войти", type="primary", use_container_width=True):
-                    if user_code.strip() == st.session_state.generated_otp:
-                        email = st.session_state.pending_email
-                        clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+              if st.button("Подтвердить и войти", type="primary", use_container_width=True):
+                if user_code.strip() == st.session_state.generated_otp:
+                    email = st.session_state.pending_email
+                    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+                    
+                    st.session_state.user_email = email
+                    st.session_state.logout_requested = False
+                    
+                    if email in clean_admin_emails:
+                        cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                        st.session_state.user_name = "Администратор"
+                        st.session_state.trial_expired = False
+                        st.success("Успешный вход!")
+                        time.sleep(0.3)
+                        st.rerun()
+                    
+                    try:
+                        gc = get_gsheets_client()
+                        sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
                         
-                        st.session_state.user_email = email
-                        st.session_state.logout_requested = False
+                        users_sheet = sh.worksheet("Users")
+                        rows = users_sheet.get_all_values()
                         
-                        if email in clean_admin_emails:
-                            cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                            st.session_state.user_name = "Администратор"
-                            st.session_state.trial_expired = False
-                            st.success("Успешный вход!")
-                            time.sleep(0.3)
-                            st.rerun()
+                        user_row = None
+                        for i, r in enumerate(rows[1:], start=2):
+                            if len(r) > 0 and r[0].strip().lower() == email:
+                                user_row = (i, r)
+                                break
                         
-                        try:
-                            gc = get_gsheets_client()
-                            sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                        if not user_row:
+                            payments_sheet = sh.worksheet("Payments")
+                            p_rows = payments_sheet.get_all_values()
                             
-                            users_sheet = sh.worksheet("Users")
-                            rows = users_sheet.get_all_values()
-                            
-                            user_row = None
-                            for i, r in enumerate(rows[1:], start=2):
-                                if len(r) > 0 and r[0].strip().lower() == email:
-                                    user_row = (i, r)
+                            found_p = None
+                            for p in reversed(p_rows[1:]):
+                                if len(p) > 1 and p[1].strip().lower() == email:
+                                    found_p = p
                                     break
                             
-                            if not user_row:
-                                payments_sheet = sh.worksheet("Payments")
-                                p_rows = payments_sheet.get_all_values()
+                            if found_p:
+                                user_name = found_p[0].strip() if found_p[0].strip() else "Преподаватель"
+                                product_name = found_p[5].strip() if len(found_p) > 5 else ""
+                                price_val = found_p[6].strip() if len(found_p) > 6 else ""
+                                reg_time_str = found_p[11].strip() if len(found_p) > 11 else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 
-                                found_p = None
-                                for p in reversed(p_rows[1:]):
-                                    if len(p) > 1 and p[1].strip().lower() == email:
-                                        found_p = p
-                                        break
+                                new_status = "paid" if (product_name or price_val) else "active"
+                                users_sheet.append_row([email, reg_time_str, new_status, user_name])
                                 
-                                if found_p:
-                                    user_name = found_p[0].strip() if found_p[0].strip() else "Преподаватель"
-                                    product_name = found_p[5].strip() if len(found_p) > 5 else ""
-                                    price_val = found_p[6].strip() if len(found_p) > 6 else ""
-                                    reg_time_str = found_p[11].strip() if len(found_p) > 11 else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                                    
-                                    new_status = "paid" if (product_name or price_val) else "active"
-                                    users_sheet.append_row([email, reg_time_str, new_status, user_name])
-                                    
-                                    st.session_state.user_name = user_name
-                                    exp_date = datetime.now() + timedelta(days=30 if new_status == "paid" else 3)
-                                    st.session_state.trial_expired = False
-                                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                            else:
-                                row_num, row_data = user_row
-                                reg_date_str = row_data[1]
-                                status = row_data[2] if len(row_data) > 2 else "active"
-                                st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+                                st.session_state.user_name = user_name
+                                exp_date = datetime.now() + timedelta(days=30 if new_status == "paid" else 3)
+                                st.session_state.trial_expired = False
+                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                        else:
+                            row_num, row_data = user_row
+                            reg_date_str = row_data[1]
+                            status = row_data[2] if len(row_data) > 2 else "active"
+                            st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+                            
+                            if status == "blocked":
+                                st.error("🚫 Ваш доступ заблокирован.")
+                                st.stop()
                                 
-                                if status == "blocked":
-                                    st.error("🚫 Ваш доступ заблокирован.")
-                                    st.stop()
-                                    
-                                if status == "paid":
-                                    last_pay_date = datetime.now()
-                                    try:
-                                        payments_sheet = sh.worksheet("Payments")
-                                        payments_rows = payments_sheet.get_all_values()
-                                        for p_row in reversed(payments_rows[1:]):
-                                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
-                                                raw_d = p_row[11].strip() if len(p_row) > 11 else ""
-                                                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
-                                                    try:
-                                                        last_pay_date = datetime.strptime(raw_d, fmt)
-                                                        break
-                                                    except ValueError:
-                                                        continue
-                                                break
-                                    except Exception:
-                                        pass
-                                    
-                                    exp_date = last_pay_date + timedelta(days=30)
-                                    if datetime.now() > exp_date:
-                                        st.session_state.trial_expired = True
-                                    else:
-                                        st.session_state.trial_expired = False
-                                    
-                                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                            if status == "paid":
+                                last_pay_date = datetime.now()
+                                try:
+                                    payments_sheet = sh.worksheet("Payments")
+                                    payments_rows = payments_sheet.get_all_values()
+                                    for p_row in reversed(payments_rows[1:]):
+                                        if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                                            raw_d = p_row[11].strip() if len(p_row) > 11 else ""
+                                            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                                                try:
+                                                    last_pay_date = datetime.strptime(raw_d, fmt)
+                                                    break
+                                                except ValueError:
+                                                    continue
+                                            break
+                                except Exception:
+                                    pass
+                                
+                                exp_date = last_pay_date + timedelta(days=30)
+                                if datetime.now() > exp_date:
+                                    st.session_state.trial_expired = True
                                 else:
-                                    reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-                                    exp_date = reg_date + timedelta(days=3)
-                                    if datetime.now() > exp_date:
-                                        st.session_state.trial_expired = True
-                                    else:
-                                        st.session_state.trial_expired = False
-                                    
-                                    cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                                    st.session_state.trial_expired = False
+                                
+                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                            else:
+                                reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
+                                exp_date = reg_date + timedelta(days=3)
+                                if datetime.now() > exp_date:
+                                    st.session_state.trial_expired = True
+                                else:
+                                    st.session_state.trial_expired = False
+                                
+                                cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
                                         
                         st.success("Успешный вход!")
                         time.sleep(0.3)
