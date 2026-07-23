@@ -258,14 +258,16 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     padding-top: 1rem !important;
 }}
 
-/* Четкая белоснежная плашка контейнера авторизации с глубокой тенью */
+/* Четкая белоснежная плашка контейнера авторизации с яркой тенью и рамкой */
 [data-testid="stContainer"] {{
     background-color: #ffffff !important;
-    border: 1px solid #cbd5e0 !important;
+    background: #ffffff !important;
+    border: 2px solid #cbd5e0 !important;
     border-radius: 20px !important;
     padding: 35px 30px !important;
-    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15) !important;
     margin-top: 5px !important;
+    opacity: 1 !important;
 }}
 
 /* Синяя кнопка входа с ярким белым текстом */
