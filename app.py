@@ -176,7 +176,7 @@ def get_user_tariff_and_usage(email, sh):
 
     except Exception:
         return tariff_name, max_cards, 0, period_start, retention_days
-        
+
 # --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ИЗВЛЕЧЕНИЕ YOUTUBE VIDEO ID ---
 def extract_youtube_id(url):
     pattern = r"(?:v=|\/([0-9A-Za-z_-]{11}).*|youtu\.be\/|shorts\/)([0-9A-Za-z_-]{11})"
@@ -270,20 +270,29 @@ button[data-testid="stBaseButton-primary"] {{
     font-weight: bold !important;
     font-size: 15px !important;
 }}
-/* Оранжевая кнопка для генератора */
-div.orange-gen-btn button {
-    background-color: #e67e22 !important;
-    border-color: #e67e22 !important;
-    color: #ffffff !important;
-}
-div.orange-gen-btn button:hover {
-    background-color: #d35400 !important;
-    border-color: #d35400 !important;
-}
 button[kind="primary"]:hover, 
 button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
+}}
+
+/* Оранжевая кнопка для генератора (перебиваем синий стиль) */
+div.orange-gen-btn button[kind="primary"],
+div.orange-gen-btn button[data-testid="stBaseButton-primary"],
+div.orange-gen-btn button {{
+    background-color: #e67e22 !important;
+    border-color: #e67e22 !important;
+    color: #ffffff !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
+    width: 100% !important;
+}}
+div.orange-gen-btn button[kind="primary"]:hover,
+div.orange-gen-btn button[data-testid="stBaseButton-primary"]:hover,
+div.orange-gen-btn button:hover {{
+    background-color: #d35400 !important;
+    border-color: #d35400 !important;
 }}
 
 input, textarea, select, 
@@ -911,7 +920,7 @@ with col_main:
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
 
-   st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
+    st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
     generate_click = st.button(
         "Создать карточки ✨", 
         type="primary", 
