@@ -99,8 +99,8 @@ def get_user_tariff_and_usage(email, sh):
 
     tariff_name = "Пробный"
     max_cards = 45
-    retention_days = 7  # Срок жизни ссылок и материалов по Пробному тарифу
-    period_start = datetime.now() - timedelta(days=3)  # Доступ к генерации — 3 дня
+    retention_days = 7
+    period_start = datetime.now() - timedelta(days=3)
 
     try:
         payments_sheet = sh.worksheet("Payments")
@@ -129,11 +129,11 @@ def get_user_tariff_and_usage(email, sh):
             if "Максимум" in product_str or "1190" in str(found_payment):
                 tariff_name = "Максимум"
                 max_cards = 3000
-                retention_days = 999999  # Вечный архив
+                retention_days = 999999
             else:
                 tariff_name = "Практик"
                 max_cards = 300
-                retention_days = 60  # Увеличенный архив — 60 дней
+                retention_days = 60
         else:
             users_sheet = sh.worksheet("Users")
             u_rows = users_sheet.get_all_values()
@@ -184,7 +184,7 @@ def extract_youtube_id(url):
         return match.group(1) or match.group(2)
     return None
 
-# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE (SUPADATA + РЕЗЕРВ) ---
+# --- ВПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ПОЛУЧЕНИЕ СУБТИТРОВ С YOUTUBE ---
 def get_youtube_transcript(video_url):
     video_id = extract_youtube_id(video_url)
     if not video_id:
@@ -630,22 +630,23 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-# --- БЛОК АВТОРИЗАЦИИ ---
+# --- БЛОК АВТОРИЗАЦИИ (БЕЗ ПУСТЫХ СМЕЩЕНИЙ СВЕРХУ) ---
 if not st.session_state.user_email:
-    col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
+    col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
         with st.container(border=True):
             st.markdown(
                 """
-                <div style="text-align: center; margin-bottom: 22px;">
-                    <h2 style="margin-bottom: 6px; color: #1a365d; font-size: 28px;">🎓 Flashcards AI</h2>
-                    <p style="color: #718096; font-size: 13.5px; margin-top: 0;">Умный генератор карточек для преподавателей</p>
+                <div style="text-align: center; margin-bottom: 20px;">
+                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
+                    <p style="color: #718096; font-size: 14px; margin-top: 0;">Умный генератор двусторонних карточек</p>
                 </div>
                 """, 
                 unsafe_allow_html=True
             )
             
             if not st.session_state.otp_sent:
+                st.write("**Вход в Личный Кабинет**")
                 email_input = st.text_input("Ваш Email:", placeholder="example@gmail.com")
                 
                 if st.button("Получить код входа", type="primary", use_container_width=True):
@@ -813,8 +814,8 @@ if not st.session_state.user_email:
                 
             st.markdown(
                 """
-                <div style="margin-top: 18px; text-align: center;">
-                    <small style="color: #a0aec0; font-size: 11px;">
+                <div style="margin-top: 20px; text-align: center;">
+                    <small style="color: #718096;">
                     Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
                     </small>
                 </div>
