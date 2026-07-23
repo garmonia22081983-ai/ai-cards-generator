@@ -20,7 +20,7 @@ import time
 import tempfile
 import re
 
-# Импортируем библиотеку субтитров YouTube через SupaData API
+# Библиотека субтитров YouTube через SupaData API (резервный импорт)
 try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except ImportError:
@@ -189,7 +189,7 @@ def extract_youtube_id(url):
 
 
 def get_youtube_transcript(video_url):
-    """Извлечение субтитров YouTube через внешний защищенный сервис SupaData API."""
+    """Извлечение субтитров YouTube через защищенный сервис SupaData API."""
     supadata_key = st.secrets.get("SUPADATA_API_KEY", "")
     if not supadata_key:
         return "Ошибка: API-ключ SupaData не найден в настройках Secrets (SUPADATA_API_KEY)."
@@ -249,7 +249,7 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
-/* Карточка авторизации */
+/* Карточка авторизации (оригинальный дизайн с шапкой) */
 .auth-container {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0;
@@ -395,6 +395,7 @@ summary {{ list-style: none !important; }}
 """, unsafe_allow_html=True)
 
 
+# --- 1. РЕЖИМ УЧЕНИКА (ПО ССЫЛКЕ ?deck=deck_id) ---
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -582,6 +583,7 @@ if student_deck_id:
     st.stop()
 
 
+# --- ИНИЦИАЛИЗАЦИЯ ПЕРЕМЕННЫХ СЕССИИ УЧИТЕЛЯ ---
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -598,6 +600,7 @@ if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
 
 
+# --- ПРОВЕРКА КУКИ ПРИ ЗАГРУЗКЕ СТРАНИЦЫ ---
 saved_email = cookie_manager.get(cookie="auth_email")
 
 if not saved_email:
@@ -664,6 +667,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
             pass
 
 
+# --- БЛОК АВТОРИЗАЦИИ С ОРИГИНАЛЬНЫМ МАКЕТОМ ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
@@ -821,6 +825,7 @@ if not st.session_state.user_email:
     st.stop()
 
 
+# --- КНОПКА ВЫХОДА И МОИ КОЛОДЫ В БОКОВОЙ ПАНЕЛИ ---
 st.sidebar.write(f"Вы вошли как: **{st.session_state.user_email}**")
 if st.sidebar.button("Выйти из аккаунта"):
     cookie_manager.delete("auth_email")
@@ -857,11 +862,13 @@ def extract_text_from_url(url):
         return f"Не удалось прочитать ссылку автоматически: {str(e)}"
 
 
+# --- ЗАГРУЗКА ДАННЫХ О ТАРИФЕ И ЛИМИТАХ ---
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
 tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
 
 
+# --- БОКОВАЯ ПАНЕЛЬ НАСТРОЕК ---
 with st.sidebar:
     st.header("⚙️ Настройки generation")
     model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-3-flash-preview", "gemini-2.5-flash", "gemini-1.5-flash"])
@@ -936,6 +943,7 @@ with st.sidebar:
             st.caption("Не удалось загрузить список колод.")
 
 
+# --- ПРОВЕРКА СОСТОЯНИЯ ПОДПИСКИ И ЛИМИТОВ ---
 is_expired = st.session_state.get("trial_expired", False)
 is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
 
@@ -952,6 +960,7 @@ elif is_limit_reached:
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
 
+# --- РАБОЧИЙ ИНТЕРФЕЙС ГЕНЕРАТОРА ---
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -997,6 +1006,7 @@ with col_stats:
         st.caption(f"Осталось: **{remaining_cards}** карточек")
 
 
+# --- ОБРАБОТКА НАЖАТИЯ КНОПКИ ГЕНЕРАЦИИ ---
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -1025,6 +1035,7 @@ if generate_click:
                     temp_file_path = None
                     source_url_to_save = user_input.strip()
 
+                    # 1. YOUTUBE ССЫЛКА ЧЕРЕЗ SUPADATA API
                     if source_type == "🎬 Ссылка на YouTube":
                         yt_transcript = get_youtube_transcript(user_input.strip())
                         if "Ошибка" in yt_transcript or "Не удалось" in yt_transcript:
@@ -1033,6 +1044,7 @@ if generate_click:
                             st.stop()
                         final_prompt_content = yt_transcript
 
+                    # 2. МЕДИАФАЙЛ (MP4 / MP3)
                     elif source_type == "📁 Видео или аудио файл (до 5 мин)":
                         if uploaded_file_obj.size > 30 * 1024 * 1024:
                             st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
@@ -1047,6 +1059,7 @@ if generate_click:
                             
                         gemini_uploaded_file = genai.upload_file(path=temp_file_path)
 
+                    # 3. ВЕБ-СТАТЬЯ
                     elif source_type == "🔗 Ссылка на веб-статью":
                         scraped_text = extract_text_from_url(user_input.strip())
                         if "Ошибка" in scraped_text or "Не удалось" in scraped_text:
@@ -1111,6 +1124,7 @@ if generate_click:
                     st.session_state.cards = cards_data
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
+                    # --- СОХРАНЕНИЕ В ИСТОРИЮ ---
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                         request_id = f"req-{int(datetime.now().timestamp())}"
@@ -1156,10 +1170,11 @@ if generate_click:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
 
+# --- ОТРИСОВКА, РЕДАКТИРОВАНИЕ И СОХРАНЕНИЕ КАРТОЧЕК ---
 if st.session_state.cards:
     st.write("---")
     
-    # Блок AI Улучшения (обогащение колоды)
+    # --- БЛОК AI-УЛУЧШЕНИЯ КОЛОДЫ ---
     with st.expander("🤖 AI Улучшение колоды (Добавить дополнительные примеры или синонимы)", expanded=False):
         st.write("Нажмите кнопку ниже, чтобы с помощью Gemini обогатить текущие карточки дополнительными нюансами использования.")
         if st.button("✨ Обогатить карточки через AI", key="ai_enhance_btn"):
@@ -1185,7 +1200,7 @@ if st.session_state.cards:
                 except Exception as ex_err:
                     st.error(f"Не удалось улучшить карточки: {ex_err}")
 
-    # Блок редактирования через таблицу
+    # --- БЛОК РЕДАКТИРОВАНИЯ ---
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
@@ -1213,7 +1228,7 @@ if st.session_state.cards:
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
 
-    # Блок сохранения колоды в личный кабинет
+    # --- БЛОК СОХРАНЕНИЯ КОЛОДЫ ---
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
     col_save1, col_save2 = st.columns([2, 1])
     with col_save1:
@@ -1240,17 +1255,15 @@ if st.session_state.cards:
                 ])
                 
                 share_url = f"{APP_URL}?deck={new_deck_id}"
-                st.session_state.last_saved_deck_url = share_url
                 st.success(f"✅ Колода «{deck_title_input}» успешно сохранена!")
+                st.write("🔗 **Ссылка для отправки ученикам:**")
+                st.code(share_url, language=None)
             except Exception as save_err:
                 st.error(f"Ошибка сохранения колоды: {save_err}")
 
-    if "last_saved_deck_url" in st.session_state and st.session_state.last_saved_deck_url:
-        st.write("🔗 **Ссылка для отправки ученикам:**")
-        st.code(st.session_state.last_saved_deck_url, language=None)
-
     st.write("---")
 
+    # --- КНОПКИ ЭКСПОРТА И РЕЖИМ ПЕЧАТИ ---
     col_exp1, col_exp2 = st.columns(2)
     
     with col_exp1:
@@ -1275,6 +1288,7 @@ if st.session_state.cards:
     with col_exp2:
         print_mode = st.checkbox("🖨️ Включить режим для печати")
 
+    # --- НАСТРОЙКИ ПЕЧАТИ ---
     is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
     custom_print_teacher = ""
     custom_print_note = ""
@@ -1295,11 +1309,11 @@ if st.session_state.cards:
                 with col_p1:
                     custom_print_teacher = st.text_input("Имя преподавателя / Название школы:", placeholder="English Class with Anna").strip()
                 with col_p2:
-                    custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Задание: Составьте предложение с каждым словом").strip()
+                    custom_print_note = st.text_input("Заметка / Задание для ученика:", placeholder="Заметка: выучите наизусть").strip()
 
         if "детская" in print_style and is_max_tariff:
             teacher_title = custom_print_teacher if custom_print_teacher else "English Class"
-            note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
+            note_str = f"<p style='margin:4px 0 0 0; color:#5d4037; font-size:12px;'><b>Заметка:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
                 f"""
                 <div style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
@@ -1349,7 +1363,7 @@ if st.session_state.cards:
 <div class="print-col">
 <h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
 <p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>Definition:</strong> {card.get('explanation', '')}</p>
-<p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><b>Collocations:</b> {card.get('collocations', '')}</p>
+<p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>Collocations:</strong> {card.get('collocations', '')}</p>
 <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>Context:</strong> {card.get('context', '')}</p>
 </div>
 </div>"""
