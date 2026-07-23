@@ -259,7 +259,22 @@ button[data-testid="stBaseButton-primary"]:hover {{
     background-color: #1a365d !important;
     border: none !important;
 }}
-
+/* Оранжевая кнопка «Создать карточки» на главном экране */
+.orange-gen-btn button[kind="primary"],
+.orange-gen-btn button[data-testid="stBaseButton-primary"] {
+    background-color: #e67e22 !important;
+    color: #ffffff !important;
+    border: none !important;
+    border-radius: 8px !important;
+    font-weight: bold !important;
+    font-size: 16px !important;
+    width: 100% !important;
+}
+.orange-gen-btn button[kind="primary"]:hover,
+.orange-gen-btn button[data-testid="stBaseButton-primary"]:hover {
+    background-color: #d35400 !important;
+    border: none !important;
+}
 input, textarea, select, 
 .stTextInput input, 
 .stTextArea textarea,
@@ -873,11 +888,13 @@ with col_main:
         st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
+   st.markdown('<div class="orange-gen-btn">', unsafe_allow_html=True)
     generate_click = st.button(
         "Создать карточки ✨", 
         type="primary", 
         disabled=button_disabled
     )
+    st.markdown('</div>', unsafe_allow_html=True)
 with col_stats:
     st.markdown(
         f"""
