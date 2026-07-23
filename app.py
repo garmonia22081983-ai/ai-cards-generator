@@ -1281,6 +1281,15 @@ with col_stats:
 
     remaining_cards = max(0, max_cards - used_cards) if tariff_name != "АДМИНИСТРАТОР" else 999999
 
+    if tariff_name == "АДМИНИСТРАТОР":
+        exp_date_str = "Бессрочно"
+    elif tariff_name in ["Практик", "Максимум"]:
+        exp_date = period_start + timedelta(days=30)
+        exp_date_str = exp_date.strftime("%d.%m.%Y")
+    else:
+        exp_date = period_start + timedelta(days=3)
+        exp_date_str = exp_date.strftime("%d.%m.%Y")
+
     st.markdown(
         f"""
         <div class="tariff-box">
@@ -1296,7 +1305,13 @@ with col_stats:
     
     if tariff_name == "АДМИНИСТРАТОР":
         st.success("👑 Безлимитный доступ (Админ)")
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown(
+            f"""
+            <p style="margin: 6px 0 0 0; color: #475569; font-size: 12px; border-top: 1px dashed #cbd5e1; padding-top: 6px;">📅 Срок действия: <b style="color: #1e293b;">{exp_date_str}</b></p>
+            </div>
+            """,
+            unsafe_allow_html=True
+        )
     else:
         progress_val = min(float(used_cards) / float(max_cards), 1.0)
         st.progress(progress_val)
@@ -1305,6 +1320,7 @@ with col_stats:
             <div style="margin-top: 8px;">
                 <p style="margin: 2px 0; font-size: 14px;">Осталось: <b style="font-size: 18px; color: #2563eb;">{remaining_cards}</b> карточек</p>
                 <p style="margin: 2px 0; color: #64748b; font-size: 12px;">Использовано: <b>{used_cards}</b> из <b>{max_cards}</b></p>
+                <p style="margin: 8px 0 0 0; color: #475569; font-size: 12.5px; border-top: 1px dashed #cbd5e1; padding-top: 6px;">📅 Доступен до: <b style="color: #1e293b;">{exp_date_str}</b></p>
             </div>
             </div>
             """,
