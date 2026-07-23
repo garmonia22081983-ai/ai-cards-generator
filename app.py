@@ -254,14 +254,19 @@ h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
     box-shadow: none !important;
 }}
 
-/* СТРОГАЯ РАМКА И СТИЛЬ ПЛАШКИ АВТОРИЗАЦИИ КАКИ НА МАКЕТЕ */
+/* СТОП ПРОЗРАЧНОСТИ: ПЛОТНАЯ БЕЛАЯ КАРТОЧКА С ЧЕТКОЙ РАМКОЙ И ТЕНЬЮ */
 [data-testid="stVerticalBlockBorderWrapper"] {{
     background-color: #ffffff !important;
     background: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
+    border: 2px solid #cbd5e1 !important;
     border-radius: 20px !important;
-    padding: 35px 30px !important;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+    padding: 40px 35px !important;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.08) !important;
+}}
+
+/* Убираем внутреннюю прозрачность контейнера */
+[data-testid="stVerticalBlockBorderWrapper"] div {{
+    background-color: transparent !important;
 }}
 
 /* Главная синяя кнопка */
@@ -624,7 +629,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-# --- БЛОК АВТОРИЗАЦИИ (ЧЕРЕЗ КОНТЕЙНЕР С РАМКОЙ) ---
+# --- БЛОК АВТОРИЗАЦИИ (БЕЛАЯ ПЛАШКА С РАМКОЙ КАК НА МАКЕТЕ) ---
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.6, 1])
     with col_a2:
