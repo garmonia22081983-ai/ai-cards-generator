@@ -116,7 +116,7 @@ def send_otp_email(target_email, otp_code):
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
-        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365)
+        return "АДМИНИСТРАТОР", 999999, 0, datetime.now() - timedelta(days=365), False
 
     tariff_name = "Пробный"
     max_cards = 45
@@ -195,10 +195,17 @@ def get_user_tariff_and_usage(email, sh):
                     except ValueError:
                         pass
 
-        return tariff_name, max_cards, used_cards, period_start
+        if tariff_name in ["Практик", "Максимум"]:
+            exp_date = period_start + timedelta(days=30)
+        else:
+            exp_date = period_start + timedelta(days=3)
+
+        is_expired = datetime.now() > exp_date
+
+        return tariff_name, max_cards, used_cards, period_start, is_expired
 
     except Exception:
-        return tariff_name, max_cards, 0, period_start
+        return tariff_name, max_cards, 0, period_start, False
 
 def extract_text_from_url(url):
     try:
@@ -239,25 +246,6 @@ def get_media_duration(file_path):
             rate = wf.getframerate()
             if rate > 0:
                 return frames / float(rate)
-    except Exception:
-        pass
-
-    try:
-        with open(file_path, 'rb') as f:
-            header = f.read(3 * 1024 * 1024)
-            idx = header.find(b'mvhd')
-            if idx != -1:
-                version = header[idx + 8]
-                if version == 0 and len(header) >= idx + 28:
-                    timescale = int.from_bytes(header[idx+20:idx+24], 'big')
-                    duration = int.from_bytes(header[idx+24:idx+28], 'big')
-                    if timescale > 0 and duration > 0:
-                        return duration / float(timescale)
-                elif version == 1 and len(header) >= idx + 40:
-                    timescale = int.from_bytes(header[idx+28:idx+32], 'big')
-                    duration = int.from_bytes(header[idx+32:idx+40], 'big')
-                    if timescale > 0 and duration > 0:
-                        return duration / float(timescale)
     except Exception:
         pass
 
@@ -875,6 +863,8 @@ if "pending_email" not in st.session_state:
     st.session_state.pending_email = None
 if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
+if "impersonated_email" not in st.session_state:
+    st.session_state.impersonated_email = None
 
 saved_email = cookie_manager.get(cookie="auth_email")
 
@@ -904,37 +894,14 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
             
             if user_row:
                 row_num, row_data = user_row
-                reg_date_str = row_data[1]
-                status = row_data[2] if len(row_data) > 2 else "active"
-                st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
-                
-                if status == "paid":
-                    last_pay_date = datetime.now()
-                    try:
-                        payments_rows = fetch_sheet_values(sh, "Payments")
-                        for p_row in reversed(payments_rows[1:]):
-                            if len(p_row) > 1 and p_row[1].strip().lower() == email:
-                                raw_d = p_row[11].strip() if len(p_row) > 11 else ""
-                                for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
-                                    try:
-                                        last_pay_date = datetime.strptime(raw_d, fmt)
-                                        break
-                                    except ValueError:
-                                        continue
-                                break
-                    except Exception:
-                        pass
-                    
-                    if datetime.now() > (last_pay_date + timedelta(days=30)):
-                        st.session_state.trial_expired = True
-                    else:
-                        st.session_state.trial_expired = False
-                else:
-                    reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-                    if datetime.now() > (reg_date + timedelta(days=3)):
-                        st.session_state.trial_expired = True
-                    else:
-                        st.session_state.trial_expired = False
+                st.session_state.user_name = row_data[3] if (len(row_data) > 3 and row_data[3].strip()) else "Преподаватель"
+            else:
+                p_rows = fetch_sheet_values(sh, "Payments")
+                for p_row in reversed(p_rows[1:]):
+                    if len(p_row) > 1 and p_row[1].strip().lower() == email:
+                        if len(p_row) > 0 and p_row[0].strip():
+                            st.session_state.user_name = p_row[0].strip()
+                        break
         except Exception:
             pass
 
@@ -1063,55 +1030,19 @@ if not st.session_state.user_email:
                                 fetch_sheet_values.clear()
                                 
                                 st.session_state.user_name = user_name
-                                exp_date = datetime.now() + timedelta(days=30 if new_status == "paid" else 3)
-                                st.session_state.trial_expired = False
                                 try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
                                 except Exception: pass
                         else:
                             row_num, row_data = user_row
-                            reg_date_str = row_data[1]
                             status = row_data[2] if len(row_data) > 2 else "active"
-                            st.session_state.user_name = row_data[3] if len(row_data) > 3 else "Преподаватель"
+                            st.session_state.user_name = row_data[3] if (len(row_data) > 3 and row_data[3].strip()) else "Преподаватель"
                             
                             if status == "blocked":
                                 st.error("🚫 Ваш доступ заблокирован.")
                                 st.stop()
                                 
-                            if status == "paid":
-                                last_pay_date = datetime.now()
-                                try:
-                                    payments_rows = fetch_sheet_values(sh, "Payments")
-                                    for p_row in reversed(payments_rows[1:]):
-                                        if len(p_row) > 1 and p_row[1].strip().lower() == email:
-                                            raw_d = p_row[11].strip() if len(p_row) > 11 else ""
-                                            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
-                                                try:
-                                                    last_pay_date = datetime.strptime(raw_d, fmt)
-                                                    break
-                                                except ValueError:
-                                                    continue
-                                            break
-                                except Exception:
-                                    pass
-                                
-                                exp_date = last_pay_date + timedelta(days=30)
-                                if datetime.now() > exp_date:
-                                    st.session_state.trial_expired = True
-                                else:
-                                    st.session_state.trial_expired = False
-                                
-                                try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                                except Exception: pass
-                            else:
-                                reg_date = datetime.strptime(reg_date_str, "%Y-%m-%d %H:%M:%S")
-                                exp_date = reg_date + timedelta(days=3)
-                                if datetime.now() > exp_date:
-                                    st.session_state.trial_expired = True
-                                else:
-                                    st.session_state.trial_expired = False
-                                
-                                try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
-                                except Exception: pass
+                            try: cookie_manager.set("auth_email", email, expires_at=datetime.now() + timedelta(days=365))
+                            except Exception: pass
                                     
                         st.success("Успешный вход!")
                         time.sleep(0.4)
@@ -1137,13 +1068,18 @@ if not st.session_state.user_email:
         )
         st.stop()
 
+clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
+is_real_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
+
+effective_email = st.session_state.impersonated_email if (is_real_admin and st.session_state.impersonated_email) else st.session_state.user_email
+
 with st.sidebar:
     col_usr1, col_usr2 = st.columns([1.7, 1])
     with col_usr1:
         st.markdown(
             f"""
-            <div style="padding-top: 6px; font-size: 13px; font-weight: bold; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{st.session_state.user_email}">
-                👤 {st.session_state.user_email}
+            <div style="padding-top: 6px; font-size: 13px; font-weight: bold; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{effective_email}">
+                👤 {effective_email}
             </div>
             """,
             unsafe_allow_html=True
@@ -1163,6 +1099,7 @@ with st.sidebar:
             """, height=0)
             
             st.session_state.user_email = None
+            st.session_state.impersonated_email = None
             st.session_state.otp_sent = False
             st.session_state.pending_email = None
             st.session_state.generated_otp = None
@@ -1171,27 +1108,77 @@ with st.sidebar:
             time.sleep(0.4)
             st.rerun()
 
+    if is_real_admin:
+        st.markdown("<hr style='margin: 4px 0;'>", unsafe_allow_html=True)
+        if st.session_state.impersonated_email:
+            st.warning(f"👁️ Режим просмотра: **{st.session_state.impersonated_email}**")
+            if st.button("🔙 Вернуться в Админку", type="primary", use_container_width=True):
+                st.session_state.impersonated_email = None
+                st.rerun()
+        else:
+            with st.expander("👑 Войти под пользователем (Без OTP)", expanded=False):
+                gc_adm = get_gsheets_client()
+                sh_adm = gc_adm.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+                
+                known_users = set()
+                for u in fetch_sheet_values(sh_adm, "Users")[1:]:
+                    if len(u) > 0 and u[0].strip(): known_users.add(u[0].strip().lower())
+                for p in fetch_sheet_values(sh_adm, "Payments")[1:]:
+                    if len(p) > 1 and p[1].strip(): known_users.add(p[1].strip().lower())
+                
+                sorted_users = sorted(list(known_users))
+                selected_imp = st.selectbox("Выберите Email пользователя:", ["-- Ввести вручную --"] + sorted_users)
+                
+                if selected_imp == "-- Ввести вручную --":
+                    manual_imp = st.text_input("Введите Email учителя:", key="manual_imp_email").strip().lower()
+                    target_imp = manual_imp
+                else:
+                    target_imp = selected_imp
+                    
+                if st.button("🚀 Войти как пользователь", key="start_impersonation_btn", use_container_width=True):
+                    if target_imp and "@" in target_imp:
+                        st.session_state.impersonated_email = target_imp
+                        st.rerun()
+                    else:
+                        st.error("Укажите корректный email.")
+
 st.sidebar.markdown("<hr style='margin: 4px 0 8px 0;'>", unsafe_allow_html=True)
 
 st.title("🎴 Умный Генератор Двусторонних Карточек")
-st.write(f"👋 **Рада видеть вас, {st.session_state.get('user_name', 'Преподаватель')}!**")
+
+gc_client = get_gsheets_client()
+sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
+tariff_name, max_cards, used_cards, period_start, is_expired = get_user_tariff_and_usage(effective_email, sh_global)
+
+display_user_name = "Преподаватель"
+if effective_email.lower() in clean_admin_emails and not st.session_state.impersonated_email:
+    display_user_name = "Администратор"
+else:
+    u_rows_g = fetch_sheet_values(sh_global, "Users")
+    for u in u_rows_g[1:]:
+        if len(u) > 0 and u[0].strip().lower() == effective_email.lower():
+            if len(u) > 3 and u[3].strip():
+                display_user_name = u[3].strip()
+            break
+    if display_user_name == "Преподаватель":
+        p_rows_g = fetch_sheet_values(sh_global, "Payments")
+        for p in reversed(p_rows_g[1:]):
+            if len(p) > 1 and p[1].strip().lower() == effective_email.lower():
+                if len(p) > 0 and p[0].strip():
+                    display_user_name = p[0].strip()
+                break
+
+st.write(f"👋 **Рада видеть вас, {display_user_name}!**")
 
 if "cards" not in st.session_state:
     st.session_state.cards = []
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
-gc_client = get_gsheets_client()
-sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-tariff_name, max_cards, used_cards, period_start = get_user_tariff_and_usage(st.session_state.user_email, sh_global)
-
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
-    is_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
-    
-    if is_admin:
+    if effective_email.lower() in clean_admin_emails:
         model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"])
     else:
         model_option = "gemini-3.5-flash"
@@ -1233,9 +1220,7 @@ with st.sidebar:
     else:
         num_cards = 0
 
-is_expired = st.session_state.get("trial_expired", False)
 is_limit_reached = (tariff_name != "АДМИНИСТРАТОР") and (used_cards >= max_cards)
-
 button_disabled = is_expired or is_limit_reached
 
 if is_expired:
@@ -1334,7 +1319,7 @@ with col_stats:
     st.markdown("<h4 style='font-size: 15px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
     try:
         d_rows = fetch_sheet_values(sh_global, "Decks")
-        my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
+        my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == effective_email.lower()]
         
         if not my_decks:
             st.caption("У вас пока нет сохраненных колод.")
@@ -1526,7 +1511,7 @@ if generate_click:
                         requests_sheet = sh_global.worksheet("Requests")
                         requests_sheet.append_row([
                             request_id, 
-                            st.session_state.user_email, 
+                            effective_email, 
                             source_url_to_save[:250], 
                             student_level, 
                             len(cards_data), 
@@ -1548,7 +1533,7 @@ if generate_click:
                             cards_sheet.append_row([
                                 card_id, request_id, card['word'], tr_val,
                                 card['translation'], exp_val, card.get('collocations', ''),
-                                card['context'], audio_us, audio_uk, st.session_state.user_email
+                                card['context'], audio_us, audio_uk, effective_email
                             ])
                         fetch_sheet_values.clear()
                     except Exception as sheets_err:
@@ -1626,7 +1611,7 @@ if st.session_state.cards:
                 
                 decks_sheet.append_row([
                     new_deck_id,
-                    st.session_state.user_email,
+                    effective_email,
                     deck_title_input.strip(),
                     student_level,
                     len(st.session_state.cards),
@@ -1755,7 +1740,7 @@ if st.session_state.cards:
                 f"""
                 <div class="printable-content" style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <h3 style="margin:0; color:#2b6cb0; font-family:'Georgia', serif;">Worksheet</h3>
+                        <div style="margin:0; color:#2b6cb0; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
                         <span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
                     </div>
                     {note_str}
@@ -1769,7 +1754,7 @@ if st.session_state.cards:
                 f"""
                 <div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <h3 style="margin:0; color:#2d3748; font-family:'Georgia', serif;">Worksheet</h3>
+                        <div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
                         <span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
                     </div>
                     {note_str}
