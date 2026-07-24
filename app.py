@@ -14,6 +14,7 @@ import uuid
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
+from email.header import Header
 import random
 import extra_streamlit_components as stx
 import time
@@ -85,15 +86,19 @@ def fetch_sheet_values(_sh, sheet_name):
 def send_otp_email(target_email, otp_code):
     try:
         smtp_config = st.secrets["smtp"]
-        msg = MIMEMultipart()
+        msg = MIMEMultipart('alternative')
         msg['From'] = smtp_config['email']
         msg['To'] = target_email
-        msg['Subject'] = f"Код входа в Flashcards AI: {otp_code}"
+        msg['Subject'] = Header(f"Код входа в Flashcards AI: {otp_code}", 'utf-8')
 
         body = f"""
+        <!DOCTYPE html>
         <html>
+            <head>
+                <meta charset="utf-8">
+            </head>
             <body style="font-family: Arial, sans-serif; color: #2d3748;">
-                <h2>Код подтверждения входа</h2>
+                <h2>Код подтверждения входа 🎓</h2>
                 <p>Ваш одноразовый код для входа в сервис <b>Flashcards AI</b>:</p>
                 <div style="background-color: #edf2f7; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #2563eb; width: 200px; margin: 15px 0;">
                     {otp_code}
@@ -102,9 +107,9 @@ def send_otp_email(target_email, otp_code):
             </body>
         </html>
         """
-        msg.attach(MIMEText(body, 'html'))
+        msg.attach(MIMEText(body, 'html', 'utf-8'))
 
-        server = smtplib.SMTP_SSL(smtp_config['server'], int(smtp_config['port']))
+        server = smtplib.SMTP_SSL(smtp_config['server'], int(smtp_config['port']), timeout=10)
         server.login(smtp_config['email'], smtp_config['password'])
         server.send_message(msg)
         server.quit()
@@ -120,7 +125,8 @@ def get_user_tariff_and_usage(email, sh):
 
     tariff_name = "Пробный"
     max_cards = 45
-    period_start = datetime.now() - timedelta(days=3)
+    period_start = datetime.now()
+    has_custom_date = False
 
     try:
         payments_rows = fetch_sheet_values(sh, "Payments")
@@ -138,9 +144,13 @@ def get_user_tariff_and_usage(email, sh):
             product_str = found_payment[5].strip() if len(found_payment) > 5 else ""
             raw_d = found_payment[11].strip() if len(found_payment) > 11 else ""
             
-            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+            for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M", "%d.%m.%Y", "%Y-%m-%d"):
                 try:
-                    period_start = datetime.strptime(raw_d, fmt)
+                    parsed_dt = datetime.strptime(raw_d, fmt)
+                    if fmt in ("%d.%m.%Y", "%Y-%m-%d"):
+                        parsed_dt = parsed_dt.replace(hour=23, minute=59, second=59)
+                    period_start = parsed_dt
+                    has_custom_date = True
                     break
                 except ValueError:
                     continue
@@ -156,9 +166,13 @@ def get_user_tariff_and_usage(email, sh):
             for u in u_rows[1:]:
                 if len(u) > 0 and u[0].strip().lower() == email.lower():
                     reg_d_str = u[1].strip() if len(u) > 1 else ""
-                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M", "%d.%m.%Y", "%Y-%m-%d"):
                         try:
-                            period_start = datetime.strptime(reg_d_str, fmt)
+                            parsed_dt = datetime.strptime(reg_d_str, fmt)
+                            if fmt in ("%d.%m.%Y", "%Y-%m-%d"):
+                                parsed_dt = parsed_dt.replace(hour=23, minute=59, second=59)
+                            period_start = parsed_dt
+                            has_custom_date = True
                             break
                         except ValueError:
                             continue
@@ -200,7 +214,10 @@ def get_user_tariff_and_usage(email, sh):
         else:
             exp_date = period_start + timedelta(days=3)
 
-        is_expired = datetime.now() > exp_date
+        if has_custom_date:
+            is_expired = datetime.now() > exp_date
+        else:
+            is_expired = False
 
         return tariff_name, max_cards, used_cards, period_start, is_expired
 
@@ -627,7 +644,11 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
             other_ans = [t for t in all_translations if t != correct_ans]
             
             distractors = random.sample(other_ans, min(3, len(other_ans)))
-            fallback_pool = ["проверять", "выбирать", "создавать", "понимать", "изучать", "следовать"]
+            fallback_pool = [
+                "исследовать", "развивать", "соглашение", "опыт", "возможность", 
+                "важный", "определенный", "поддерживать", "решение", "качество",
+                "окружение", "разнообразие", "впечатление", "влияние", "движение"
+            ]
             while len(distractors) < 3:
                 cand = random.choice(fallback_pool)
                 if cand not in distractors and cand != correct_ans:
@@ -738,9 +759,28 @@ if student_deck_id:
             st.error("🔴 Колода не найдена или была удалена преподавателем.")
             st.stop()
             
+        deck_owner = found_deck[1].strip() if len(found_deck) > 1 else ""
         deck_name = found_deck[2]
         deck_level = found_deck[3]
         cards_data = json.loads(found_deck[5])
+        deck_created_str = found_deck[6] if len(found_deck) > 6 else ""
+
+        # Проверка заморозки колоды на стороне ученика:
+        # На тарифе "Максимум" и для Админа — заморозки НЕТ (вечный доступ)
+        if deck_owner:
+            owner_tariff, _, _, _, _ = get_user_tariff_and_usage(deck_owner, sh_global)
+            if owner_tariff in ["Пробный", "Практик"]:
+                max_freeze = 7 if owner_tariff == "Пробный" else 60
+                if deck_created_str:
+                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                        try:
+                            c_dt = datetime.strptime(deck_created_str.strip(), fmt)
+                            if datetime.now() > (c_dt + timedelta(days=max_freeze)):
+                                st.warning("❄️ **Срок доступа к этой колоде истёк.** Обратитесь к преподавателю для продления доступности материалов.")
+                                st.stop()
+                            break
+                        except ValueError:
+                            continue
         
         st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
         st.caption(f"Всего карточек: {len(cards_data)}")
@@ -975,13 +1015,16 @@ if not st.session_state.user_email:
                         st.error("🔴 Email не найден в системе.")
                         st.link_button("👉 Получить 3 дня тест-драйва на flashcards-ai.ru", "https://flashcards-ai.ru", type="primary", use_container_width=True)
                     else:
-                        otp_code = str(random.randint(100000, 999999))
-                        with st.spinner("Отправка одноразового кода..."):
-                            if send_otp_email(email, otp_code):
-                                st.session_state.generated_otp = otp_code
-                                st.session_state.pending_email = email
-                                st.session_state.otp_sent = True
-                                st.rerun()
+                        if st.session_state.get("otp_sent"):
+                            st.rerun()
+                        else:
+                            otp_code = str(random.randint(100000, 999999))
+                            with st.spinner("Отправка одноразового кода..."):
+                                if send_otp_email(email, otp_code):
+                                    st.session_state.generated_otp = otp_code
+                                    st.session_state.pending_email = email
+                                    st.session_state.otp_sent = True
+                                    st.rerun()
 
         else:
             st.info(f"📩 Код отправлен на **{st.session_state.pending_email}**.")
@@ -1070,6 +1113,7 @@ if not st.session_state.user_email:
                     
             if st.button("Ввести другой Email", use_container_width=True):
                 st.session_state.otp_sent = False
+                st.session_state.generated_otp = None
                 st.rerun()
 
         st.markdown(
@@ -1101,28 +1145,33 @@ with st.sidebar:
             unsafe_allow_html=True
         )
     with col_usr2:
-        if st.button("Выйти", key="sidebar_logout_btn", use_container_width=True):
-            try:
-                cookie_manager.delete("auth_email")
-            except Exception:
-                pass
-            
-            components.html("""
-                <script>
-                    document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                    window.parent.document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                </script>
-            """, height=0)
-            
-            st.session_state.user_email = None
-            st.session_state.impersonated_email = None
-            st.session_state.otp_sent = False
-            st.session_state.pending_email = None
-            st.session_state.generated_otp = None
-            st.session_state.trial_expired = False
-            st.session_state.logout_requested = True
-            time.sleep(0.4)
-            st.rerun()
+        if st.session_state.impersonated_email:
+            if st.button("Выйти", key="sidebar_logout_btn", use_container_width=True):
+                st.session_state.impersonated_email = None
+                st.rerun()
+        else:
+            if st.button("Выйти", key="sidebar_logout_btn", use_container_width=True):
+                try:
+                    cookie_manager.delete("auth_email")
+                except Exception:
+                    pass
+                
+                components.html("""
+                    <script>
+                        document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                        window.parent.document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    </script>
+                """, height=0)
+                
+                st.session_state.user_email = None
+                st.session_state.impersonated_email = None
+                st.session_state.otp_sent = False
+                st.session_state.pending_email = None
+                st.session_state.generated_otp = None
+                st.session_state.trial_expired = False
+                st.session_state.logout_requested = True
+                time.sleep(0.4)
+                st.rerun()
 
     if is_real_admin:
         st.markdown("<hr style='margin: 4px 0;'>", unsafe_allow_html=True)
@@ -1195,7 +1244,7 @@ with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
     if effective_email.lower() in clean_admin_emails:
-        model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-2.0-flash"])
+        model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-3-flash"])
     else:
         model_option = "gemini-3.5-flash"
     
@@ -1261,8 +1310,8 @@ with col_main:
         user_input = st.text_area("Вставьте сюда текст статьи, субтитры или диалог:", height=200)
         st.caption("💡 **Совет:** Если вы хотите создать карточки по видео с YouTube, откройте ролик на YouTube, нажмите под ним кнопку **«Показать текст видео» (Show transcript)**, скопируйте текст и вставьте его сюда.")
     elif source_type == "📁 Видео или аудио файл (до 5 мин)":
-        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 30 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov"])
-        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV. Gemini распознает английскую речь напрямую.")
+        uploaded_file_obj = st.file_uploader("Загрузите видео или аудио фрагмент (до 5 минут, макс. 20 МБ):", type=["mp3", "mp4", "wav", "m4a", "mov", "aac", "webm"])
+        st.caption("Поддерживаются форматы: MP4, MP3, WAV, M4A, MOV, AAC. Gemini распознает английскую речь напрямую.")
     elif source_type == "🔗 Ссылка на веб-статью":
         user_input = st.text_input("Вставьте URL-ссылку на англоязычную статью:")
 
@@ -1363,12 +1412,19 @@ with col_stats:
                 d_created_str = d[6] if len(d) > 6 else ""
                 
                 is_frozen = False
-                max_freeze_days = 7 if tariff_name == "Пробный" else 60
-                if d_created_str:
+                # На тарифе "Максимум" и для Админа — заморозки НЕТ (вечный архив)
+                if tariff_name == "Пробный":
+                    max_freeze_days = 7
+                elif tariff_name == "Практик":
+                    max_freeze_days = 60
+                else:
+                    max_freeze_days = None
+                
+                if max_freeze_days is not None and d_created_str:
                     for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
                         try:
                             created_dt = datetime.strptime(d_created_str.strip(), fmt)
-                            if datetime.now() > (created_dt + timedelta(days=max_freeze_days)) and tariff_name != "АДМИНИСТРАТОР":
+                            if datetime.now() > (created_dt + timedelta(days=max_freeze_days)):
                                 is_frozen = True
                             break
                         except ValueError:
@@ -1376,7 +1432,7 @@ with col_stats:
 
                 if is_frozen:
                     st.write(f"❄️ **{d_name}** ({d_level}) — *Заморожена*")
-                    st.warning(f"❄️ **Колода заморожена**\nСрок хранения колоды истёк (прошло {max_freeze_days} дн.). Продлите тариф или перейдите на тариф «Практик» или «Максимум», чтобы разблокировать доступ.")
+                    st.warning(f"❄️ **Колода заморожена**\nСрок хранения колоды истёк (прошло {max_freeze_days} дн.). Продлите тариф или перейдите на тариф «Максимум», чтобы разблокировать вечный доступ.")
                     st.link_button("💳 Продлить тариф", "https://flashcards-ai.ru/#tarifs", key=f"freeze_renew_{d_id}")
                 else:
                     st.write(f"**{d_name}** ({d_level})")
@@ -1420,34 +1476,52 @@ if generate_click:
             st.link_button("💳 Посмотреть тарифы", "https://flashcards-ai.ru/#tarifs")
         else:
             final_prompt_content = ""
-            gemini_uploaded_file = None
-            temp_file_path = None
+            media_part = None
             source_url_to_save = user_input.strip()
 
             if source_type == "📁 Видео или аудио файл (до 5 мин)":
-                if uploaded_file_obj.size > 30 * 1024 * 1024:
-                    st.error("🛑 Файл слишком большой (превышает 30 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
+                file_bytes = uploaded_file_obj.getvalue()
+                if len(file_bytes) > 20 * 1024 * 1024:
+                    st.error("🛑 Файл слишком большой (превышает 20 МБ)! Пожалуйста, вырежьте короткий фрагмент длительностью до 5 минут.")
                     st.stop()
                     
                 file_ext = os.path.splitext(uploaded_file_obj.name)[1].lower()
-                source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(uploaded_file_obj.size/1024/1024, 1)} MB)"
+                source_url_to_save = f"Файл: {uploaded_file_obj.name} ({round(len(file_bytes)/1024/1024, 1)} MB)"
                 
-                with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
-                    tmp.write(uploaded_file_obj.read())
-                    temp_file_path = tmp.name
-                
-                duration_sec = get_media_duration(temp_file_path)
-                if duration_sec and duration_sec > 300:
-                    dur_min = int(duration_sec // 60)
-                    dur_rem_sec = int(duration_sec % 60)
-                    st.error(f"🛑 **Длительность файла слишком большая: {dur_min} мин {dur_rem_sec} сек.**")
-                    st.info("Максимально допустимая длина файла — **5 минут**. Пожалуйста, обрежьте видео/аудио и загрузите фрагмент заново.")
+                temp_file_path = None
+                try:
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=file_ext) as tmp:
+                        tmp.write(file_bytes)
+                        temp_file_path = tmp.name
+                    
+                    duration_sec = get_media_duration(temp_file_path)
+                    if duration_sec and duration_sec > 300:
+                        dur_min = int(duration_sec // 60)
+                        dur_rem_sec = int(duration_sec % 60)
+                        st.error(f"🛑 **Длительность файла слишком большая: {dur_min} мин {dur_rem_sec} сек.**")
+                        st.info("Максимально допустимая длина файла — **5 минут**. Пожалуйста, обрежьте видео/аудио и загрузите фрагмент заново.")
+                        st.stop()
+                finally:
                     if temp_file_path and os.path.exists(temp_file_path):
                         try: os.remove(temp_file_path)
                         except Exception: pass
-                    st.stop()
-                    
-                gemini_uploaded_file = genai.upload_file(path=temp_file_path)
+
+                mime_types_map = {
+                    ".mp3": "audio/mp3",
+                    ".wav": "audio/wav",
+                    ".m4a": "audio/m4a",
+                    ".aac": "audio/aac",
+                    ".ogg": "audio/ogg",
+                    ".mp4": "video/mp4",
+                    ".mov": "video/quicktime",
+                    ".webm": "video/webm"
+                }
+                mime_type = mime_types_map.get(file_ext, "audio/mp3")
+
+                media_part = {
+                    "mime_type": mime_type,
+                    "data": file_bytes
+                }
 
             elif source_type == "🔗 Ссылка на веб-статью":
                 with st.spinner("Загружаем текст статьи..."):
@@ -1496,8 +1570,8 @@ if generate_click:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
 
-                    if gemini_uploaded_file:
-                        response = model.generate_content([prompt_text, gemini_uploaded_file])
+                    if media_part:
+                        response = model.generate_content([prompt_text, media_part])
                     else:
                         response = model.generate_content([prompt_text, final_prompt_content])
 
@@ -1554,13 +1628,6 @@ if generate_click:
                         fetch_sheet_values.clear()
                     except Exception as sheets_err:
                         st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
-                    
-                    if gemini_uploaded_file:
-                        try: genai.delete_file(gemini_uploaded_file.name)
-                        except Exception: pass
-                    if temp_file_path and os.path.exists(temp_file_path):
-                        try: os.remove(temp_file_path)
-                        except Exception: pass
 
                     st.success(f"Успешно! Создано карточек: {len(cards_data)}")
                     time.sleep(1)
