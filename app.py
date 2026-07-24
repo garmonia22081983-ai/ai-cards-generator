@@ -74,6 +74,14 @@ def get_gsheets_client():
     st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам!")
     st.stop()
 
+@st.cache_data(ttl=30)
+def fetch_sheet_values(_sh, sheet_name):
+    try:
+        ws = _sh.worksheet(sheet_name)
+        return ws.get_all_values()
+    except Exception:
+        return []
+
 def send_otp_email(target_email, otp_code):
     try:
         smtp_config = st.secrets["smtp"]
@@ -115,8 +123,7 @@ def get_user_tariff_and_usage(email, sh):
     period_start = datetime.now() - timedelta(days=3)
 
     try:
-        payments_sheet = sh.worksheet("Payments")
-        payments_rows = payments_sheet.get_all_values()
+        payments_rows = fetch_sheet_values(sh, "Payments")
 
         found_payment = None
         for p_row in reversed(payments_rows[1:]):
@@ -145,8 +152,7 @@ def get_user_tariff_and_usage(email, sh):
                 tariff_name = "Практик"
                 max_cards = 300
         else:
-            users_sheet = sh.worksheet("Users")
-            u_rows = users_sheet.get_all_values()
+            u_rows = fetch_sheet_values(sh, "Users")
             for u in u_rows[1:]:
                 if len(u) > 0 and u[0].strip().lower() == email.lower():
                     reg_d_str = u[1].strip() if len(u) > 1 else ""
@@ -159,8 +165,7 @@ def get_user_tariff_and_usage(email, sh):
                     break
 
         filter_start = period_start - timedelta(days=1)
-        requests_sheet = sh.worksheet("Requests")
-        req_rows = requests_sheet.get_all_values()
+        req_rows = fetch_sheet_values(sh, "Requests")
         
         used_cards = 0
         for r in req_rows[1:]:
@@ -723,8 +728,7 @@ if student_deck_id:
     try:
         gc_client = get_gsheets_client()
         sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-        decks_sheet = sh_global.worksheet("Decks")
-        rows = decks_sheet.get_all_values()
+        rows = fetch_sheet_values(sh_global, "Decks")
         
         found_deck = None
         for r in rows[1:]:
@@ -890,9 +894,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         try:
             gc = get_gsheets_client()
             sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-            
-            users_sheet = sh.worksheet("Users")
-            rows = users_sheet.get_all_values()
+            rows = fetch_sheet_values(sh, "Users")
             
             user_row = None
             for i, r in enumerate(rows[1:], start=2):
@@ -909,8 +911,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
                 if status == "paid":
                     last_pay_date = datetime.now()
                     try:
-                        payments_sheet = sh.worksheet("Payments")
-                        payments_rows = payments_sheet.get_all_values()
+                        payments_rows = fetch_sheet_values(sh, "Payments")
                         for p_row in reversed(payments_rows[1:]):
                             if len(p_row) > 1 and p_row[1].strip().lower() == email:
                                 raw_d = p_row[11].strip() if len(p_row) > 11 else ""
@@ -969,12 +970,8 @@ if not st.session_state.user_email:
                         try:
                             gc = get_gsheets_client()
                             sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
-                            
-                            users_sheet = sh.worksheet("Users")
-                            users_rows = users_sheet.get_all_values()
-                            
-                            payments_sheet = sh.worksheet("Payments")
-                            payments_rows = payments_sheet.get_all_values()
+                            users_rows = fetch_sheet_values(sh, "Users")
+                            payments_rows = fetch_sheet_values(sh, "Payments")
                             
                             user_exists = False
                             for r in users_rows[1:]:
@@ -1017,7 +1014,6 @@ if not st.session_state.user_email:
                     st.session_state.user_email = email
                     st.session_state.logout_requested = False
                     
-                    # Direct JS cookie write
                     components.html(f"""
                         <script>
                             let d = new Date();
@@ -1040,9 +1036,7 @@ if not st.session_state.user_email:
                         gc = get_gsheets_client()
                         sh = gc.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
                         
-                        users_sheet = sh.worksheet("Users")
-                        rows = users_sheet.get_all_values()
-                        
+                        rows = fetch_sheet_values(sh, "Users")
                         user_row = None
                         for i, r in enumerate(rows[1:], start=2):
                             if len(r) > 0 and r[0].strip().lower() == email:
@@ -1050,9 +1044,7 @@ if not st.session_state.user_email:
                                 break
                         
                         if not user_row:
-                            payments_sheet = sh.worksheet("Payments")
-                            p_rows = payments_sheet.get_all_values()
-                            
+                            p_rows = fetch_sheet_values(sh, "Payments")
                             found_p = None
                             for p in reversed(p_rows[1:]):
                                 if len(p) > 1 and p[1].strip().lower() == email:
@@ -1066,7 +1058,9 @@ if not st.session_state.user_email:
                                 reg_time_str = found_p[11].strip() if len(found_p) > 11 else datetime.now().strftime("%Y-%m-%d %H:%M:%S")
                                 
                                 new_status = "paid" if (product_name or price_val) else "active"
+                                users_sheet = sh.worksheet("Users")
                                 users_sheet.append_row([email, reg_time_str, new_status, user_name])
+                                fetch_sheet_values.clear()
                                 
                                 st.session_state.user_name = user_name
                                 exp_date = datetime.now() + timedelta(days=30 if new_status == "paid" else 3)
@@ -1086,8 +1080,7 @@ if not st.session_state.user_email:
                             if status == "paid":
                                 last_pay_date = datetime.now()
                                 try:
-                                    payments_sheet = sh.worksheet("Payments")
-                                    payments_rows = payments_sheet.get_all_values()
+                                    payments_rows = fetch_sheet_values(sh, "Payments")
                                     for p_row in reversed(payments_rows[1:]):
                                         if len(p_row) > 1 and p_row[1].strip().lower() == email:
                                             raw_d = p_row[11].strip() if len(p_row) > 11 else ""
@@ -1340,8 +1333,7 @@ with col_stats:
     st.write("---")
     st.markdown("<h4 style='font-size: 15px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
     try:
-        decks_sheet = sh_global.worksheet("Decks")
-        d_rows = decks_sheet.get_all_values()
+        d_rows = fetch_sheet_values(sh_global, "Decks")
         my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == st.session_state.user_email.lower()]
         
         if not my_decks:
@@ -1532,7 +1524,6 @@ if generate_click:
                         request_id = f"req-{int(datetime.now().timestamp())}"
                         
                         requests_sheet = sh_global.worksheet("Requests")
-                        # Column Order: ID (A), UserEmail (B), SourceText (C), Level (D), NumCards (E), Status (F), Timestamp (G), source_type (H), source_url (I)
                         requests_sheet.append_row([
                             request_id, 
                             st.session_state.user_email, 
@@ -1559,6 +1550,7 @@ if generate_click:
                                 card['translation'], exp_val, card.get('collocations', ''),
                                 card['context'], audio_us, audio_uk, st.session_state.user_email
                             ])
+                        fetch_sheet_values.clear()
                     except Exception as sheets_err:
                         st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
                     
@@ -1641,6 +1633,7 @@ if st.session_state.cards:
                     cards_json_str,
                     now_str
                 ])
+                fetch_sheet_values.clear()
                 
                 share_url = f"{APP_URL}?deck={new_deck_id}"
                 st.success(f"✅ Колода «{deck_title_input}» успешно сохранена!")
@@ -1740,7 +1733,6 @@ if st.session_state.cards:
 
         name_display = student_name_input if student_name_input else "_________________"
         
-        # Header formatting
         if "детская" in print_style.lower() and is_max_tariff:
             note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
@@ -1786,7 +1778,6 @@ if st.session_state.cards:
                 unsafe_allow_html=True
             )
 
-        # Cards print loop
         for card in st.session_state.cards:
             tr_str = get_card_transcription(card, accent_option)
             exp_str = get_card_explanation(card, def_lang_option)
