@@ -279,25 +279,27 @@ if os.path.exists("background.jpg"):
         bin_str = get_base64_of_bin_file("background.jpg")
         bg_css = f"background-image: url('data:image/jpeg;base64,{bin_str}') !important;"
     except Exception:
-        bg_css = "background-color: #f8f6f0 !important;"
+        bg_css = "background-color: #f8fafc !important;"
 else:
-    bg_css = "background-color: #f8f6f0 !important;"
+    bg_css = "background-color: #f8fafc !important;"
 
 css_template = f"""
 <style>
+/* Hide standard Streamlit header */
 [data-testid="stHeader"], header {{
     display: none !important;
 }}
 
 [data-testid="stMainBlockContainer"],
 .main .block-container {{
-    padding-top: 1.2rem !important;
+    padding-top: 1.5rem !important;
     margin-top: 0rem !important;
+    max-width: 1200px !important;
 }}
 
 [data-testid="stSidebarContent"],
 [data-testid="stSidebarUserContent"] {{
-    padding-top: 1rem !important;
+    padding-top: 1.2rem !important;
     margin-top: 0rem !important;
 }}
 
@@ -306,62 +308,68 @@ css_template = f"""
 }}
 
 [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
-    gap: 0.2rem !important;
+    gap: 0.4rem !important;
 }}
 
 html, body, [data-testid="stAppViewContainer"], .stApp {{
-    color: #2d3748 !important;
+    color: #1e293b !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
     {bg_css}
 }}
 
 :root {{
     --primary-color: #2563eb !important;
+    --primary-hover: #1d4ed8 !important;
 }}
 
+/* Custom User Card in Sidebar */
+.user-profile-box {{
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 12px !important;
+    padding: 10px 14px !important;
+    margin-bottom: 12px !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+}}
+
+/* Primary Buttons styling */
+.stButton > button[kind="primary"] {{
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
+    border: none !important;
+    color: #ffffff !important;
+    border-radius: 10px !important;
+    font-weight: 600 !important;
+    padding: 0.5rem 1.2rem !important;
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
+    transition: all 0.2s ease-in-out !important;
+}}
+
+.stButton > button[kind="primary"]:hover {{
+    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3) !important;
+    transform: translateY(-1px) !important;
+}}
+
+/* Secondary Buttons */
+.stButton > button {{
+    border-radius: 8px !important;
+    border: 1px solid #cbd5e1 !important;
+    transition: all 0.2s ease !important;
+}}
+
+.stButton > button:hover {{
+    border-color: #2563eb !important;
+    color: #2563eb !important;
+}}
+
+/* Radio and Input Styling */
 div[data-baseweb="radio"] input:checked + div,
 div[data-baseweb="radio"] div[aria-checked="true"] {{
     border-color: #2563eb !important;
     background-color: #2563eb !important;
-}}
-
-div[role="radiogroup"] label div[aria-checked="true"] {{
-    border-color: #2563eb !important;
-    background-color: #2563eb !important;
-}}
-
-span[data-baseweb="radio"] div {{
-    border-color: #2563eb !important;
-}}
-
-.stButton > button[kind="primary"] {{
-    background-color: #2563eb !important;
-    border-color: #2563eb !important;
-    color: #ffffff !important;
-}}
-
-.stButton > button[kind="primary"]:hover {{
-    background-color: #1d4ed8 !important;
-    border-color: #1d4ed8 !important;
-    color: #ffffff !important;
-}}
-
-h1, h2, h3, h4, h5, h6, p, span, label, li, div {{
-    color: #2d3748 !important;
-}}
-
-.auth-container {{
-    background-color: #ffffff !important;
-    border: 2px solid #2563eb;
-    border-radius: 16px;
-    padding: 30px 25px;
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-    margin-top: 0px;
-    margin-bottom: 20px;
-}}
-
-.auth-header {{
-    text-align: center;
-    margin-bottom: 20px;
 }}
 
 input, textarea, select, 
@@ -371,109 +379,104 @@ input, textarea, select,
 [data-baseweb="textarea"],
 [data-baseweb="select"] > div {{
     background-color: #ffffff !important;
-    color: #2d3748 !important;
-    -webkit-text-fill-color: #2d3748 !important;
-    border: 1px solid #cbd5e0 !important;
-    border-radius: 8px !important;
+    color: #0f172a !important;
+    -webkit-text-fill-color: #0f172a !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 10px !important;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
 }}
 
-div[data-baseweb="popover"] {{
-    z-index: 999999 !important;
-}}
-
-div[data-baseweb="popover"] > div,
-div[data-baseweb="popover"] ul,
-div[data-baseweb="popover"] [data-baseweb="menu"],
-div[data-baseweb="popover"] [role="listbox"] {{
-    max-height: 250px !important;
-    overflow-y: auto !important;
-}}
-
-div[data-baseweb="popover"] li,
-div[data-baseweb="popover"] [role="option"] {{
-    padding-top: 5px !important;
-    padding-bottom: 5px !important;
-    font-size: 13px !important;
+input:focus, textarea:focus {{
+    border-color: #2563eb !important;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
 }}
 
 [data-testid="stSidebar"], 
-.stSidebar, 
-[data-testid="stSidebar"] > div, 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
-    background-color: #f4efe6 !important;
-    background-image: none !important;
+.stSidebar {{
+    background-color: #f8fafc !important;
+    border-right: 1px solid #e2e8f0 !important;
 }}
 
+/* Tariff Box Styling */
 .tariff-box {{
     background-color: #ffffff !important;
-    border: 1px solid #ebdcc5;
-    border-radius: 12px;
-    padding: 16px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.03);
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 14px !important;
+    padding: 18px !important;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
 }}
 
+/* Saved Deck Card in Sidebar */
+.saved-deck-card {{
+    background: #ffffff !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+    margin-bottom: 8px !important;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
+}}
+
+/* Interactive Flashcard Front */
 .card-front {{
-    background-color: #e3b5b5 !important;
-    border: 1px solid #d49f9f;
-    border-radius: 12px;
-    padding: 15px;
-    text-align: center;
-    min-height: 180px;
-    max-height: 180px;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    box-shadow: 0 8px 16px rgba(138, 105, 105, 0.12);
+    background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%) !important;
+    border: 1px solid #fca5a5 !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    text-align: center !important;
+    min-height: 190px !important;
+    max-height: 190px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.08) !important;
 }}
 
 .card-front-title {{
-    font-size: 22px;
-    font-weight: bold;
-    font-family: 'Georgia', serif;
-    color: #4a2e2e !important;
+    font-size: 24px !important;
+    font-weight: 700 !important;
+    font-family: 'Georgia', serif !important;
+    color: #881337 !important;
 }}
 
 .card-front-transcription {{
-    font-size: 14px;
-    color: #5c3a3a !important;
-    margin-top: 6px;
-    font-family: sans-serif;
+    font-size: 14px !important;
+    color: #9f1239 !important;
+    margin-top: 6px !important;
+    font-family: monospace !important;
 }}
 
 .card-front-subtitle {{
-    font-size: 10px;
-    color: #704b4b !important;
-    margin-top: 8px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    font-weight: 600;
+    font-size: 11px !important;
+    color: #be123c !important;
+    margin-top: 10px !important;
+    text-transform: uppercase !important;
+    letter-spacing: 1.2px !important;
+    font-weight: 700 !important;
 }}
 
+/* Interactive Flashcard Back */
 .card-back {{
     background-color: #ffffff !important;
-    border: 1px solid #ebdcc5;
-    border-radius: 12px;
-    padding: 15px;
-    min-height: 310px;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.02);
-    color: #2d3748 !important;
+    border: 1px solid #e2e8f0 !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    min-height: 320px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04) !important;
+    color: #1e293b !important;
 }}
-
-summary::-webkit-details-marker {{ display: none !important; }}
-summary {{ list-style: none !important; }}
 
 /* Print styles */
 .print-row-bw {{
     display: flex;
-    border: 1px dashed #718096;
+    border: 1px dashed #94a3b8;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
-    border-radius: 6px;
+    border-radius: 8px;
 }}
 
 .print-row-kids {{
@@ -507,21 +510,21 @@ summary {{ list-style: none !important; }}
 
 .print-row-premium {{
     display: flex;
-    border: 1px solid #2b6cb0;
-    border-left: 6px solid #2b6cb0;
+    border: 1px solid #2563eb;
+    border-left: 6px solid #2563eb;
     border-radius: 8px;
     margin-bottom: 12px;
     page-break-inside: avoid;
     background-color: #ffffff;
     overflow: hidden;
-    box-shadow: 0 4px 12px rgba(43, 108, 176, 0.08);
+    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
 }}
 
 .print-col-premium-left {{
     width: 40%;
     padding: 15px;
-    background-color: #ebf8ff;
-    border-right: 1px solid #bee3f8;
+    background-color: #eff6ff;
+    border-right: 1px solid #dbeafe;
     text-align: center;
     display: flex;
     flex-direction: column;
@@ -545,7 +548,7 @@ summary {{ list-style: none !important; }}
     align-items: center;
     justify-content: center;
     font-family: 'Georgia', serif;
-    color: #1a365d;
+    color: #1e3a8a;
 }}
 
 @media print {{
@@ -569,12 +572,6 @@ summary {{ list-style: none !important; }}
 
     .main .block-container > div > div:not(:has(.printable-content)) {{
         display: none !important;
-    }}
-
-    [data-testid="stMainBlockContainer"],
-    .main .block-container {{
-        padding-top: 0rem !important;
-        margin-top: 0rem !important;
     }}
 
     body, html, [data-testid="stAppViewContainer"], .stApp {{
@@ -676,7 +673,7 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
     with st.form(key=f"{quiz_key_prefix}_form"):
         user_choices = {}
         for q in quiz_questions:
-            st.markdown(f"#### **{q['id'] + 1}. {q['word']}** <span style='font-size:14px; color:#718096;'>{q['transcription']}</span>", unsafe_allow_html=True)
+            st.markdown(f"#### **{q['id'] + 1}. {q['word']}** <span style='font-size:14px; color:#64748b;'>{q['transcription']}</span>", unsafe_allow_html=True)
             if q['explanation']:
                 st.caption(f"💡 *Definition:* {q['explanation']}")
             
@@ -765,8 +762,6 @@ if student_deck_id:
         cards_data = json.loads(found_deck[5])
         deck_created_str = found_deck[6] if len(found_deck) > 6 else ""
 
-        # Проверка заморозки колоды на стороне ученика:
-        # На тарифе "Максимум" и для Админа — заморозки НЕТ (вечный доступ)
         if deck_owner:
             owner_tariff, _, _, _, _ = get_user_tariff_and_usage(deck_owner, sh_global)
             if owner_tariff in ["Пробный", "Практик"]:
@@ -807,12 +802,12 @@ if student_deck_id:
                 coll_lbl = get_card_collocations_label(s_def_lang)
                 ctx_lbl = get_card_context_label(s_def_lang)
                 print_html = f"""<div class="printable-content print-row-bw">
-<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{tr_str}</span></div>
+<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#64748b;">{tr_str}</span></div>
 <div class="print-col">
-<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
-<p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
-<p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {card.get('collocations', '')}</p>
-<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>{ctx_lbl}</strong> {card.get('context', '')}</p>
+<h4 style="color:#2563eb; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
+<p style="font-size: 12px; color:#475569; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
+<p style="font-size: 12px; color:#1e293b; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {card.get('collocations', '')}</p>
+<p style="font-size: 12px; color:#475569; margin:0;"><strong>{ctx_lbl}</strong> {card.get('context', '')}</p>
 </div>
 </div>"""
                 st.markdown(print_html, unsafe_allow_html=True)
@@ -831,11 +826,11 @@ if student_deck_id:
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                    f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-                    f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
-                    f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>{coll_lbl_s}</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
-                    f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>{ctx_lbl_s}</i> {card.get('context', '')}</p>"
+                    f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
+                    f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
+                    f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
+                    f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_s}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
+                    f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_s}</i> {card.get('context', '')}</p>"
                     f"</div>"
                 )
                 anki_list_student.append({"Front": card.get('word', ''), "Back": anki_back})
@@ -876,21 +871,21 @@ if student_deck_id:
                     else:
                         back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
-<span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
-<span style="color: #718096; font-size: 11px;">{tr_str}</span>
+<span style="font-size: 14px; font-weight: bold; color: #881337 !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
+<span style="color: #64748b; font-size: 11px;">{tr_str}</span>
 </div>
 <div style="font-size: 12px; margin-bottom: 5px;"><b>{exp_lbl}</b> {exp_str}</div>
-<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
+<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2563eb;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>{ctx_lbl}</b> <i>{card.get('context', '')}</i></div>
-<details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
-<summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
-<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
+<details style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; background: #f8fafc; margin-bottom: 10px;">
+<summary style="font-size: 12px; font-weight: bold; color: #1e3a8a; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
+<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2563eb; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
 {card.get('translation', '')}
 </div>
 </details>
-<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold;">{flag_emoji}</span>
+<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+        <span style="font-size: 12px; font-weight: bold;">{flag_emoji}</span>
         <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
     </div>
 </div>
@@ -968,8 +963,8 @@ if not st.session_state.user_email:
             """
             <div class="auth-container">
                 <div class="auth-header">
-                    <h2 style="margin-bottom: 5px; color: #1a365d;">🎓 Flashcards AI</h2>
-                    <p style="color: #4a5568; font-size: 16px; font-weight: 600; margin-top: 0;">Умный генератор двусторонних карточек</p>
+                    <h2 style="margin-bottom: 5px; color: #1e3a8a;">🎓 Flashcards AI</h2>
+                    <p style="color: #475569; font-size: 15px; font-weight: 600; margin-top: 0;">Умный генератор двусторонних карточек</p>
                 </div>
             </div>
             """, 
@@ -1119,8 +1114,8 @@ if not st.session_state.user_email:
         st.markdown(
             """
             <div style="margin-top: 20px; text-align: center;">
-                <small style="color: #718096;">
-                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2e6c9e;">Политику конфиденциальности</a>.
+                <small style="color: #64748b;">
+                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2563eb;">Политику конфиденциальности</a>.
                 </small>
             </div>
             """, 
@@ -1134,47 +1129,47 @@ is_real_admin = st.session_state.user_email and (st.session_state.user_email.str
 effective_email = st.session_state.impersonated_email if (is_real_admin and st.session_state.impersonated_email) else st.session_state.user_email
 
 with st.sidebar:
-    col_usr1, col_usr2 = st.columns([1.7, 1])
-    with col_usr1:
-        st.markdown(
-            f"""
-            <div style="padding-top: 6px; font-size: 13px; font-weight: bold; color: #2d3748; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" title="{effective_email}">
+    st.markdown(
+        f"""
+        <div class="user-profile-box">
+            <div style="font-size: 13px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="{effective_email}">
                 👤 {effective_email}
             </div>
-            """,
-            unsafe_allow_html=True
-        )
-    with col_usr2:
-        if st.session_state.impersonated_email:
-            if st.button("Выйти", key="sidebar_logout_btn", use_container_width=True):
-                st.session_state.impersonated_email = None
-                st.rerun()
-        else:
-            if st.button("Выйти", key="sidebar_logout_btn", use_container_width=True):
-                try:
-                    cookie_manager.delete("auth_email")
-                except Exception:
-                    pass
-                
-                components.html("""
-                    <script>
-                        document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                        window.parent.document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-                    </script>
-                """, height=0)
-                
-                st.session_state.user_email = None
-                st.session_state.impersonated_email = None
-                st.session_state.otp_sent = False
-                st.session_state.pending_email = None
-                st.session_state.generated_otp = None
-                st.session_state.trial_expired = False
-                st.session_state.logout_requested = True
-                time.sleep(0.4)
-                st.rerun()
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    if st.session_state.impersonated_email:
+        if st.button("🚪 Выйти из маскировки", key="sidebar_logout_btn", use_container_width=True):
+            st.session_state.impersonated_email = None
+            st.rerun()
+    else:
+        if st.button("🚪 Выйти", key="sidebar_logout_btn", use_container_width=True):
+            try:
+                cookie_manager.delete("auth_email")
+            except Exception:
+                pass
+            
+            components.html("""
+                <script>
+                    document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                    window.parent.document.cookie = "auth_email=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+                </script>
+            """, height=0)
+            
+            st.session_state.user_email = None
+            st.session_state.impersonated_email = None
+            st.session_state.otp_sent = False
+            st.session_state.pending_email = None
+            st.session_state.generated_otp = None
+            st.session_state.trial_expired = False
+            st.session_state.logout_requested = True
+            time.sleep(0.4)
+            st.rerun()
 
     if is_real_admin:
-        st.markdown("<hr style='margin: 4px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
         if st.session_state.impersonated_email:
             st.warning(f"👁️ Режим просмотра: **{st.session_state.impersonated_email}**")
             if st.button("🔙 Вернуться в Админку", type="primary", use_container_width=True):
@@ -1207,9 +1202,17 @@ with st.sidebar:
                     else:
                         st.error("Укажите корректный email.")
 
-st.sidebar.markdown("<hr style='margin: 4px 0 8px 0;'>", unsafe_allow_html=True)
+st.sidebar.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
 
-st.title("🎴 Умный Генератор Двусторонних Карточек")
+st.markdown(
+    """
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+        <span style="font-size: 32px;">🎓</span>
+        <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #0f172a;">Flashcards AI</h1>
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 gc_client = get_gsheets_client()
 sh_global = gc_client.open_by_key("1YTuOcYeNTecheAn57L8TzCq0bXolYMVOa94MuMGoj88")
@@ -1233,7 +1236,14 @@ else:
                     display_user_name = p[0].strip()
                 break
 
-st.write(f"👋 **Рада видеть вас, {display_user_name}!**")
+st.markdown(
+    f"""
+    <div style="display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 20px;">
+        👋 Рада видеть вас, {display_user_name}!
+    </div>
+    """,
+    unsafe_allow_html=True
+)
 
 if "cards" not in st.session_state:
     st.session_state.cards = []
@@ -1318,7 +1328,8 @@ with col_main:
     generate_click = st.button(
         "Создать карточки ✨", 
         type="primary", 
-        disabled=button_disabled
+        disabled=button_disabled,
+        use_container_width=True
     )
 
 with col_stats:
@@ -1346,9 +1357,9 @@ with col_stats:
     st.markdown(
         f"""
         <div class="tariff-box">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                <h3 style="margin:0; font-size:16px; color:#1e293b;">📊 Ваш тариф</h3>
-                <span style="background-color: {badge_bg}; color: #ffffff; padding: 3px 10px; border-radius: 12px; font-size: 12px; font-weight: bold;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+                <h3 style="margin:0; font-size:15px; font-weight: 700; color:#0f172a;">📊 Ваш тариф</h3>
+                <span style="background-color: {badge_bg}; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;">
                     {tariff_name.upper()}
                 </span>
             </div>
@@ -1360,7 +1371,7 @@ with col_stats:
         st.success("👑 Безлимитный доступ (Админ)")
         st.markdown(
             f"""
-            <p style="margin: 6px 0 0 0; color: #475569; font-size: 12px; border-top: 1px dashed #cbd5e1; padding-top: 6px;">📅 Срок действия: <b style="color: #1e293b;">{exp_date_str}</b></p>
+            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">📅 Срок действия: <b style="color: #0f172a;">{exp_date_str}</b></p>
             </div>
             """,
             unsafe_allow_html=True
@@ -1370,18 +1381,18 @@ with col_stats:
         st.progress(progress_val)
         st.markdown(
             f"""
-            <div style="margin-top: 8px;">
+            <div style="margin-top: 10px;">
                 <p style="margin: 2px 0; font-size: 14px;">Осталось: <b style="font-size: 18px; color: #2563eb;">{remaining_cards}</b> карточек</p>
                 <p style="margin: 2px 0; color: #64748b; font-size: 12px;">Использовано: <b>{used_cards}</b> из <b>{max_cards}</b></p>
-                <p style="margin: 8px 0 0 0; color: #475569; font-size: 12.5px; border-top: 1px dashed #cbd5e1; padding-top: 6px;">📅 Доступен до: <b style="color: #1e293b;">{exp_date_str}</b></p>
+                <p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">📅 Доступен до: <b style="color: #0f172a;">{exp_date_str}</b></p>
             </div>
             </div>
             """,
             unsafe_allow_html=True
         )
 
-    st.write("---")
-    st.markdown("<h4 style='font-size: 15px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #1a365d;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
+    st.write("")
+    st.markdown("<h4 style='font-size: 15px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #0f172a;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
     try:
         d_rows = fetch_sheet_values(sh_global, "Decks")
         my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == effective_email.lower()]
@@ -1412,7 +1423,6 @@ with col_stats:
                 d_created_str = d[6] if len(d) > 6 else ""
                 
                 is_frozen = False
-                # На тарифе "Максимум" и для Админа — заморозки НЕТ (вечный архив)
                 if tariff_name == "Пробный":
                     max_freeze_days = 7
                 elif tariff_name == "Практик":
@@ -1431,11 +1441,11 @@ with col_stats:
                             continue
 
                 if is_frozen:
-                    st.write(f"❄️ **{d_name}** ({d_level}) — *Заморожена*")
+                    st.markdown(f"<div class='saved-deck-card'>❄️ <b>{d_name}</b> ({d_level}) — <i>Заморожена</i></div>", unsafe_allow_html=True)
                     st.warning(f"❄️ **Колода заморожена**\nСрок хранения колоды истёк (прошло {max_freeze_days} дн.). Продлите тариф или перейдите на тариф «Максимум», чтобы разблокировать вечный доступ.")
                     st.link_button("💳 Продлить тариф", "https://flashcards-ai.ru/#tarifs", key=f"freeze_renew_{d_id}")
                 else:
-                    st.write(f"**{d_name}** ({d_level})")
+                    st.markdown(f"<div class='saved-deck-card'><b>{d_name}</b> <span style='font-size:12px; color:#64748b;'>({d_level})</span></div>", unsafe_allow_html=True)
                     c1, c2 = st.columns(2)
                     with c1:
                         if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
@@ -1450,7 +1460,7 @@ with col_stats:
                         student_link = f"{APP_URL}?deck={d_id}"
                         st.code(student_link, language=None)
                     
-                st.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
+                st.markdown("<hr style='margin: 6px 0 10px 0;'>", unsafe_allow_html=True)
     except Exception:
         st.caption("Не удалось загрузить список колод.")
 
@@ -1678,14 +1688,13 @@ if st.session_state.cards:
         st.session_state.cards = edited_df.to_dict(orient="records")
 
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
-    col_save1, col_save2 = st.columns([2, 1])
+    col_save1, col_save2 = st.columns([2.5, 1], gap="medium")
     with col_save1:
         default_deck_title = f"Колода {student_level} — {datetime.now().strftime('%d.%m.%Y')}"
         deck_title_input = st.text_input("Название колоды:", value=default_deck_title)
     with col_save2:
-        st.write(" ")
-        st.write(" ")
-        if st.button("💾 Сохранить колоду", type="primary"):
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("💾 Сохранить колоду", type="primary", use_container_width=True):
             try:
                 decks_sheet = sh_global.worksheet("Decks")
                 new_deck_id = f"deck-{int(datetime.now().timestamp())}"
@@ -1907,11 +1916,11 @@ if st.session_state.cards:
                 encoded_w = urllib.parse.quote(str(card.get('word', '')))
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                    f"<h2 style='color:#2e6c9e; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-                    f"<p style='font-size:13px; color:#a0aec0; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-                    f"<p style='font-size:14px; color:#4a5568; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
-                    f"<p style='font-size:14px; color:#2d3748; margin-bottom:8px;'><b>{coll_lbl_t}</b> <span style='color:#2e6c9e;'>{card.get('collocations', '')}</span></p>"
-                    f"<p style='font-size:14px; color:#718096; margin-bottom:12px;'><i>{ctx_lbl_t}</i> {card.get('context', '')}</p>"
+                    f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
+                    f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
+                    f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
+                    f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_t}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
+                    f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_t}</i> {card.get('context', '')}</p>"
                     f"</div>"
                 )
                 anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
@@ -1949,21 +1958,21 @@ if st.session_state.cards:
                 else:
                     back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
-<span style="font-size: 13px; font-weight: bold; color: #4a2e2e !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
-<span style="color: #718096; font-size: 11px;">{tr_str}</span>
+<span style="font-size: 14px; font-weight: bold; color: #881337 !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
+<span style="color: #64748b; font-size: 11px;">{tr_str}</span>
 </div>
 <div style="font-size: 12px; margin-bottom: 5px;"><b>{exp_lbl}</b> {exp_str}</div>
-<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2e6c9e;">{card.get('collocations', '')}</span></div>
+<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2563eb;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>{ctx_lbl}</b> <i>{card.get('context', '')}</i></div>
-<details style="border: 1px solid #ebdcc5; border-radius: 6px; padding: 4px 8px; background: #fdfbf7; margin-bottom: 10px;">
-<summary style="font-size: 12px; font-weight: bold; color: #1a365d; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
-<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2e6c9e; text-align: center; border-top: 1px dashed #ebdcc5; padding-top: 4px;">
+<details style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; background: #f8fafc; margin-bottom: 10px;">
+<summary style="font-size: 12px; font-weight: bold; color: #1e3a8a; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
+<div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2563eb; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
 {card.get('translation', '')}
 </div>
 </details>
-<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f7fafc; padding: 4px 8px; border-radius: 8px;">
-    <div style="display: flex; align-items: center; gap: 4px;">
-        <span style="font-size: 11px; font-weight: bold;">{flag_emoji}</span>
+<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
+    <div style="display: flex; align-items: center; gap: 6px;">
+        <span style="font-size: 12px; font-weight: bold;">{flag_emoji}</span>
         <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
     </div>
 </div>
