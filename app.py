@@ -1,3 +1,4 @@
+# STREAMING_CHUNK:Loading foundational Python libraries...
 import streamlit as st
 import google.generativeai as genai
 import json
@@ -24,6 +25,7 @@ import html
 import wave
 import streamlit.components.v1 as components
 
+# STREAMING_CHUNK:Configuring system credentials and cookie session manager...
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 ADMIN_EMAILS = [
@@ -39,6 +41,7 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
+# STREAMING_CHUNK:Configuring Google Sheets authorization setup...
 @st.cache_resource
 def get_gsheets_client():
     scopes = [
@@ -75,6 +78,7 @@ def get_gsheets_client():
     st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам!")
     st.stop()
 
+# STREAMING_CHUNK:Defining Google Sheets reader and email dispatch logic...
 @st.cache_data(ttl=30)
 def fetch_sheet_values(_sh, sheet_name):
     try:
@@ -118,6 +122,7 @@ def send_otp_email(target_email, otp_code):
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
+# STREAMING_CHUNK:Calculating user tariff and usage quotas...
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
@@ -224,6 +229,7 @@ def get_user_tariff_and_usage(email, sh):
     except Exception:
         return tariff_name, max_cards, 0, period_start, False
 
+# STREAMING_CHUNK:Defining website scraper and duration analyzer...
 def extract_text_from_url(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -273,6 +279,7 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
+# STREAMING_CHUNK:Injecting customized CSS stylesheet...
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -320,6 +327,16 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
 :root {{
     --primary-color: #2563eb !important;
     --primary-hover: #1d4ed8 !important;
+}}
+
+/* Login White Card Styling */
+div[data-testid="stColumn"]:has(#login-card-marker) {{
+    background-color: #ffffff !important;
+    border: 1px solid #cbd5e1 !important;
+    border-radius: 18px !important;
+    padding: 32px 30px !important;
+    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important;
+    margin-top: 20px !important;
 }}
 
 /* Custom User Card in Sidebar */
@@ -596,6 +613,7 @@ input:focus, textarea:focus {{
 
 st.markdown(css_template, unsafe_allow_html=True)
 
+# STREAMING_CHUNK:Defining language and card label helpers...
 def get_card_transcription(card, accent_choice):
     if "US" in str(accent_choice):
         return card.get('transcription_us', card.get('transcription', ''))
@@ -623,6 +641,7 @@ def get_card_context_label(def_lang_choice):
         return "Контекст:"
     return "Context:"
 
+# STREAMING_CHUNK:Rendering interactive quiz widget...
 def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺🇸 US (Американский)"):
     st.markdown("### 🧪 Интерактивный тест по колоде")
     st.caption("Выберите один из вариантов перевода для каждого слова:")
@@ -725,6 +744,7 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
             st.session_state[user_ans_key] = {}
             st.rerun()
 
+# STREAMING_CHUNK:Handling public shared deck URL parameter...
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -900,6 +920,7 @@ if student_deck_id:
 
     st.stop()
 
+# STREAMING_CHUNK:Initializing session state for user login...
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -956,16 +977,16 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
+# STREAMING_CHUNK:Rendering white card login interface...
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
+        st.markdown('<div id="login-card-marker"></div>', unsafe_allow_html=True)
         st.markdown(
             """
-            <div class="auth-container">
-                <div class="auth-header">
-                    <h2 style="margin-bottom: 5px; color: #1e3a8a;">🎓 Flashcards AI</h2>
-                    <p style="color: #475569; font-size: 15px; font-weight: 600; margin-top: 0;">Умный генератор двусторонних карточек</p>
-                </div>
+            <div style="text-align: center; margin-bottom: 20px;">
+                <h2 style="margin-bottom: 6px; color: #1e3a8a; font-weight: 800; font-size: 26px;">🎓 Flashcards AI</h2>
+                <p style="color: #475569; font-size: 15px; font-weight: 600; margin-top: 0;">Умный генератор двусторонних карточек</p>
             </div>
             """, 
             unsafe_allow_html=True
@@ -1123,6 +1144,7 @@ if not st.session_state.user_email:
         )
         st.stop()
 
+# STREAMING_CHUNK:Rendering profile card in sidebar...
 clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
 is_real_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
 
@@ -1204,6 +1226,7 @@ with st.sidebar:
 
 st.sidebar.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
 
+# STREAMING_CHUNK:Rendering main header greeting...
 st.markdown(
     """
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
@@ -1250,6 +1273,7 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
+# STREAMING_CHUNK:Setting clean admin model selector...
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
@@ -1308,6 +1332,7 @@ elif is_limit_reached:
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
+# STREAMING_CHUNK:Rendering main inputs and tariff statistics card...
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1464,6 +1489,7 @@ with col_stats:
     except Exception:
         st.caption("Не удалось загрузить список колод.")
 
+# STREAMING_CHUNK:Executing generation request with inline binary file handling...
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -1546,7 +1572,10 @@ if generate_click:
 
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
                 try:
-                    model = genai.GenerativeModel(model_option)
+                    try:
+                        model = genai.GenerativeModel(model_option)
+                    except Exception:
+                        model = genai.GenerativeModel("gemini-3.5-flash")
                     
                     if source_type == "✍️ Готовый список слов":
                         prompt_text = f"""
@@ -1580,10 +1609,21 @@ if generate_click:
                         Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                         """
 
-                    if media_part:
-                        response = model.generate_content([prompt_text, media_part])
-                    else:
-                        response = model.generate_content([prompt_text, final_prompt_content])
+                    try:
+                        if media_part:
+                            response = model.generate_content([prompt_text, media_part])
+                        else:
+                            response = model.generate_content([prompt_text, final_prompt_content])
+                    except Exception as first_err:
+                        if model_option != "gemini-3.5-flash":
+                            st.info(f"💡 Модель {model_option} временно недоступна. Автоматически переключаемся на основную gemini-3.5-flash...")
+                            fallback_model = genai.GenerativeModel("gemini-3.5-flash")
+                            if media_part:
+                                response = fallback_model.generate_content([prompt_text, media_part])
+                            else:
+                                response = fallback_model.generate_content([prompt_text, final_prompt_content])
+                        else:
+                            raise first_err
 
                     text_response = response.text.strip()
                     
@@ -1645,6 +1685,7 @@ if generate_click:
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
+# STREAMING_CHUNK:Rendering card data editor and deck save toolbar...
 if st.session_state.cards:
     st.write("---")
     
@@ -1721,6 +1762,7 @@ if st.session_state.cards:
 
     st.write("---")
 
+    # STREAMING_CHUNK:Rendering card presentation preview modes...
     teacher_view_mode = st.radio(
         "Выберите режим предпросмотра:",
         ["🎴 Интерактивный тренажер", "🧪 Пройти тест", "🖨️ Режим для печати"],
@@ -1903,6 +1945,7 @@ if st.session_state.cards:
     elif teacher_view_mode == "🧪 Пройти тест":
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
+    # STREAMING_CHUNK:Rendering interactive flashcards grid view...
     else:
         col_exp1, col_exp2 = st.columns(2)
         coll_lbl_t = get_card_collocations_label(def_lang_option)
