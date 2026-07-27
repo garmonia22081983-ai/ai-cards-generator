@@ -1,4 +1,4 @@
-# STREAMING_CHUNK:Loading core libraries and dependencies...
+# STREAMING_CHUNK:Loading foundational Python libraries...
 import streamlit as st
 import google.generativeai as genai
 import json
@@ -25,7 +25,7 @@ import html
 import wave
 import streamlit.components.v1 as components
 
-# STREAMING_CHUNK:Configuring system constants and session settings...
+# STREAMING_CHUNK:Configuring system credentials and cookie session manager...
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 ADMIN_EMAILS = [
@@ -41,7 +41,7 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
-# STREAMING_CHUNK:Initializing Google Sheets authentication client...
+# STREAMING_CHUNK:Initializing Google Sheets authorization connection...
 @st.cache_resource
 def get_gsheets_client():
     scopes = [
@@ -78,7 +78,7 @@ def get_gsheets_client():
     st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам!")
     st.stop()
 
-# STREAMING_CHUNK:Defining Google Sheets reader and email sender...
+# STREAMING_CHUNK:Defining Google Sheets reader and OTP mail sender...
 @st.cache_data(ttl=30)
 def fetch_sheet_values(_sh, sheet_name):
     try:
@@ -122,7 +122,7 @@ def send_otp_email(target_email, otp_code):
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
-# STREAMING_CHUNK:Calculating user subscription status and card usage...
+# STREAMING_CHUNK:Calculating user subscription limits and usages...
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
@@ -279,7 +279,7 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# STREAMING_CHUNK:Injecting customized CSS stylesheet...
+# STREAMING_CHUNK:Injecting custom page styles and print CSS rule overrides...
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -744,7 +744,7 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
             st.session_state[user_ans_key] = {}
             st.rerun()
 
-# STREAMING_CHUNK:Handling public shared student link view with print support...
+# STREAMING_CHUNK:Handling public shared student link view with dual export...
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -861,13 +861,14 @@ if student_deck_id:
 
         else:
             anki_list_student = []
+            quizlet_list_student = []
             coll_lbl_s = get_card_collocations_label(s_def_lang)
             ctx_lbl_s = get_card_context_label(s_def_lang)
             for card in cards_data:
                 tr_str = get_card_transcription(card, s_accent)
                 exp_str = get_card_explanation(card, s_def_lang)
                 exp_lbl = get_card_explanation_label(s_def_lang)
-                encoded_w = urllib.parse.quote(str(card.get('word', '')))
+                
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
                     f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
@@ -878,10 +879,19 @@ if student_deck_id:
                     f"</div>"
                 )
                 anki_list_student.append({"Front": card.get('word', ''), "Back": anki_back})
+
+                quizlet_back = f"{card.get('translation', '')} {tr_str}\n\n💡 {exp_lbl} {exp_str}\n🔗 {coll_lbl_s} {card.get('collocations', '')}\n💬 {ctx_lbl_s} {card.get('context', '')}"
+                quizlet_list_student.append({"Front": card.get('word', ''), "Back": quizlet_back})
                 
-            df_s = pd.DataFrame(anki_list_student)
-            csv_s = df_s.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
-            st.download_button(label="📱 Скачать файл для Anki / Quizlet", data=csv_s, file_name=f"{deck_name}_anki.txt", mime="text/plain", key="s_anki_btn")
+            csv_s_anki = pd.DataFrame(anki_list_student).to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+            csv_s_quizlet = pd.DataFrame(quizlet_list_student).to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+
+            c_dl1, c_dl2 = st.columns(2)
+            with c_dl1:
+                st.download_button(label="📱 Скачать для Anki (с HTML)", data=csv_s_anki, file_name=f"{deck_name}_anki.txt", mime="text/plain", key="s_anki_btn", use_container_width=True)
+            with c_dl2:
+                st.download_button(label="🟣 Скачать для Quizlet (Чистый текст)", data=csv_s_quizlet, file_name=f"{deck_name}_quizlet.txt", mime="text/plain", key="s_quizlet_btn", use_container_width=True)
+            
             st.write("")
 
             if "student_flipped" not in st.session_state:
@@ -1955,32 +1965,43 @@ if st.session_state.cards:
     elif teacher_view_mode == "🧪 Пройти тест":
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
-    # STREAMING_CHUNK:Rendering interactive flashcards grid view...
+    # STREAMING_CHUNK:Rendering interactive flashcards grid view and exports...
     else:
-        col_exp1, col_exp2 = st.columns(2)
+        anki_list = []
+        quizlet_list = []
         coll_lbl_t = get_card_collocations_label(def_lang_option)
         ctx_lbl_t = get_card_context_label(def_lang_option)
+        
+        for card in st.session_state.cards:
+            tr_str = get_card_transcription(card, accent_option)
+            exp_str = get_card_explanation(card, def_lang_option)
+            exp_lbl = get_card_explanation_label(def_lang_option)
+            
+            anki_back = (
+                f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
+                f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
+                f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
+                f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
+                f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_t}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
+                f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_t}</i> {card.get('context', '')}</p>"
+                f"</div>"
+            )
+            anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
+
+            quizlet_back = f"{card.get('translation', '')} {tr_str}\n\n💡 {exp_lbl} {exp_str}\n🔗 {coll_lbl_t} {card.get('collocations', '')}\n💬 {ctx_lbl_t} {card.get('context', '')}"
+            quizlet_list.append({"Front": card.get('word', ''), "Back": quizlet_back})
+
+        df_anki = pd.DataFrame(anki_list)
+        csv_anki = df_anki.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+
+        df_quizlet = pd.DataFrame(quizlet_list)
+        csv_quizlet = df_quizlet.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+
+        col_exp1, col_exp2 = st.columns(2)
         with col_exp1:
-            anki_list = []
-            for card in st.session_state.cards:
-                tr_str = get_card_transcription(card, accent_option)
-                exp_str = get_card_explanation(card, def_lang_option)
-                exp_lbl = get_card_explanation_label(def_lang_option)
-                encoded_w = urllib.parse.quote(str(card.get('word', '')))
-                anki_back = (
-                    f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                    f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-                    f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-                    f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
-                    f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_t}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
-                    f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_t}</i> {card.get('context', '')}</p>"
-                    f"</div>"
-                )
-                anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
-                
-            df = pd.DataFrame(anki_list)
-            csv = df.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
-            st.download_button(label="📱 Скачать файл для Anki / Quizlet", data=csv, file_name="gemini_anki_cards.txt", mime="text/plain")
+            st.download_button(label="📱 Скачать для Anki (с HTML)", data=csv_anki, file_name="anki_cards.txt", mime="text/plain", use_container_width=True)
+        with col_exp2:
+            st.download_button(label="🟣 Скачать для Quizlet (Чистый текст)", data=csv_quizlet, file_name="quizlet_cards.txt", mime="text/plain", use_container_width=True)
 
         st.write("")
         cols = st.columns(3)
