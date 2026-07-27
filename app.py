@@ -1,4 +1,4 @@
-# STREAMING_CHUNK:Importing required Python dependencies...
+# STREAMING_CHUNK:Loading core libraries and dependencies...
 import streamlit as st
 import google.generativeai as genai
 import json
@@ -41,7 +41,7 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
-# STREAMING_CHUNK:Initializing Google Sheets authentication connection...
+# STREAMING_CHUNK:Initializing Google Sheets authentication client...
 @st.cache_resource
 def get_gsheets_client():
     scopes = [
@@ -78,7 +78,7 @@ def get_gsheets_client():
     st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам!")
     st.stop()
 
-# STREAMING_CHUNK:Defining sheet data fetcher and OTP mail dispatcher...
+# STREAMING_CHUNK:Defining Google Sheets reader and email sender...
 @st.cache_data(ttl=30)
 def fetch_sheet_values(_sh, sheet_name):
     try:
@@ -122,7 +122,7 @@ def send_otp_email(target_email, otp_code):
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
-# STREAMING_CHUNK:Calculating tariff expiration and request limits...
+# STREAMING_CHUNK:Calculating user subscription status and card usage...
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
@@ -229,7 +229,7 @@ def get_user_tariff_and_usage(email, sh):
     except Exception:
         return tariff_name, max_cards, 0, period_start, False
 
-# STREAMING_CHUNK:Defining website scraping and media duration functions...
+# STREAMING_CHUNK:Defining website scraping and media length parser...
 def extract_text_from_url(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -279,7 +279,7 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# STREAMING_CHUNK:Injecting custom page styles and print CSS rule overrides...
+# STREAMING_CHUNK:Injecting customized CSS stylesheet...
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -613,7 +613,7 @@ input:focus, textarea:focus {{
 
 st.markdown(css_template, unsafe_allow_html=True)
 
-# STREAMING_CHUNK:Defining localized text functions...
+# STREAMING_CHUNK:Defining localized text formatting helpers...
 def get_card_transcription(card, accent_choice):
     if "US" in str(accent_choice):
         return card.get('transcription_us', card.get('transcription', ''))
@@ -744,7 +744,7 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
             st.session_state[user_ans_key] = {}
             st.rerun()
 
-# STREAMING_CHUNK:Handling public student deck view with print PDF support...
+# STREAMING_CHUNK:Handling public shared student link view with print support...
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -944,7 +944,7 @@ if student_deck_id:
 
     st.stop()
 
-# STREAMING_CHUNK:Initializing user authentication state...
+# STREAMING_CHUNK:Initializing user authentication session...
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -1001,7 +1001,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-# STREAMING_CHUNK:Rendering login form container...
+# STREAMING_CHUNK:Rendering login form container with white card UI...
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
@@ -1168,7 +1168,7 @@ if not st.session_state.user_email:
         )
         st.stop()
 
-# STREAMING_CHUNK:Rendering user sidebar profile block...
+# STREAMING_CHUNK:Rendering user profile sidebar section...
 clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
 is_real_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
 
@@ -1250,7 +1250,7 @@ with st.sidebar:
 
 st.sidebar.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
 
-# STREAMING_CHUNK:Rendering header welcome banner...
+# STREAMING_CHUNK:Rendering main app title and greeting banner...
 st.markdown(
     """
     <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
@@ -1297,7 +1297,7 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
-# STREAMING_CHUNK:Configuring generation controls...
+# STREAMING_CHUNK:Configuring generation parameters and model options...
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
@@ -1356,7 +1356,7 @@ elif is_limit_reached:
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
-# STREAMING_CHUNK:Rendering main generation input elements...
+# STREAMING_CHUNK:Rendering main input controls and saved deck list...
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1513,7 +1513,7 @@ with col_stats:
     except Exception:
         st.caption("Не удалось загрузить список колод.")
 
-# STREAMING_CHUNK:Calling Gemini API for card generation...
+# STREAMING_CHUNK:Executing generation request via Gemini Generative AI...
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -1709,7 +1709,7 @@ if generate_click:
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
-# STREAMING_CHUNK:Rendering card text data editor and deck saving bar...
+# STREAMING_CHUNK:Rendering card text data editor and deck saving toolbar...
 if st.session_state.cards:
     st.write("---")
     
@@ -1786,7 +1786,7 @@ if st.session_state.cards:
 
     st.write("---")
 
-    # STREAMING_CHUNK:Rendering teacher view modes...
+    # STREAMING_CHUNK:Rendering teacher card preview tabs and printable controls...
     teacher_view_mode = st.radio(
         "Выберите режим предпросмотра:",
         ["🎴 Интерактивный тренажер", "🧪 Пройти тест", "🖨️ Режим для печати"],
@@ -1797,70 +1797,56 @@ if st.session_state.cards:
 
     if teacher_view_mode == "🖨️ Режим для печати":
         is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
-        custom_print_note = ""
-        student_name_input = ""
-        date_input_str = "___/___/2026"
-        print_style = "🖨️ Черно-белая (Экономный режим)"
+
+        col_hdr1, col_hdr2, col_hdr3 = st.columns([1, 1, 1.5])
+        with col_hdr1:
+            student_name_input = st.text_input("👤 **Имя ученика:**", placeholder="Оставьте пустым для черты _______", key="ws_student_name").strip()
+        with col_hdr2:
+            date_input_str = st.text_input("📅 **Дата:**", value="___/___/2026", key="ws_date_str").strip()
+        with col_hdr3:
+            custom_print_note = st.text_input("📝 **Задание / Инструкция для ученика:**", placeholder="Например: Составьте 3 предложения с новыми словами", key="ws_print_note").strip()
+
+        print_style = "🖨️ Черно-белая (Эконом)"
 
         if is_max_tariff:
             st.markdown(
                 """
-                <div style="background: #fffdf5; border: 2px solid #f59e0b; border-radius: 12px; padding: 16px 20px; margin-bottom: 20px; box-shadow: 0 4px 12px rgba(245, 158, 11, 0.12);">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px;">
-                        <span style="font-size: 20px;">👑</span>
-                        <h4 style="margin: 0; color: #92400e; font-size: 16px; font-weight: bold;">Настройка дизайна распечатки и задания (Тариф «Максимум»)</h4>
+                <div style="background: #fffdf5; border: 1px solid #f59e0b; border-radius: 12px; padding: 12px 16px; margin-top: 10px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                        <span style="font-size: 18px;">👑</span>
+                        <h4 style="margin: 0; color: #92400e; font-size: 15px; font-weight: bold;">Выбор стиля оформления распечатки (Тариф «Максимум»)</h4>
                     </div>
-                    <p style="margin: 0 0 12px 0; font-size: 13px; color: #78350f;">
-                        Выберите внешний вид листа, введите имя ученика, дату и добавьте инструкцию. Изменения применятся мгновенно!
-                    </p>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-            
-            col_st1, col_st2 = st.columns([1.5, 1])
-            with col_st1:
-                print_style = st.radio(
-                    "🎨 **Выберите стиль оформления листа:**", 
-                    [
-                        "🖨️ Черно-белая (Эконом)", 
-                        "🎨 Детская цветная (Kids Style)", 
-                        "💼 Взрослый цветной (Премиум)"
-                    ],
-                    horizontal=True,
-                    key="max_print_style_radio"
-                )
-            with col_st2:
-                custom_print_note = st.text_input(
-                    "📝 **Задание / Инструкция для ученика:**", 
-                    placeholder="Например: Составьте 3 предложения с новыми словами",
-                    key="max_print_note_input"
-                ).strip()
-            
-            col_hdr1, col_hdr2 = st.columns(2)
-            with col_hdr1:
-                student_name_input = st.text_input("👤 **Имя ученика (для печати):**", placeholder="Оставьте пустым для черты _______", key="ws_student_name").strip()
-            with col_hdr2:
-                date_input_str = st.text_input("📅 **Дата (для печати):**", value="___/___/2026", key="ws_date_str").strip()
-
-            st.write("")
+            print_style = st.radio(
+                "🎨 **Выберите стиль оформления листа:**", 
+                [
+                    "🖨️ Черно-белая (Эконом)", 
+                    "🎨 Детская цветная (Kids Style)", 
+                    "💼 Взрослый цветной (Премиум)"
+                ],
+                horizontal=True,
+                key="max_print_style_radio"
+            )
         else:
             st.markdown(
                 """
-                <div style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); border: 2px solid #2563eb; border-radius: 12px; padding: 16px 20px; margin-bottom: 16px; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.1);">
-                    <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-                        <span style="font-size: 20px;">🎨</span>
-                        <h4 style="margin: 0; color: #1e3a8a; font-size: 15px; font-weight: bold;">Цветная печать и задания доступны на тарифе «Максимум»</h4>
+                <div style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px 18px; margin-top: 10px; margin-bottom: 16px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+                        <div>
+                            <span style="font-size: 14px; font-weight: bold; color: #1e3a8a;">🎨 Дизайнерские цветные стили (Kids Style и Премиум)</span>
+                            <p style="margin: 2px 0 0 0; font-size: 12px; color: #1e40af;">Доступны на тарифе <b>«Максимум»</b>. Перейдите на тариф Максимум, чтобы создавать яркие цветные распечатки!</p>
+                        </div>
+                        <a href="https://flashcards-ai.ru/#tarifs" target="_blank" style="background-color: #2563eb; color: white; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: bold; white-space: nowrap;">👑 Узнать больше</a>
                     </div>
-                    <p style="margin: 0; font-size: 13px; color: #1e40af; line-height: 1.5;">
-                        Перейдите на тариф <b>«Максимум»</b>, чтобы разблокировать <b>яркий детский стиль (Kids Style)</b>, <b>стильный взрослый премиум-дизайн</b> и добавлять <b>персональные задания для учеников</b> прямо на печатных листах!
-                    </p>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
-            st.link_button("👑 Перейти на тариф «Максимум»", "https://flashcards-ai.ru/#tarifs", type="primary")
-            st.write("")
+
+        st.write("")
 
         components.html(
             """
@@ -1969,7 +1955,7 @@ if st.session_state.cards:
     elif teacher_view_mode == "🧪 Пройти тест":
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
-    # STREAMING_CHUNK:Rendering interactive flashcards grid...
+    # STREAMING_CHUNK:Rendering interactive flashcards grid view...
     else:
         col_exp1, col_exp2 = st.columns(2)
         coll_lbl_t = get_card_collocations_label(def_lang_option)
