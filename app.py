@@ -41,7 +41,7 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
-# STREAMING_CHUNK:Initializing Google Sheets authorization connection...
+# STREAMING_CHUNK:Initializing Google Sheets authentication connection...
 @st.cache_resource
 def get_gsheets_client():
     scopes = [
@@ -880,7 +880,7 @@ if student_deck_id:
                 )
                 anki_list_student.append({"Front": card.get('word', ''), "Back": anki_back})
 
-                quizlet_back = f"{card.get('translation', '')} {tr_str}\n\n💡 {exp_lbl} {exp_str}\n🔗 {coll_lbl_s} {card.get('collocations', '')}\n💬 {ctx_lbl_s} {card.get('context', '')}"
+                quizlet_back = f"{card.get('translation', '')} {tr_str}  •  💡 {exp_lbl} {exp_str}  •  🔗 {coll_lbl_s} {card.get('collocations', '')}  •  💬 {ctx_lbl_s} {card.get('context', '')}"
                 quizlet_list_student.append({"Front": card.get('word', ''), "Back": quizlet_back})
                 
             csv_s_anki = pd.DataFrame(anki_list_student).to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
@@ -1988,7 +1988,7 @@ if st.session_state.cards:
             )
             anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
 
-            quizlet_back = f"{card.get('translation', '')} {tr_str}\n\n💡 {exp_lbl} {exp_str}\n🔗 {coll_lbl_t} {card.get('collocations', '')}\n💬 {ctx_lbl_t} {card.get('context', '')}"
+            quizlet_back = f"{card.get('translation', '')} {tr_str}  •  💡 {exp_lbl} {exp_str}  •  🔗 {coll_lbl_t} {card.get('collocations', '')}  •  💬 {ctx_lbl_t} {card.get('context', '')}"
             quizlet_list.append({"Front": card.get('word', ''), "Back": quizlet_back})
 
         df_anki = pd.DataFrame(anki_list)
