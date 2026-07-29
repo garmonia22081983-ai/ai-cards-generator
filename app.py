@@ -875,7 +875,7 @@ input:focus, textarea:focus {{
 }}
 
 /* Interactive Flashcard Back Standard */
-.card-back {{
+.card-back {
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 16px !important;
@@ -886,17 +886,17 @@ input:focus, textarea:focus {{
     justify-content: space-between !important;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04) !important;
     color: #1e293b !important;
-}}
+}
+
+/* Hide time display and progress timeline in audio players */
+audio::-webkit-media-controls-timeline,
+audio::-webkit-media-controls-current-time-display,
+audio::-webkit-media-controls-time-remaining-display {
+    display: none !important;
+}
 
 /* Print styles */
-.print-row-bw {{
-    display: flex;
-    border: 1px dashed #94a3b8;
-    margin-bottom: 12px;
-    page-break-inside: avoid;
-    background-color: #ffffff;
-    border-radius: 8px;
-}}
+.print-row-bw {
 
 .print-row-kids {{
     display: flex;
