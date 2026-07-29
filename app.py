@@ -25,7 +25,7 @@ import html
 import wave
 import streamlit.components.v1 as components
 
-# STREAMING_CHUNK:Configuring system credentials and cookie session manager...
+# STREAMING_CHUNK:Configuring system constants, admin list and session cookies...
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 ADMIN_EMAILS = [
@@ -40,6 +40,345 @@ else:
     st.error("Ключ API не найден в настройках Secrets!")
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
+
+# STREAMING_CHUNK:Embedding static pre-built Demo Decks dictionary...
+DEMO_DECKS = {
+    "demo-airport": {
+        "title": "✈️ At the Airport & Travel",
+        "level": "B1 (Intermediate)",
+        "style": "premium",
+        "cards": [
+            {
+                "word": "customs",
+                "transcription_us": "/ˈkʌstəmz/",
+                "transcription_uk": "/ˈkʌstəmz/",
+                "translation": "таможня",
+                "explanation_en": "The place at the airport where officers check your luggage.",
+                "explanation_ru": "Место в аэропорту, где проверяют багаж и декларации.",
+                "collocations": "go through customs, clear customs, customs officer",
+                "context": "We had to go through customs as soon as our plane landed."
+            },
+            {
+                "word": "baggage claim",
+                "transcription_us": "/ˈbæɡɪdʒ kleɪm/",
+                "transcription_uk": "/ˈbæɡɪdʒ kleɪm/",
+                "translation": "выдача багажа",
+                "explanation_en": "The area in an airport where arriving passengers collect suitcases.",
+                "explanation_ru": "Зона в аэропорту, где прилетевшие пассажиры забирают чемоданы.",
+                "collocations": "baggage claim area, head to baggage claim, lost baggage claim",
+                "context": "Please wait for me near the baggage claim area after the flight."
+            },
+            {
+                "word": "boarding pass",
+                "transcription_us": "/ˈbɔːrdɪŋ pæs/",
+                "transcription_uk": "/ˈbɔːdɪŋ pɑːs/",
+                "translation": "посадочный талон",
+                "explanation_en": "A document that gives you permission to get on an airplane.",
+                "explanation_ru": "Документ, по которому вас пускают на борт самолета.",
+                "collocations": "show your boarding pass, digital boarding pass, print a boarding pass",
+                "context": "Have your passport and boarding pass ready at the gate."
+            },
+            {
+                "word": "layover",
+                "transcription_us": "/ˈleɪoʊvər/",
+                "transcription_uk": "/ˈleɪəʊvə/",
+                "translation": "пересадка / стыковка",
+                "explanation_en": "A period of waiting between flights during a long journey.",
+                "explanation_ru": "Остановка или ожидание между рейсами при полете с пересадкой.",
+                "collocations": "3-hour layover, flight with a layover, long layover",
+                "context": "We have a four-hour layover in Istanbul before our next flight."
+            },
+            {
+                "word": "delayed",
+                "transcription_us": "/dɪˈleɪd/",
+                "transcription_uk": "/dɪˈleɪd/",
+                "translation": "задержан (о рейсе)",
+                "explanation_en": "Happening or arriving later than planned or expected.",
+                "explanation_ru": "Рейс или событие, которое перенесено на более позднее время.",
+                "collocations": "delayed flight, severely delayed, arrive delayed",
+                "context": "Our flight was delayed due to heavy fog in London."
+            },
+            {
+                "word": "gate",
+                "transcription_us": "/ɡeɪt/",
+                "transcription_uk": "/ɡeɪt/",
+                "translation": "гейт / выход на посадку",
+                "explanation_en": "The exit area where passengers board the aircraft.",
+                "explanation_ru": "Выход в аэропорту, через который пассажиры идут в самолет.",
+                "collocations": "departure gate, change gates, proceeding to gate 5",
+                "context": "Boarding begins in fifteen minutes at gate B12."
+            }
+        ]
+    },
+    "demo-business": {
+        "title": "💼 Business & Job Interview",
+        "level": "B2 (Upper-Intermediate)",
+        "style": "premium",
+        "cards": [
+            {
+                "word": "accomplishment",
+                "transcription_us": "/əˈkɑːmplɪʃmənt/",
+                "transcription_uk": "/əˈkʌmplɪʃmənt/",
+                "translation": "достижение / успех",
+                "explanation_en": "Something that has been achieved successfully through hard work.",
+                "explanation_ru": "Успешный результат, достигнутый благодаря усилиям и труду.",
+                "collocations": "major accomplishment, proud accomplishment, list accomplishments",
+                "context": "Increasing annual sales by 30% was my biggest professional accomplishment."
+            },
+            {
+                "word": "collaborate",
+                "transcription_us": "/kəˈlæbəreɪt/",
+                "transcription_uk": "/kəˈlæbəreɪt/",
+                "translation": "сотрудничать / работать совместно",
+                "explanation_en": "To work jointly with others on an activity or project.",
+                "explanation_ru": "Работать вместе с коллегами над общим проектом.",
+                "collocations": "collaborate closely, collaborate with teams, eager to collaborate",
+                "context": "Our marketing team collaborates closely with software developers."
+            },
+            {
+                "word": "deadline",
+                "transcription_us": "/ˈdedlaɪn/",
+                "transcription_uk": "/ˈdedlaɪn/",
+                "translation": "крайний срок / дедлайн",
+                "explanation_en": "The latest time or date by which a task should be completed.",
+                "explanation_ru": "Фиксированная дата или время, до которого нужно сдать работу.",
+                "collocations": "meet a deadline, tight deadline, miss the deadline",
+                "context": "We had to work late yesterday to meet the project deadline."
+            },
+            {
+                "word": "competitive advantage",
+                "transcription_us": "/kəmˈpetətɪv ədˈvæntɪdʒ/",
+                "transcription_uk": "/kəmˈpetətɪv ədˈvɑːntɪdʒ/",
+                "translation": "конкурентное преимущество",
+                "explanation_en": "A condition that puts a company in a favorable business position.",
+                "explanation_ru": "Качество или фактор, выделяющий компанию среди конкурентов.",
+                "collocations": "gain competitive advantage, key competitive advantage, sustainable advantage",
+                "context": "Innovative technology gives our company a strong competitive advantage."
+            },
+            {
+                "word": "strengths",
+                "transcription_us": "/streŋkθs/",
+                "transcription_uk": "/streŋθs/",
+                "translation": "сильные стороны / преимущества",
+                "explanation_en": "Good qualities or skills that give a person or organization power.",
+                "explanation_ru": "Положительные качества, навыки и профессиональные плюсы.",
+                "collocations": "key strengths, identify strengths, strengths and weaknesses",
+                "context": "My key strengths are strategic problem-solving and team management."
+            },
+            {
+                "word": "work-life balance",
+                "transcription_us": "/wɜːrk laɪf ˈbæləns/",
+                "transcription_uk": "/wɜːk laɪf ˈbæləns/",
+                "translation": "баланс работы и личной жизни",
+                "explanation_en": "The equilibrium between professional work and personal life.",
+                "explanation_ru": "Равновесие между рабочей деятельностью и личным временем.",
+                "collocations": "maintain work-life balance, poor work-life balance, healthy balance",
+                "context": "Flexible working hours help employees maintain a healthy work-life balance."
+            }
+        ]
+    },
+    "demo-kids": {
+        "title": "🦁 Animals & Nature (Kids)",
+        "level": "A1–A2 (Beginner)",
+        "style": "kids",
+        "cards": [
+            {
+                "word": "butterfly",
+                "transcription_us": "/ˈbʌtərflaɪ/",
+                "transcription_uk": "/ˈbʌtəflaɪ/",
+                "translation": "бабочка",
+                "explanation_en": "A colorful insect with four large wings.",
+                "explanation_ru": "Яркое насекомое с четырьмя красивыми крыльями.",
+                "collocations": "colorful butterfly, butterfly wings, catch a butterfly",
+                "context": "Look at that bright yellow butterfly sitting on the flower!"
+            },
+            {
+                "word": "dolphin",
+                "transcription_us": "/ˈdɑːlfɪn/",
+                "transcription_uk": "/ˈdɒlfɪn/",
+                "translation": "дельфин",
+                "explanation_en": "A smart sea animal that breathes air and swims fast.",
+                "explanation_ru": "Умное морское животное, которое быстро плавает и прыгает.",
+                "collocations": "friendly dolphin, swim with dolphins, dolphin show",
+                "context": "Dolphins are very intelligent animals that love playing in water."
+            },
+            {
+                "word": "hedgehog",
+                "transcription_us": "/ˈhedʒhɔːɡ/",
+                "transcription_uk": "/ˈhedʒhɒɡ/",
+                "translation": "ёжик",
+                "explanation_en": "A small animal covered with sharp spines on its back.",
+                "explanation_ru": "Маленькое лесное животное с острыми иголками на спине.",
+                "collocations": "little hedgehog, sharp spines, hedgehog in the garden",
+                "context": "The little hedgehog rolled into a ball when it felt scared."
+            },
+            {
+                "word": "squirrel",
+                "transcription_us": "/ˈskwɜːrəl/",
+                "transcription_uk": "/ˈskwɪrəl/",
+                "translation": "белка",
+                "explanation_en": "A small animal with a bushy tail that climbs trees and eats nuts.",
+                "explanation_ru": "Пушистый зверёк с пушистым хвостом, который прыгает по деревьям.",
+                "collocations": "bushy tail, squirrel collects nuts, red squirrel",
+                "context": "A red squirrel ran up the tree trunk with an acorn in its mouth."
+            },
+            {
+                "word": "feather",
+                "transcription_us": "/ˈfeðər/",
+                "transcription_uk": "/ˈfeðə/",
+                "translation": "перо (птичье)",
+                "explanation_en": "One of the soft light things that cover a bird's body.",
+                "explanation_ru": "Легкая и мягкая частичка оперения птицы.",
+                "collocations": "bird feather, light as a feather, soft feather",
+                "context": "The child found a beautiful blue feather on the grass in the park."
+            },
+            {
+                "word": "forest",
+                "transcription_us": "/ˈfɔːrɪst/",
+                "transcription_uk": "/ˈfɒrɪst/",
+                "translation": "лес",
+                "explanation_en": "A large area of land covered with many trees and plants.",
+                "explanation_ru": "Большой участок земли, на котором растет много деревьев.",
+                "collocations": "deep forest, walk in the forest, forest animals",
+                "context": "Many wild animals and birds live together in the green forest."
+            }
+        ]
+    },
+    "demo-phrasal": {
+        "title": "🔥 Top Phrasal Verbs",
+        "level": "B1–B2 (Intermediate)",
+        "style": "premium",
+        "cards": [
+            {
+                "word": "figure out",
+                "transcription_us": "/ˈfɪɡjər aʊt/",
+                "transcription_uk": "/ˈfɪɡər aʊt/",
+                "translation": "разобраться / понять / вычислить",
+                "explanation_en": "To understand or solve something after thinking about it.",
+                "explanation_ru": "Понять или найти решение проблемы после размышлений.",
+                "collocations": "figure out a problem, figure out how to, try to figure out",
+                "context": "It took me thirty minutes to figure out how to install this program."
+            },
+            {
+                "word": "give up",
+                "transcription_us": "/ɡɪv ʌp/",
+                "transcription_uk": "/ɡɪv ʌp/",
+                "translation": "сдаваться / бросать (привычку)",
+                "explanation_en": "To stop trying to do something or stop a habit.",
+                "explanation_ru": "Перестать пытаться делать что-то или отказаться от привычки.",
+                "collocations": "never give up, give up smoking, give up hope",
+                "context": "Don't give up on learning English even if grammar seems difficult at first."
+            },
+            {
+                "word": "turn out",
+                "transcription_us": "/tɜːrn aʊt/",
+                "transcription_uk": "/tɜːn aʊt/",
+                "translation": "оказаться / выясниться",
+                "explanation_en": "To prove to be or happen in a particular way in the end.",
+                "explanation_ru": "Оказаться в результате или произойти неожиданным образом.",
+                "collocations": "turn out well, as it turns out, turn out to be true",
+                "context": "The test turned out to be much easier than we expected."
+            },
+            {
+                "word": "run out of",
+                "transcription_us": "/rʌn aʊt ʌv/",
+                "transcription_uk": "/rʌn aʊt ɒv/",
+                "translation": "заканчиваться (о ресурсах)",
+                "explanation_en": "To use all of something so that there is none left.",
+                "explanation_ru": "Израсходовать всё без остатка (время, деньги, память).",
+                "collocations": "run out of time, run out of money, run out of coffee",
+                "context": "We need to hurry because we are running out of time before the deadline."
+            },
+            {
+                "word": "look forward to",
+                "transcription_us": "/lʊk ˈfɔːrwərd tuː/",
+                "transcription_uk": "/lʊk ˈfɔːwəd tuː/",
+                "translation": "ждать с нетерпением",
+                "explanation_en": "To feel excited and happy about something that is going to happen.",
+                "explanation_ru": "Радоваться и с нетерпением ожидать предстоящего события.",
+                "collocations": "look forward to meeting, look forward to vacation, eagerly look forward",
+                "context": "I am really looking forward to our upcoming trip to Italy."
+            },
+            {
+                "word": "carry on",
+                "transcription_us": "/ˈkæri ɑːn/",
+                "transcription_uk": "/ˈkæri ɒn/",
+                "translation": "продолжать (делать что-либо)",
+                "explanation_en": "To continue doing something without stopping.",
+                "explanation_ru": "Продолжать начатое действие несмотря на препятствия.",
+                "collocations": "carry on working, carry on with the lesson, carry on as usual",
+                "context": "Please carry on reading the text while I write on the board."
+            }
+        ]
+    },
+    "demo-vocab": {
+        "title": "🧠 Smart Vocabulary (Debates)",
+        "level": "C1 (Advanced)",
+        "style": "premium",
+        "cards": [
+            {
+                "word": "ambiguous",
+                "transcription_us": "/æmˈbɪɡjuəs/",
+                "transcription_uk": "/æmˈbɪɡjuəs/",
+                "translation": "двусмысленный / неоднозначный",
+                "explanation_en": "Open to more than one interpretation; not having one clear meaning.",
+                "explanation_ru": "Имеющий несколько возможных толкований, нечеткий.",
+                "collocations": "ambiguous statement, highly ambiguous, avoid ambiguous wording",
+                "context": "The wording of the law was ambiguous and led to heated debates."
+            },
+            {
+                "word": "inevitable",
+                "transcription_us": "/ɪnˈevɪtəbl/",
+                "transcription_uk": "/ɪnˈevɪtəbl/",
+                "translation": "неизбежный / неминуемый",
+                "explanation_en": "Certain to happen and impossible to avoid or prevent.",
+                "explanation_ru": "То, что обязательно произойдет и чего нельзя избежать.",
+                "collocations": "inevitable consequence, feel inevitable, almost inevitable",
+                "context": "Changes in the global climate have made economic adaptation inevitable."
+            },
+            {
+                "word": "compelling",
+                "transcription_us": "/kəmˈpelɪŋ/",
+                "transcription_uk": "/kəmˈpelɪŋ/",
+                "translation": "убедительный / веский",
+                "explanation_en": "Evoking interest, attention, or admiration in a powerfully irresistible way.",
+                "explanation_ru": "Очень сильный и логичный аргумент, вызывает доверие.",
+                "collocations": "compelling evidence, compelling argument, compelling reason",
+                "context": "The researcher presented compelling evidence to support her scientific theory."
+            },
+            {
+                "word": "detrimental",
+                "transcription_us": "/ˌdetrɪˈmentl/",
+                "transcription_uk": "/ˌdetrɪˈmentl/",
+                "translation": "пагубный / вредный",
+                "explanation_en": "Tending to cause harm or damage to someone or something.",
+                "explanation_ru": "Наносящий существенный вред или ущерб здоровью/развитию.",
+                "collocations": "detrimental impact, detrimental to health, highly detrimental",
+                "context": "Lack of sleep can have a detrimental effect on cognitive performance."
+            },
+            {
+                "word": "feasible",
+                "transcription_us": "/ˈfiːzəbl/",
+                "transcription_uk": "/ˈfiːzəbl/",
+                "translation": "осуществимый / реальный / выполнимый",
+                "explanation_en": "Possible to do easily or conveniently in practice.",
+                "explanation_ru": "Задача или план, который реально реализовать на практике.",
+                "collocations": "economically feasible, highly feasible, feasible solution",
+                "context": "It is not economically feasible to build a bridge across this wide bay."
+            },
+            {
+                "word": "counterproductive",
+                "transcription_us": "/ˌkaʊntərprəˈdʌktɪv/",
+                "transcription_uk": "/ˌkaʊntəprəˈdʌktɪv/",
+                "translation": "контрпродуктивный / приводящий к обратному результату",
+                "explanation_en": "Having the opposite effect to the one that is intended.",
+                "explanation_ru": "Действие, дающее результат, противоположный желаемой цели.",
+                "collocations": "highly counterproductive, prove counterproductive, counterproductive strategy",
+                "context": "Strict punishment can often be counterproductive in motivating students."
+            }
+        ]
+    }
+}
 
 # STREAMING_CHUNK:Initializing Google Sheets authentication connection...
 @st.cache_resource
@@ -279,7 +618,7 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# STREAMING_CHUNK:Injecting custom page styles and print CSS rule overrides...
+# STREAMING_CHUNK:Injecting custom page styles including Kids & Premium card themes...
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -433,7 +772,16 @@ input:focus, textarea:focus {{
     box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
 }}
 
-/* Interactive Flashcard Front */
+.demo-deck-card {{
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
+    border: 1px solid #bae6fd !important;
+    border-radius: 10px !important;
+    padding: 10px 12px !important;
+    margin-bottom: 8px !important;
+    box-shadow: 0 2px 6px rgba(14, 165, 233, 0.06) !important;
+}}
+
+/* Standard Interactive Flashcard Front */
 .card-front {{
     background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%) !important;
     border: 1px solid #fca5a5 !important;
@@ -456,6 +804,72 @@ input:focus, textarea:focus {{
     color: #881337 !important;
 }}
 
+/* Kids Style Interactive Flashcard Front & Back */
+.card-front-kids {{
+    background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%) !important;
+    border: 2px solid #fdba74 !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    text-align: center !important;
+    min-height: 190px !important;
+    max-height: 190px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.12) !important;
+}}
+
+.card-front-kids .card-front-title {{
+    color: #c2410c !important;
+}}
+
+.card-back-kids {{
+    background-color: #fffdf5 !important;
+    border: 2px solid #ffb74d !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    min-height: 320px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.08) !important;
+    color: #1e293b !important;
+}}
+
+/* Premium Style Interactive Flashcard Front & Back */
+.card-front-premium {{
+    background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%) !important;
+    border: 2px solid #93c5fd !important;
+    border-radius: 16px !important;
+    padding: 20px !important;
+    text-align: center !important;
+    min-height: 190px !important;
+    max-height: 190px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12) !important;
+}}
+
+.card-front-premium .card-front-title {{
+    color: #1e40af !important;
+}}
+
+.card-back-premium {{
+    background-color: #ffffff !important;
+    border: 2px solid #3b82f6 !important;
+    border-radius: 16px !important;
+    padding: 18px !important;
+    min-height: 320px !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: space-between !important;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08) !important;
+    color: #1e293b !important;
+}}
+
 .card-front-transcription {{
     font-size: 14px !important;
     color: #9f1239 !important;
@@ -472,7 +886,7 @@ input:focus, textarea:focus {{
     font-weight: 700 !important;
 }}
 
-/* Interactive Flashcard Back */
+/* Interactive Flashcard Back Standard */
 .card-back {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -971,6 +1385,8 @@ if "logout_requested" not in st.session_state:
     st.session_state.logout_requested = False
 if "impersonated_email" not in st.session_state:
     st.session_state.impersonated_email = None
+if "demo_style" not in st.session_state:
+    st.session_state.demo_style = None
 
 saved_email = cookie_manager.get(cookie="auth_email")
 
@@ -1366,7 +1782,7 @@ elif is_limit_reached:
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
-# STREAMING_CHUNK:Rendering main input controls and saved deck list...
+# STREAMING_CHUNK:Rendering main input controls and saved deck list with Demo Decks sidebar...
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1509,6 +1925,7 @@ with col_stats:
                     with c1:
                         if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
                             st.session_state.cards = json.loads(d_cards_json)
+                            st.session_state.demo_style = None
                             st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
                             st.rerun()
                     with c2:
@@ -1522,6 +1939,19 @@ with col_stats:
                 st.markdown("<hr style='margin: 6px 0 10px 0;'>", unsafe_allow_html=True)
     except Exception:
         st.caption("Не удалось загрузить список колод.")
+
+    # SECTION: Готовые Демо-Колоды
+    st.write("")
+    st.markdown("<h4 style='font-size: 15px; font-weight: bold; color: #0284c7; margin-top: 10px; margin-bottom: 8px;'>🎁 Готовые демо-колоды</h4>", unsafe_allow_html=True)
+    st.caption("Попробуйте интерактивные карточки без списания лимита:")
+
+    for d_key, d_info in DEMO_DECKS.items():
+        st.markdown(f"<div class='demo-deck-card'><b>{d_info['title']}</b> <br/><span style='font-size:11px; color:#0369a1;'>Уровень: {d_info['level']}</span></div>", unsafe_allow_html=True)
+        if st.button("👁️ Попробовать", key=f"try_{d_key}", use_container_width=True):
+            st.session_state.cards = d_info["cards"]
+            st.session_state.demo_style = d_info["style"]
+            st.session_state.flipped = {i: False for i in range(len(d_info["cards"]))}
+            st.rerun()
 
 # STREAMING_CHUNK:Executing generation request via Gemini Generative AI...
 if generate_click:
@@ -1676,6 +2106,7 @@ if generate_click:
                     cards_data = json.loads(text_response)
                     
                     st.session_state.cards = cards_data
+                    st.session_state.demo_style = None
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     
                     try:
@@ -1723,6 +2154,9 @@ if generate_click:
 if st.session_state.cards:
     st.write("---")
     
+    if st.session_state.get("demo_style"):
+        st.info("🎁 **Вы тестируете готовую демо-колоду.** Вы можете изучить интерактивные карточки, двойную озвучку US/GB, пройти тест и распечатать страницу!")
+
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
@@ -1796,7 +2230,7 @@ if st.session_state.cards:
 
     st.write("---")
 
-    # STREAMING_CHUNK:Rendering teacher card preview tabs and printable controls...
+    # STREAMING_CHUNK:Rendering teacher card preview tabs and printable controls with Demo Support...
     teacher_view_mode = st.radio(
         "Выберите режим предпросмотра:",
         ["🎴 Интерактивный тренажер", "🧪 Пройти тест", "🖨️ Режим для печати"],
@@ -1806,7 +2240,7 @@ if st.session_state.cards:
     st.write("")
 
     if teacher_view_mode == "🖨️ Режим для печати":
-        is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"])
+        is_max_tariff = (tariff_name in ["Максимум", "АДМИНИСТРАТОР"]) or (st.session_state.get("demo_style") is not None)
 
         col_hdr1, col_hdr2, col_hdr3 = st.columns([1, 1, 1.5])
         with col_hdr1:
@@ -1816,6 +2250,12 @@ if st.session_state.cards:
         with col_hdr3:
             custom_print_note = st.text_input("📝 **Задание / Инструкция для ученика:**", placeholder="Например: Составьте 3 предложения с новыми словами", key="ws_print_note").strip()
 
+        default_print_index = 0
+        if st.session_state.get("demo_style") == "kids":
+            default_print_index = 1
+        elif st.session_state.get("demo_style") == "premium":
+            default_print_index = 2
+
         print_style = "🖨️ Черно-белая (Эконом)"
 
         if is_max_tariff:
@@ -1824,7 +2264,7 @@ if st.session_state.cards:
                 <div style="background: #fffdf5; border: 1px solid #f59e0b; border-radius: 12px; padding: 12px 16px; margin-top: 10px; margin-bottom: 16px;">
                     <div style="display: flex; align-items: center; gap: 8px;">
                         <span style="font-size: 18px;">👑</span>
-                        <h4 style="margin: 0; color: #92400e; font-size: 15px; font-weight: bold;">Выбор стиля оформления распечатки (Тариф «Максимум»)</h4>
+                        <h4 style="margin: 0; color: #92400e; font-size: 15px; font-weight: bold;">Выбор стиля оформления распечатки (Тариф «Максимум» и Демо)</h4>
                     </div>
                 </div>
                 """,
@@ -1837,6 +2277,7 @@ if st.session_state.cards:
                     "🎨 Детская цветная (Kids Style)", 
                     "💼 Взрослый цветной (Премиум)"
                 ],
+                index=default_print_index,
                 horizontal=True,
                 key="max_print_style_radio"
             )
@@ -1965,7 +2406,7 @@ if st.session_state.cards:
     elif teacher_view_mode == "🧪 Пройти тест":
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
-    # STREAMING_CHUNK:Rendering interactive flashcards grid view and exports...
+    # STREAMING_CHUNK:Rendering interactive flashcards with dual US/GB audio for demo decks...
     else:
         anki_list = []
         quizlet_list = []
@@ -2005,51 +2446,71 @@ if st.session_state.cards:
 
         st.write("")
         cols = st.columns(3)
+        current_demo_style = st.session_state.get("demo_style")
+
         for i, card in enumerate(st.session_state.cards):
             col_idx = i % 3
+            tr_us = card.get('transcription_us', card.get('transcription', ''))
+            tr_gb = card.get('transcription_uk', card.get('transcription', ''))
             tr_str = get_card_transcription(card, accent_option)
             exp_str = get_card_explanation(card, def_lang_option)
             exp_lbl = get_card_explanation_label(def_lang_option)
             coll_lbl = get_card_collocations_label(def_lang_option)
             ctx_lbl = get_card_context_label(def_lang_option)
-            audio_type = "2" if "US" in accent_option else "1"
-            flag_emoji = "🇺🇸" if "US" in accent_option else "🇬🇧"
+            
+            encoded_word = urllib.parse.quote(str(card.get('word', '')))
+
+            front_class = "card-front"
+            back_class = "card-back"
+            if current_demo_style == "kids":
+                front_class = "card-front-kids"
+                back_class = "card-back-kids"
+            elif current_demo_style == "premium":
+                front_class = "card-front-premium"
+                back_class = "card-back-premium"
 
             with cols[col_idx]:
                 is_flipped = st.session_state.flipped.get(i, False)
-                encoded_word = urllib.parse.quote(str(card.get('word', '')))
                 
                 if not is_flipped:
-                    front_html = f"""<div class="card-front">
+                    front_html = f"""<div class="{front_class}">
 <span class="card-front-title">{card.get('word', '')}</span>
 <span class="card-front-transcription">{tr_str}</span>
-<span class="card-front-subtitle">{accent_option.split()[0]} English</span>
+<span class="card-front-subtitle">English Flashcard</span>
 </div>"""
                     st.markdown(front_html, unsafe_allow_html=True)
                     if st.button("🔄 Перевернуть", key=f"flip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    back_html = f"""<div class="card-back">
+                    audio_block_html = f"""
+                    <div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 11px; font-weight: bold;">🇺🇸 US</span>
+                            <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 26px;"></audio>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span style="font-size: 11px; font-weight: bold;">🇬🇧 GB</span>
+                            <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 26px;"></audio>
+                        </div>
+                    </div>
+                    """
+                    
+                    back_html = f"""<div class="{back_class}">
 <div style="text-align: center; margin-bottom: 5px;">
 <span style="font-size: 14px; font-weight: bold; color: #881337 !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
-<span style="color: #64748b; font-size: 11px;">{tr_str}</span>
+<span style="color: #64748b; font-size: 11px;">US: {tr_us} | GB: {tr_gb}</span>
 </div>
 <div style="font-size: 12px; margin-bottom: 5px;"><b>{exp_lbl}</b> {exp_str}</div>
 <div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2563eb;">{card.get('collocations', '')}</span></div>
 <div style="font-size: 12px; margin-bottom: 10px;"><b>{ctx_lbl}</b> <i>{card.get('context', '')}</i></div>
-<details style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; background: #f8fafc; margin-bottom: 10px;">
+<details style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; background: #f8fafc; margin-bottom: 8px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1e3a8a; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
 <div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2563eb; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
 {card.get('translation', '')}
 </div>
 </details>
-<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
-    <div style="display: flex; align-items: center; gap: 6px;">
-        <span style="font-size: 12px; font-weight: bold;">{flag_emoji}</span>
-        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
-    </div>
-</div>
+{audio_block_html}
 </div>"""
                     st.markdown(back_html, unsafe_allow_html=True)
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
