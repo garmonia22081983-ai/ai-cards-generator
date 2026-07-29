@@ -1200,7 +1200,7 @@ if student_deck_id:
         
         col_s_opt1, col_s_opt2 = st.columns(2)
         with col_s_opt1:
-            s_accent = st.radio("Акцент / Произношение:", ["🇺🇸 US (Американский)", "🇬🇧 GB (Британский)"], horizontal=True, key="s_accent_radio")
+            s_accent = st.radio("Акцент / Произношение:", ["US (Американский)", "GB (Британский)"], horizontal=True, key="s_accent_radio")
         with col_s_opt2:
             s_def_lang = st.radio("Язык дефиниции:", ["🇬🇧 На английском", "🇷🇺 На русском"], horizontal=True, key="s_def_lang_radio")
 
@@ -1716,7 +1716,7 @@ with st.sidebar:
     
     accent_option = st.radio(
         "Транскрипция и озвучка:",
-        ["🇺🇸 US (Американский)", "🇬🇧 GB (Британский)"],
+        ["US (Американский)", "GB (Британский)"],
         index=0,
         key="teacher_accent_radio"
     )
@@ -2340,7 +2340,9 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    audio_block_html = f"""<div style="display: flex; flex-direction: column; gap: 4px; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
+                    if current_demo_style:
+                        # Двойная озвучка US + GB ТОЛЬКО для демо-колод
+                        audio_block_html = f"""<div style="display: flex; flex-direction: column; gap: 4px; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
 <div style="display: flex; align-items: center; gap: 6px;">
 <div style="min-width: 48px; display: flex; align-items: center; gap: 3px;">{US_FLAG_SVG} <span style="font-size: 11px; font-weight: bold; color: #1e293b;">US</span></div>
 <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100%; height: 28px;"></audio>
@@ -2348,6 +2350,17 @@ if st.session_state.cards:
 <div style="display: flex; align-items: center; gap: 6px;">
 <div style="min-width: 48px; display: flex; align-items: center; gap: 3px;">{GB_FLAG_SVG} <span style="font-size: 11px; font-weight: bold; color: #1e293b;">GB</span></div>
 <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100%; height: 28px;"></audio>
+</div>
+</div>"""
+                    else:
+                        # Единоличный плеер по выбранному преподавателем акценту
+                        audio_type = "2" if "US" in str(accent_option) else "1"
+                        flag_svg = US_FLAG_SVG if "US" in str(accent_option) else GB_FLAG_SVG
+                        flag_lbl = "US" if "US" in str(accent_option) else "GB"
+                        audio_block_html = f"""<div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
+<div style="display: flex; align-items: center; gap: 6px; width: 100%;">
+{flag_svg} <span style="font-size: 11px; font-weight: bold; color: #1e293b;">{flag_lbl}</span>
+<audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 100%; height: 28px;"></audio>
 </div>
 </div>"""
                     
