@@ -1904,6 +1904,7 @@ with col_stats:
                             st.session_state.demo_style = None
                             st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
                             st.session_state.trigger_scroll = True
+                            st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
                             st.rerun()
                     with c2:
                         if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
@@ -1929,6 +1930,7 @@ with col_stats:
             st.session_state.demo_style = d_info["style"]
             st.session_state.flipped = {i: False for i in range(len(d_info["cards"]))}
             st.session_state.trigger_scroll = True
+            st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
             st.rerun()
 
 # STREAMING_CHUNK:Executing generation request via Gemini Generative AI...
@@ -2087,6 +2089,7 @@ if generate_click:
                     st.session_state.demo_style = None
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
                     st.session_state.trigger_scroll = True
+                    st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
                     
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -2136,16 +2139,19 @@ if st.session_state.cards:
 
     if st.session_state.get("trigger_scroll", False):
         st.session_state.trigger_scroll = False
+        sc_cnt = st.session_state.get("scroll_counter", int(time.time()))
         components.html(
-            """<script>
-            setTimeout(function() {
+            f"""<script>
+            // Scroll Trigger ID: {sc_cnt}
+            setTimeout(function() {{
                 var el = window.parent.document.getElementById("cards-anchor");
-                if (el) {
-                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 150);
+                if (el) {{
+                    el.scrollIntoView({{ behavior: 'smooth', block: 'start' }});
+                }}
+            }}, 200);
             </script>""",
-            height=0
+            height=0,
+            key=f"scroll_comp_{sc_cnt}"
         )
 
     if st.session_state.get("demo_style"):
