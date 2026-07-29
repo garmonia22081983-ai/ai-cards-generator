@@ -1764,7 +1764,7 @@ elif is_limit_reached:
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
-# STREAMING_CHUNK:Rendering main input controls and saved deck list with Demo Decks sidebar...
+# STREAMING_CHUNK:Rendering main input controls and saved deck list with Expandable Sections...
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1843,95 +1843,96 @@ with col_stats:
         )
 
     st.write("")
-    st.markdown("<h4 style='font-size: 15px; font-weight: bold; margin-top: 5px; margin-bottom: 10px; color: #0f172a;'>📂 Мои сохраненные колоды</h4>", unsafe_allow_html=True)
-    try:
-        d_rows = fetch_sheet_values(sh_global, "Decks")
-        my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == effective_email.lower()]
-        
-        if not my_decks:
-            st.caption("У вас пока нет сохраненных колод.")
-        else:
-            search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
-            show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
+
+    # EXPANDER 1: Мои сохраненные колоды
+    with st.expander("📂 Мои сохраненные колоды", expanded=False):
+        try:
+            d_rows = fetch_sheet_values(sh_global, "Decks")
+            my_decks = [r for r in d_rows[1:] if len(r) > 1 and r[1].strip().lower() == effective_email.lower()]
             
-            all_my_decks_rev = list(reversed(my_decks))
-            
-            if search_q:
-                filtered_decks = [d for d in all_my_decks_rev if search_q in d[2].lower()]
+            if not my_decks:
+                st.caption("У вас пока нет сохраненных колод.")
             else:
-                filtered_decks = all_my_decks_rev
+                search_q = st.text_input("🔍 Поиск колоды:", key="deck_search_query", placeholder="Название...").strip().lower()
+                show_all = st.checkbox("Показать все колоды", key="show_all_my_decks")
                 
-            display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
-            
-            if not search_q and len(my_decks) > 5 and not show_all:
-                st.caption(f"Показано последние 5 из {len(my_decks)}.")
-            
-            for d in display_decks:
-                d_id = d[0]
-                d_name = d[2]
-                d_level = d[3]
-                d_cards_json = d[5]
-                d_created_str = d[6] if len(d) > 6 else ""
+                all_my_decks_rev = list(reversed(my_decks))
                 
-                is_frozen = False
-                if tariff_name == "Пробный":
-                    max_freeze_days = 7
-                elif tariff_name == "Практик":
-                    max_freeze_days = 60
+                if search_q:
+                    filtered_decks = [d for d in all_my_decks_rev if search_q in d[2].lower()]
                 else:
-                    max_freeze_days = None
-                
-                if max_freeze_days is not None and d_created_str:
-                    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
-                        try:
-                            created_dt = datetime.strptime(d_created_str.strip(), fmt)
-                            if datetime.now() > (created_dt + timedelta(days=max_freeze_days)):
-                                is_frozen = True
-                            break
-                        except ValueError:
-                            continue
-
-                if is_frozen:
-                    st.markdown(f"<div class='saved-deck-card'>❄️ <b>{d_name}</b> ({d_level}) — <i>Заморожена</i></div>", unsafe_allow_html=True)
-                    st.warning(f"❄️ **Колода заморожена**\nСрок хранения колоды истёк (прошло {max_freeze_days} дн.). Продлите тариф или перейдите на тариф «Максимум», чтобы разблокировать вечный доступ.")
-                    st.link_button("💳 Продлить тариф", "https://flashcards-ai.ru/#tarifs", key=f"freeze_renew_{d_id}")
-                else:
-                    st.markdown(f"<div class='saved-deck-card'><b>{d_name}</b> <span style='font-size:12px; color:#64748b;'>({d_level})</span></div>", unsafe_allow_html=True)
-                    c1, c2 = st.columns(2)
-                    with c1:
-                        if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
-                            st.session_state.cards = json.loads(d_cards_json)
-                            st.session_state.demo_style = None
-                            st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
-                            st.session_state.trigger_scroll = True
-                            st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
-                            st.rerun()
-                    with c2:
-                        if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
-                            st.session_state[f"show_link_{d_id}"] = not st.session_state.get(f"show_link_{d_id}", False)
-                            
-                    if st.session_state.get(f"show_link_{d_id}", False):
-                        student_link = f"{APP_URL}?deck={d_id}"
-                        st.code(student_link, language=None)
+                    filtered_decks = all_my_decks_rev
                     
-                st.markdown("<hr style='margin: 6px 0 10px 0;'>", unsafe_allow_html=True)
-    except Exception:
-        st.caption("Не удалось загрузить список колод.")
+                display_decks = filtered_decks if (show_all or search_q) else filtered_decks[:5]
+                
+                if not search_q and len(my_decks) > 5 and not show_all:
+                    st.caption(f"Показано последние 5 из {len(my_decks)}.")
+                
+                for d in display_decks:
+                    d_id = d[0]
+                    d_name = d[2]
+                    d_level = d[3]
+                    d_cards_json = d[5]
+                    d_created_str = d[6] if len(d) > 6 else ""
+                    
+                    is_frozen = False
+                    if tariff_name == "Пробный":
+                        max_freeze_days = 7
+                    elif tariff_name == "Практик":
+                        max_freeze_days = 60
+                    else:
+                        max_freeze_days = None
+                    
+                    if max_freeze_days is not None and d_created_str:
+                        for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d %H:%M", "%d.%m.%Y %H:%M:%S", "%d.%m.%Y %H:%M"):
+                            try:
+                                created_dt = datetime.strptime(d_created_str.strip(), fmt)
+                                if datetime.now() > (created_dt + timedelta(days=max_freeze_days)):
+                                    is_frozen = True
+                                break
+                            except ValueError:
+                                continue
 
-    # SECTION: Готовые Демо-Колоды
-    st.write("")
-    st.markdown("<h4 style='font-size: 15px; font-weight: bold; color: #0284c7; margin-top: 10px; margin-bottom: 8px;'>🎁 Готовые демо-колоды</h4>", unsafe_allow_html=True)
-    st.caption("Попробуйте интерактивные карточки без списания лимита:")
+                    if is_frozen:
+                        st.markdown(f"<div class='saved-deck-card'>❄️ <b>{d_name}</b> ({d_level}) — <i>Заморожена</i></div>", unsafe_allow_html=True)
+                        st.warning(f"❄️ **Колода заморожена**\nСрок хранения колоды истёк (прошло {max_freeze_days} дн.). Продлите тариф или перейдите на тариф «Максимум», чтобы разблокировать вечный доступ.")
+                        st.link_button("💳 Продлить тариф", "https://flashcards-ai.ru/#tarifs", key=f"freeze_renew_{d_id}")
+                    else:
+                        st.markdown(f"<div class='saved-deck-card'><b>{d_name}</b> <span style='font-size:12px; color:#64748b;'>({d_level})</span></div>", unsafe_allow_html=True)
+                        c1, c2 = st.columns(2)
+                        with c1:
+                            if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
+                                st.session_state.cards = json.loads(d_cards_json)
+                                st.session_state.demo_style = None
+                                st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
+                                st.session_state.trigger_scroll = True
+                                st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
+                                st.rerun()
+                        with c2:
+                            if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
+                                st.session_state[f"show_link_{d_id}"] = not st.session_state.get(f"show_link_{d_id}", False)
+                                
+                        if st.session_state.get(f"show_link_{d_id}", False):
+                            student_link = f"{APP_URL}?deck={d_id}"
+                            st.code(student_link, language=None)
+                        
+                    st.markdown("<hr style='margin: 6px 0 10px 0;'>", unsafe_allow_html=True)
+        except Exception:
+            st.caption("Не удалось загрузить список колод.")
 
-    for d_key, d_info in DEMO_DECKS.items():
-        st.markdown(f"<div class='demo-deck-card'><b>{d_info['title']}</b><br/><span style='font-size:11px; color:#0369a1;'>Уровень: {d_info['level']}</span></div>", unsafe_allow_html=True)
-        if st.button("👁️ Попробовать", key=f"try_{d_key}", use_container_width=True):
-            st.session_state.cards = d_info["cards"]
-            st.session_state.demo_style = d_info["style"]
-            st.session_state.flipped = {i: False for i in range(len(d_info["cards"]))}
-            st.session_state.trigger_scroll = True
-            st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
-            st.rerun()
+    # EXPANDER 2: Готовые Демо-Колоды
+    with st.expander("🎁 Готовые демо-колоды", expanded=False):
+        st.caption("Попробуйте интерактивные карточки без списания лимита:")
+
+        for d_key, d_info in DEMO_DECKS.items():
+            st.markdown(f"<div class='demo-deck-card'><b>{d_info['title']}</b><br/><span style='font-size:11px; color:#0369a1;'>Уровень: {d_info['level']}</span></div>", unsafe_allow_html=True)
+            if st.button("👁️ Попробовать", key=f"try_{d_key}", use_container_width=True):
+                st.session_state.cards = d_info["cards"]
+                st.session_state.demo_style = d_info["style"]
+                st.session_state.flipped = {i: False for i in range(len(d_info["cards"]))}
+                st.session_state.trigger_scroll = True
+                st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
+                st.rerun()
 
 # STREAMING_CHUNK:Executing generation request via Gemini Generative AI...
 if generate_click:
