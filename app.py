@@ -1,3 +1,4 @@
+# STREAMING_CHUNK:Loading foundational Python libraries...
 import streamlit as st
 import google.generativeai as genai
 import json
@@ -24,6 +25,7 @@ import html
 import wave
 import streamlit.components.v1 as components
 
+# STREAMING_CHUNK:Configuring system constants, admin list and SVG flags...
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 ADMIN_EMAILS = [
@@ -42,6 +44,7 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
+# STREAMING_CHUNK:Embedding static pre-built Demo Decks dictionary...
 DEMO_DECKS = {
     "demo-airport": {
         "title": "✈️ At the Airport & Travel",
@@ -380,6 +383,7 @@ DEMO_DECKS = {
     }
 }
 
+# STREAMING_CHUNK:Initializing Google Sheets authentication connection...
 @st.cache_resource
 def get_gsheets_client():
     scopes = [
@@ -416,6 +420,7 @@ def get_gsheets_client():
     st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам!")
     st.stop()
 
+# STREAMING_CHUNK:Defining Google Sheets reader and OTP mail sender...
 @st.cache_data(ttl=30)
 def fetch_sheet_values(_sh, sheet_name):
     try:
@@ -453,6 +458,7 @@ def send_otp_email(target_email, otp_code):
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
+# STREAMING_CHUNK:Calculating user subscription limits and usages...
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
@@ -559,6 +565,7 @@ def get_user_tariff_and_usage(email, sh):
     except Exception:
         return tariff_name, max_cards, 0, period_start, False
 
+# STREAMING_CHUNK:Defining website scraping and media length parser...
 def extract_text_from_url(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -608,6 +615,7 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
+# STREAMING_CHUNK:Injecting custom page styles including Kids & Premium card themes...
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -875,7 +883,7 @@ input:focus, textarea:focus {{
 }}
 
 /* Interactive Flashcard Back Standard */
-.card-back {
+.card-back {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
     border-radius: 16px !important;
@@ -886,17 +894,24 @@ input:focus, textarea:focus {{
     justify-content: space-between !important;
     box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04) !important;
     color: #1e293b !important;
-}
+}}
 
 /* Hide time display and progress timeline in audio players */
 audio::-webkit-media-controls-timeline,
 audio::-webkit-media-controls-current-time-display,
-audio::-webkit-media-controls-time-remaining-display {
+audio::-webkit-media-controls-time-remaining-display {{
     display: none !important;
-}
+}}
 
 /* Print styles */
-.print-row-bw {
+.print-row-bw {{
+    display: flex;
+    border: 1px dashed #94a3b8;
+    margin-bottom: 12px;
+    page-break-inside: avoid;
+    background-color: #ffffff;
+    border-radius: 8px;
+}}
 
 .print-row-kids {{
     display: flex;
@@ -1014,6 +1029,7 @@ audio::-webkit-media-controls-time-remaining-display {
 
 st.markdown(css_template, unsafe_allow_html=True)
 
+# STREAMING_CHUNK:Defining localized text formatting helpers...
 def get_card_transcription(card, accent_choice):
     if "US" in str(accent_choice):
         return card.get('transcription_us', card.get('transcription', ''))
@@ -1041,6 +1057,7 @@ def get_card_context_label(def_lang_choice):
         return "Контекст:"
     return "Context:"
 
+# STREAMING_CHUNK:Rendering interactive quiz section...
 def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺🇸 US (Американский)"):
     st.markdown("### 🧪 Интерактивный тест по колоде")
     st.caption("Выберите один из вариантов перевода для каждого слова:")
@@ -1143,6 +1160,7 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
             st.session_state[user_ans_key] = {}
             st.rerun()
 
+# STREAMING_CHUNK:Handling public shared student link view with dual export...
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -1333,9 +1351,9 @@ if student_deck_id:
 </div>
 </details>
 <div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
-<div style="display: flex; align-items: center; gap: 6px; width: 100%;">
+<div style="display: flex; align-items: center; gap: 6px;">
 {flag_svg} <span style="font-size: 11px; font-weight: bold;">{flag_lbl}</span>
-<audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 100%; height: 28px;"></audio>
+<audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
 </div>
 </div>
 </div>"""
@@ -1349,6 +1367,7 @@ if student_deck_id:
 
     st.stop()
 
+# STREAMING_CHUNK:Initializing user authentication session...
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -1407,6 +1426,7 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
+# STREAMING_CHUNK:Rendering login form container with white card UI...
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
@@ -1569,6 +1589,7 @@ if not st.session_state.user_email:
         )
         st.stop()
 
+# STREAMING_CHUNK:Rendering user profile sidebar section...
 clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
 is_real_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
 
@@ -1648,6 +1669,7 @@ with st.sidebar:
 
 st.sidebar.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
 
+# STREAMING_CHUNK:Rendering main app title and greeting banner...
 st.markdown(
     """<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
 <span style="font-size: 32px;">🎓</span>
@@ -1690,6 +1712,7 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
+# STREAMING_CHUNK:Configuring generation parameters and model options...
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
@@ -1748,6 +1771,7 @@ elif is_limit_reached:
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
+# STREAMING_CHUNK:Rendering main input controls and saved deck list with Expandable Sections...
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1917,6 +1941,7 @@ with col_stats:
                 st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
                 st.rerun()
 
+# STREAMING_CHUNK:Executing generation request via Gemini Generative AI...
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -2115,6 +2140,7 @@ if generate_click:
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
+# STREAMING_CHUNK:Rendering main cards view first with auto-scroll and toolbar...
 if st.session_state.cards:
     st.write("---")
     st.markdown('<div id="cards-anchor"></div>', unsafe_allow_html=True)
@@ -2301,6 +2327,7 @@ if st.session_state.cards:
     elif teacher_view_mode == "🧪 Пройти тест":
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
+    # RENDER INTERACTIVE FLASHCARDS GRID
     else:
         cols = st.columns(3)
         current_demo_style = st.session_state.get("demo_style")
@@ -2385,8 +2412,10 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = False
                         st.rerun()
 
+    # BOTTOM TOOLBAR: Downloads, Save Deck and Table Editor
     st.write("---")
     
+    # Anki and Quizlet Export Buttons
     anki_list = []
     quizlet_list = []
     coll_lbl_t = get_card_collocations_label(def_lang_option)
@@ -2425,6 +2454,7 @@ if st.session_state.cards:
 
     st.write("")
 
+    # Save Deck to Cabinet
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
     col_save1, col_save2 = st.columns([2.5, 1], gap="medium")
     with col_save1:
@@ -2457,6 +2487,7 @@ if st.session_state.cards:
             except Exception as save_err:
                 st.error(f"Ошибка сохранения колоды: {save_err}")
 
+    # Text Table Editor Expander
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
