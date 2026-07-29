@@ -2150,8 +2150,7 @@ if st.session_state.cards:
                 }}
             }}, 200);
             </script>""",
-            height=0,
-            key=f"scroll_comp_{sc_cnt}"
+            height=0
         )
 
     if st.session_state.get("demo_style"):
