@@ -434,22 +434,16 @@ def send_otp_email(target_email, otp_code):
         msg['To'] = target_email
         msg['Subject'] = Header(f"Код входа в Flashcards AI: {otp_code}", 'utf-8')
 
-        body = f"""
-        <!DOCTYPE html>
-        <html>
-            <head>
-                <meta charset="utf-8">
-            </head>
-            <body style="font-family: Arial, sans-serif; color: #2d3748;">
-                <h2>Код подтверждения входа 🎓</h2>
-                <p>Ваш одноразовый код для входа в сервис <b>Flashcards AI</b>:</p>
-                <div style="background-color: #edf2f7; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #2563eb; width: 200px; margin: 15px 0;">
-                    {otp_code}
-                </div>
-                <p style="font-size: 12px; color: #718096;">Код действителен в течение 10 минут.</p>
-            </body>
-        </html>
-        """
+        body = f"""<!DOCTYPE html>
+<html>
+<head><meta charset="utf-8"></head>
+<body style="font-family: Arial, sans-serif; color: #2d3748;">
+<h2>Код подтверждения входа 🎓</h2>
+<p>Ваш одноразовый код для входа в сервис <b>Flashcards AI</b>:</p>
+<div style="background-color: #edf2f7; padding: 15px; border-radius: 8px; font-size: 24px; font-weight: bold; letter-spacing: 5px; text-align: center; color: #2563eb; width: 200px; margin: 15px 0;">{otp_code}</div>
+<p style="font-size: 12px; color: #718096;">Код действителен в течение 10 минут.</p>
+</body>
+</html>"""
         msg.attach(MIMEText(body, 'html', 'utf-8'))
 
         server = smtplib.SMTP_SSL(smtp_config['server'], int(smtp_config['port']), timeout=10)
@@ -629,8 +623,7 @@ if os.path.exists("background.jpg"):
 else:
     bg_css = "background-color: #f8fafc !important;"
 
-css_template = f"""
-<style>
+css_template = f"""<style>
 /* Hide standard Streamlit header */
 [data-testid="stHeader"], header {{
     display: none !important;
@@ -1022,8 +1015,7 @@ input:focus, textarea:focus {{
         break-inside: avoid !important;
     }}
 }}
-</style>
-"""
+</style>"""
 
 st.markdown(css_template, unsafe_allow_html=True)
 
@@ -1230,26 +1222,22 @@ if student_deck_id:
 
         if student_mode == "🖨️ Версия для печати":
             components.html(
-                """
-                <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 16px; border: 1px solid #cbd5e0; border-radius: 10px; margin-bottom: 15px;">
-                    <span style="font-size: 13px; color: #4a5568;">💡 <b>Совет:</b> Чтобы сохранить файл на диск, в окне печати выберите принтер <b>«Сохранить как PDF»</b>.</span>
-                    <button onclick="window.parent.print()" style="background-color: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; font-family: sans-serif; display: flex; align-items: center; gap: 6px;">
-                        📄 Распечатать / Сохранить в PDF
-                    </button>
-                </div>
-                """,
+                """<div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 16px; border: 1px solid #cbd5e0; border-radius: 10px; margin-bottom: 15px;">
+<span style="font-size: 13px; color: #4a5568;">💡 <b>Совет:</b> Чтобы сохранить файл на диск, в окне печати выберите принтер <b>«Сохранить как PDF»</b>.</span>
+<button onclick="window.parent.print()" style="background-color: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; font-family: sans-serif; display: flex; align-items: center; gap: 6px;">
+📄 Распечатать / Сохранить в PDF
+</button>
+</div>""",
                 height=65
             )
 
             st.markdown(
-                f"""
-                <div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet: {deck_name}</div>
-                        <span style="font-size: 12px; color: #718096;">Level: {deck_level}</span>
-                    </div>
-                </div>
-                """,
+                f"""<div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
+<div style="display: flex; justify-content: space-between; align-items: flex-end;">
+<div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet: {deck_name}</div>
+<span style="font-size: 12px; color: #718096;">Level: {deck_level}</span>
+</div>
+</div>""",
                 unsafe_allow_html=True
             )
 
@@ -1352,10 +1340,10 @@ if student_deck_id:
 </div>
 </details>
 <div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
-    <div style="display: flex; align-items: center; gap: 6px;">
-        <span style="font-size: 12px; font-weight: bold;">{flag_emoji}</span>
-        <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
-    </div>
+<div style="display: flex; align-items: center; gap: 6px;">
+<span style="font-size: 12px; font-weight: bold;">{flag_emoji}</span>
+<audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
+</div>
 </div>
 </div>"""
                         st.markdown(back_html, unsafe_allow_html=True)
@@ -1433,12 +1421,10 @@ if not st.session_state.user_email:
     with col_a2:
         st.markdown('<div id="login-card-marker"></div>', unsafe_allow_html=True)
         st.markdown(
-            """
-            <div style="text-align: center; margin-bottom: 20px;">
-                <h2 style="margin-bottom: 6px; color: #1e3a8a; font-weight: 800; font-size: 26px;">🎓 Flashcards AI</h2>
-                <p style="color: #475569; font-size: 15px; font-weight: 600; margin-top: 0;">Умный генератор двусторонних карточек</p>
-            </div>
-            """, 
+            """<div style="text-align: center; margin-bottom: 20px;">
+<h2 style="margin-bottom: 6px; color: #1e3a8a; font-weight: 800; font-size: 26px;">🎓 Flashcards AI</h2>
+<p style="color: #475569; font-size: 15px; font-weight: 600; margin-top: 0;">Умный генератор двусторонних карточек</p>
+</div>""", 
             unsafe_allow_html=True
         )
         
@@ -1583,13 +1569,11 @@ if not st.session_state.user_email:
                 st.rerun()
 
         st.markdown(
-            """
-            <div style="margin-top: 20px; text-align: center;">
-                <small style="color: #64748b;">
-                Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2563eb;">Политику конфиденциальности</a>.
-                </small>
-            </div>
-            """, 
+            """<div style="margin-top: 20px; text-align: center;">
+<small style="color: #64748b;">
+Входя в систему, вы принимаете <a href="https://flashcards-ai.ru/privacy" target="_blank" style="color: #2563eb;">Политику конфиденциальности</a>.
+</small>
+</div>""", 
             unsafe_allow_html=True
         )
         st.stop()
@@ -1602,13 +1586,11 @@ effective_email = st.session_state.impersonated_email if (is_real_admin and st.s
 
 with st.sidebar:
     st.markdown(
-        f"""
-        <div class="user-profile-box">
-            <div style="font-size: 13px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="{effective_email}">
-                👤 {effective_email}
-            </div>
-        </div>
-        """,
+        f"""<div class="user-profile-box">
+<div style="font-size: 13px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="{effective_email}">
+👤 {effective_email}
+</div>
+</div>""",
         unsafe_allow_html=True
     )
     
@@ -1678,12 +1660,10 @@ st.sidebar.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
 
 # STREAMING_CHUNK:Rendering main app title and greeting banner...
 st.markdown(
-    """
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-        <span style="font-size: 32px;">🎓</span>
-        <h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #0f172a;">Flashcards AI</h1>
-    </div>
-    """,
+    """<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+<span style="font-size: 32px;">🎓</span>
+<h1 style="margin: 0; font-size: 28px; font-weight: 800; color: #0f172a;">Flashcards AI</h1>
+</div>""",
     unsafe_allow_html=True
 )
 
@@ -1710,11 +1690,9 @@ else:
                 break
 
 st.markdown(
-    f"""
-    <div style="display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 20px;">
-        👋 Рада видеть вас, {display_user_name}!
-    </div>
-    """,
+    f"""<div style="display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 20px;">
+👋 Рада видеть вас, {display_user_name}!
+</div>""",
     unsafe_allow_html=True
 )
 
@@ -1830,39 +1808,33 @@ with col_stats:
         exp_date_str = exp_date.strftime("%d.%m.%Y")
 
     st.markdown(
-        f"""
-        <div class="tariff-box">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                <h3 style="margin:0; font-size:15px; font-weight: 700; color:#0f172a;">📊 Ваш тариф</h3>
-                <span style="background-color: {badge_bg}; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;">
-                    {tariff_name.upper()}
-                </span>
-            </div>
-        """, 
+        f"""<div class="tariff-box">
+<div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
+<h3 style="margin:0; font-size:15px; font-weight: 700; color:#0f172a;">📊 Ваш тариф</h3>
+<span style="background-color: {badge_bg}; color: #ffffff; padding: 4px 12px; border-radius: 20px; font-size: 11px; font-weight: bold; letter-spacing: 0.5px;">
+{tariff_name.upper()}
+</span>
+</div>""", 
         unsafe_allow_html=True
     )
     
     if tariff_name == "АДМИНИСТРАТОР":
         st.success("👑 Безлимитный доступ (Админ)")
         st.markdown(
-            f"""
-            <p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">📅 Срок действия: <b style="color: #0f172a;">{exp_date_str}</b></p>
-            </div>
-            """,
+            f"""<p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">📅 Срок действия: <b style="color: #0f172a;">{exp_date_str}</b></p>
+</div>""",
             unsafe_allow_html=True
         )
     else:
         progress_val = min(float(used_cards) / float(max_cards), 1.0)
         st.progress(progress_val)
         st.markdown(
-            f"""
-            <div style="margin-top: 10px;">
-                <p style="margin: 2px 0; font-size: 14px;">Осталось: <b style="font-size: 18px; color: #2563eb;">{remaining_cards}</b> карточек</p>
-                <p style="margin: 2px 0; color: #64748b; font-size: 12px;">Использовано: <b>{used_cards}</b> из <b>{max_cards}</b></p>
-                <p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">📅 Доступен до: <b style="color: #0f172a;">{exp_date_str}</b></p>
-            </div>
-            </div>
-            """,
+            f"""<div style="margin-top: 10px;">
+<p style="margin: 2px 0; font-size: 14px;">Осталось: <b style="font-size: 18px; color: #2563eb;">{remaining_cards}</b> карточек</p>
+<p style="margin: 2px 0; color: #64748b; font-size: 12px;">Использовано: <b>{used_cards}</b> из <b>{max_cards}</b></p>
+<p style="margin: 8px 0 0 0; color: #64748b; font-size: 12px; border-top: 1px dashed #e2e8f0; padding-top: 8px;">📅 Доступен до: <b style="color: #0f172a;">{exp_date_str}</b></p>
+</div>
+</div>""",
             unsafe_allow_html=True
         )
 
@@ -1946,7 +1918,7 @@ with col_stats:
     st.caption("Попробуйте интерактивные карточки без списания лимита:")
 
     for d_key, d_info in DEMO_DECKS.items():
-        st.markdown(f"<div class='demo-deck-card'><b>{d_info['title']}</b> <br/><span style='font-size:11px; color:#0369a1;'>Уровень: {d_info['level']}</span></div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='demo-deck-card'><b>{d_info['title']}</b><br/><span style='font-size:11px; color:#0369a1;'>Уровень: {d_info['level']}</span></div>", unsafe_allow_html=True)
         if st.button("👁️ Попробовать", key=f"try_{d_key}", use_container_width=True):
             st.session_state.cards = d_info["cards"]
             st.session_state.demo_style = d_info["style"]
@@ -2260,14 +2232,12 @@ if st.session_state.cards:
 
         if is_max_tariff:
             st.markdown(
-                """
-                <div style="background: #fffdf5; border: 1px solid #f59e0b; border-radius: 12px; padding: 12px 16px; margin-top: 10px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <span style="font-size: 18px;">👑</span>
-                        <h4 style="margin: 0; color: #92400e; font-size: 15px; font-weight: bold;">Выбор стиля оформления распечатки (Тариф «Максимум» и Демо)</h4>
-                    </div>
-                </div>
-                """,
+                """<div style="background: #fffdf5; border: 1px solid #f59e0b; border-radius: 12px; padding: 12px 16px; margin-top: 10px; margin-bottom: 16px;">
+<div style="display: flex; align-items: center; gap: 8px;">
+<span style="font-size: 18px;">👑</span>
+<h4 style="margin: 0; color: #92400e; font-size: 15px; font-weight: bold;">Выбор стиля оформления распечатки (Тариф «Максимум» и Демо)</h4>
+</div>
+</div>""",
                 unsafe_allow_html=True
             )
             print_style = st.radio(
@@ -2283,31 +2253,27 @@ if st.session_state.cards:
             )
         else:
             st.markdown(
-                """
-                <div style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px 18px; margin-top: 10px; margin-bottom: 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
-                        <div>
-                            <span style="font-size: 14px; font-weight: bold; color: #1e3a8a;">🎨 Дизайнерские цветные стили (Kids Style и Премиум)</span>
-                            <p style="margin: 2px 0 0 0; font-size: 12px; color: #1e40af;">Доступны на тарифе <b>«Максимум»</b>. Перейдите на тариф Максимум, чтобы создавать яркие цветные распечатки!</p>
-                        </div>
-                        <a href="https://flashcards-ai.ru/#tarifs" target="_blank" style="background-color: #2563eb; color: white; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: bold; white-space: nowrap;">👑 Узнать больше</a>
-                    </div>
-                </div>
-                """,
+                """<div style="background: linear-gradient(135deg, #eff6ff 0%, #e0f2fe 100%); border: 1px solid #bfdbfe; border-radius: 12px; padding: 12px 18px; margin-top: 10px; margin-bottom: 16px;">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 10px;">
+<div>
+<span style="font-size: 14px; font-weight: bold; color: #1e3a8a;">🎨 Дизайнерские цветные стили (Kids Style и Премиум)</span>
+<p style="margin: 2px 0 0 0; font-size: 12px; color: #1e40af;">Доступны на тарифе <b>«Максимум»</b>. Перейдите на тариф Максимум, чтобы создавать яркие цветные распечатки!</p>
+</div>
+<a href="https://flashcards-ai.ru/#tarifs" target="_blank" style="background-color: #2563eb; color: white; padding: 6px 14px; border-radius: 8px; text-decoration: none; font-size: 12px; font-weight: bold; white-space: nowrap;">👑 Узнать больше</a>
+</div>
+</div>""",
                 unsafe_allow_html=True
             )
 
         st.write("")
 
         components.html(
-            """
-            <div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 16px; border: 1px solid #cbd5e0; border-radius: 10px; margin-bottom: 15px;">
-                <span style="font-size: 13px; color: #4a5568;">💡 <b>Совет:</b> Чтобы сохранить файл на диск, в окне печати выберите принтер <b>«Сохранить как PDF»</b>.</span>
-                <button onclick="window.parent.print()" style="background-color: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; font-family: sans-serif; display: flex; align-items: center; gap: 6px;">
-                    📄 Распечатать / Сохранить в PDF
-                </button>
-            </div>
-            """,
+            """<div style="display: flex; justify-content: space-between; align-items: center; background: #ffffff; padding: 12px 16px; border: 1px solid #cbd5e0; border-radius: 10px; margin-bottom: 15px;">
+<span style="font-size: 13px; color: #4a5568;">💡 <b>Совет:</b> Чтобы сохранить файл на диск, в окне печати выберите принтер <b>«Сохранить как PDF»</b>.</span>
+<button onclick="window.parent.print()" style="background-color: #2563eb; color: #ffffff; border: none; padding: 8px 18px; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 13px; font-family: sans-serif; display: flex; align-items: center; gap: 6px;">
+📄 Распечатать / Сохранить в PDF
+</button>
+</div>""",
             height=65
         )
 
@@ -2316,45 +2282,39 @@ if st.session_state.cards:
         if "детская" in print_style.lower() and is_max_tariff:
             note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
-                f"""
-                <div class="printable-content" style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
-                    <div style="display: flex; justify-content: space-between; align-items: center;">
-                        <span style="font-size: 16px; font-weight: bold; color: #d84315; display: flex; align-items: center; gap: 6px;">
-                            <span>🎨 🦁</span> <span>English Worksheet</span>
-                        </span>
-                        <span style="font-size: 12px; color: #666; font-weight: 500;">Name: {name_display} | Date: {date_input_str}</span>
-                    </div>
-                    {note_str}
-                </div>
-                """,
+                f"""<div class="printable-content" style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
+<div style="display: flex; justify-content: space-between; align-items: center;">
+<span style="font-size: 16px; font-weight: bold; color: #d84315; display: flex; align-items: center; gap: 6px;">
+<span>🎨 🦁</span> <span>English Worksheet</span>
+</span>
+<span style="font-size: 12px; color: #666; font-weight: 500;">Name: {name_display} | Date: {date_input_str}</span>
+</div>
+{note_str}
+</div>""",
                 unsafe_allow_html=True
             )
         elif "взрослый" in print_style.lower() and is_max_tariff:
             note_str = f"<p style='margin:4px 0 0 0; color:#2b6cb0; font-size:12px;'><b>Task:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
-                f"""
-                <div class="printable-content" style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <div style="margin:0; color:#2b6cb0; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
-                        <span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
-                    </div>
-                    {note_str}
-                </div>
-                """,
+                f"""<div class="printable-content" style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
+<div style="display: flex; justify-content: space-between; align-items: flex-end;">
+<div style="margin:0; color:#2b6cb0; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
+<span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
+</div>
+{note_str}
+</div>""",
                 unsafe_allow_html=True
             )
         else:
             note_str = f"<p style='margin:4px 0 0 0; color:#2d3748; font-size:12px;'><b>Task:</b> {custom_print_note}</p>" if custom_print_note else ""
             st.markdown(
-                f"""
-                <div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
-                    <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-                        <div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
-                        <span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
-                    </div>
-                    {note_str}
-                </div>
-                """,
+                f"""<div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
+<div style="display: flex; justify-content: space-between; align-items: flex-end;">
+<div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
+<span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
+</div>
+{note_str}
+</div>""",
                 unsafe_allow_html=True
             )
 
@@ -2483,18 +2443,10 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = True
                         st.rerun()
                 else:
-                    audio_block_html = f"""
-                    <div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
-                        <div style="display: flex; align-items: center; gap: 4px;">
-                            <span style="font-size: 11px; font-weight: bold;">🇺🇸 US</span>
-                            <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 26px;"></audio>
-                        </div>
-                        <div style="display: flex; align-items: center; gap: 4px;">
-                            <span style="font-size: 11px; font-weight: bold;">🇬🇧 GB</span>
-                            <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 26px;"></audio>
-                        </div>
-                    </div>
-                    """
+                    audio_block_html = f"""<div style="display: flex; gap: 6px; align-items: center; justify-content: space-around; background: #f1f5f9; padding: 6px; border-radius: 8px; flex-wrap: wrap;">
+<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 11px; font-weight: bold; color: #1e293b;">🇺🇸 US</span><audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 26px;"></audio></div>
+<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 11px; font-weight: bold; color: #1e293b;">🇬🇧 GB</span><audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 26px;"></audio></div>
+</div>"""
                     
                     back_html = f"""<div class="{back_class}">
 <div style="text-align: center; margin-bottom: 5px;">
