@@ -25,7 +25,7 @@ import html
 import wave
 import streamlit.components.v1 as components
 
-# STREAMING_CHUNK:Configuring system constants, admin list and session cookies...
+# STREAMING_CHUNK:Configuring system constants, admin list and SVG flags...
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 ADMIN_EMAILS = [
@@ -33,6 +33,9 @@ ADMIN_EMAILS = [
 ]
 
 cookie_manager = stx.CookieManager(key="auth_cookie_manager")
+
+US_FLAG_SVG = '<svg width="18" height="12" viewBox="0 0 640 480" style="vertical-align: middle; border-radius: 2px; display: inline-block;"><path fill="#bd3d44" d="M0 0h640v480H0z"/><path stroke="#fff" stroke-width="37" d="M0 55.4h640M0 129.2h640M0 203h640M0 276.9h640M0 350.7h640M0 424.6h640"/><path fill="#192f5d" d="M0 0h285.7v258.5H0z"/></svg>'
+GB_FLAG_SVG = '<svg width="18" height="12" viewBox="0 0 640 480" style="vertical-align: middle; border-radius: 2px; display: inline-block;"><path fill="#012169" d="M0 0h640v480H0z"/><path stroke="#fff" stroke-width="60" d="m0 0 640 480M640 0 0 480"/><path stroke="#C8102E" stroke-width="40" d="m0 0 640 480M640 0 0 480"/><path stroke="#fff" stroke-width="100" d="M320 0v480M0 240h640"/><path stroke="#C8102E" stroke-width="60" d="M320 0v480M0 240h640"/></svg>'
 
 if "GEMINI_API_KEY" in st.secrets:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
@@ -1308,7 +1311,8 @@ if student_deck_id:
                 coll_lbl = get_card_collocations_label(s_def_lang)
                 ctx_lbl = get_card_context_label(s_def_lang)
                 audio_type = "2" if "US" in s_accent else "1"
-                flag_emoji = "🇺🇸" if "US" in s_accent else "🇬🇧"
+                flag_svg = US_FLAG_SVG if "US" in s_accent else GB_FLAG_SVG
+                flag_lbl = "US" if "US" in s_accent else "GB"
 
                 with cols[col_idx]:
                     is_flipped = st.session_state.student_flipped.get(i, False)
@@ -1341,7 +1345,7 @@ if student_deck_id:
 </details>
 <div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
 <div style="display: flex; align-items: center; gap: 6px;">
-<span style="font-size: 12px; font-weight: bold;">{flag_emoji}</span>
+{flag_svg} <span style="font-size: 11px; font-weight: bold;">{flag_lbl}</span>
 <audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type={audio_type}" controls style="width: 140px; height: 28px;"></audio>
 </div>
 </div>
@@ -1899,6 +1903,7 @@ with col_stats:
                             st.session_state.cards = json.loads(d_cards_json)
                             st.session_state.demo_style = None
                             st.session_state.flipped = {i: False for i in range(len(st.session_state.cards))}
+                            st.session_state.trigger_scroll = True
                             st.rerun()
                     with c2:
                         if st.button("📋 Ссылка", key=f"copylink_btn_{d_id}", use_container_width=True):
@@ -1923,6 +1928,7 @@ with col_stats:
             st.session_state.cards = d_info["cards"]
             st.session_state.demo_style = d_info["style"]
             st.session_state.flipped = {i: False for i in range(len(d_info["cards"]))}
+            st.session_state.trigger_scroll = True
             st.rerun()
 
 # STREAMING_CHUNK:Executing generation request via Gemini Generative AI...
@@ -2080,6 +2086,7 @@ if generate_click:
                     st.session_state.cards = cards_data
                     st.session_state.demo_style = None
                     st.session_state.flipped = {i: False for i in range(len(cards_data))}
+                    st.session_state.trigger_scroll = True
                     
                     try:
                         now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -2117,92 +2124,33 @@ if generate_click:
                         st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
 
                     st.success(f"Успешно! Создано карточек: {len(cards_data)}")
-                    time.sleep(1)
+                    time.sleep(0.5)
                     st.rerun()
                 except Exception as e:
                     st.error(f"Произошла ошибка при генерации: {e}.")
 
-# STREAMING_CHUNK:Rendering card text data editor and deck saving toolbar...
+# STREAMING_CHUNK:Rendering main cards view first with auto-scroll and toolbar...
 if st.session_state.cards:
     st.write("---")
-    
+    st.markdown('<div id="cards-anchor"></div>', unsafe_allow_html=True)
+
+    if st.session_state.get("trigger_scroll", False):
+        st.session_state.trigger_scroll = False
+        components.html(
+            """<script>
+            setTimeout(function() {
+                var el = window.parent.document.getElementById("cards-anchor");
+                if (el) {
+                    el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 150);
+            </script>""",
+            height=0
+        )
+
     if st.session_state.get("demo_style"):
         st.info("🎁 **Вы тестируете готовую демо-колоду.** Вы можете изучить интерактивные карточки, двойную озвучку US/GB, пройти тест и распечатать страницу!")
 
-    with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
-        st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
-        
-        df_edit = pd.DataFrame(st.session_state.cards)
-        
-        if "transcription_us" not in df_edit.columns:
-            df_edit["transcription_us"] = df_edit.get("transcription", "")
-        if "transcription_uk" not in df_edit.columns:
-            df_edit["transcription_uk"] = df_edit.get("transcription", "")
-        if "explanation_en" not in df_edit.columns:
-            df_edit["explanation_en"] = df_edit.get("explanation", "")
-        if "explanation_ru" not in df_edit.columns:
-            df_edit["explanation_ru"] = df_edit.get("translation", "")
-
-        required_cols = ["word", "translation", "transcription_us", "transcription_uk", "explanation_en", "explanation_ru", "collocations", "context"]
-        for col in required_cols:
-            if col not in df_edit.columns:
-                df_edit[col] = ""
-        
-        df_edit = df_edit[required_cols]
-        
-        edited_df = st.data_editor(
-            df_edit,
-            num_rows="dynamic",
-            use_container_width=True,
-            key="cards_data_editor",
-            column_config={
-                "word": st.column_config.TextColumn("Слово / Фраза (EN)", required=True),
-                "translation": st.column_config.TextColumn("Перевод (RU)", required=True),
-                "transcription_us": st.column_config.TextColumn("Транскрипция US"),
-                "transcription_uk": st.column_config.TextColumn("Транскрипция GB"),
-                "explanation_en": st.column_config.TextColumn("Дефиниция (EN)"),
-                "explanation_ru": st.column_config.TextColumn("Дефиниция (RU)"),
-                "collocations": st.column_config.TextColumn("Коллокации"),
-                "context": st.column_config.TextColumn("Контекстное предложение"),
-            }
-        )
-        st.session_state.cards = edited_df.to_dict(orient="records")
-
-    st.markdown("### 💾 Сохранить колоду в личный кабинет")
-    col_save1, col_save2 = st.columns([2.5, 1], gap="medium")
-    with col_save1:
-        default_deck_title = f"Колода {student_level} — {datetime.now().strftime('%d.%m.%Y')}"
-        deck_title_input = st.text_input("Название колоды:", value=default_deck_title)
-    with col_save2:
-        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
-        if st.button("💾 Сохранить колоду", type="primary", use_container_width=True):
-            try:
-                decks_sheet = sh_global.worksheet("Decks")
-                new_deck_id = f"deck-{int(datetime.now().timestamp())}"
-                cards_json_str = json.dumps(st.session_state.cards, ensure_ascii=False)
-                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                
-                decks_sheet.append_row([
-                    new_deck_id,
-                    effective_email,
-                    deck_title_input.strip(),
-                    student_level,
-                    len(st.session_state.cards),
-                    cards_json_str,
-                    now_str
-                ])
-                fetch_sheet_values.clear()
-                
-                share_url = f"{APP_URL}?deck={new_deck_id}"
-                st.success(f"✅ Колода «{deck_title_input}» успешно сохранена!")
-                st.write("🔗 **Ссылка для отправки ученикам:**")
-                st.code(share_url, language=None)
-            except Exception as save_err:
-                st.error(f"Ошибка сохранения колоды: {save_err}")
-
-    st.write("---")
-
-    # STREAMING_CHUNK:Rendering teacher card preview tabs and printable controls with Demo Support...
     teacher_view_mode = st.radio(
         "Выберите режим предпросмотра:",
         ["🎴 Интерактивный тренажер", "🧪 Пройти тест", "🖨️ Режим для печати"],
@@ -2366,45 +2314,8 @@ if st.session_state.cards:
     elif teacher_view_mode == "🧪 Пройти тест":
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
-    # STREAMING_CHUNK:Rendering interactive flashcards with dual US/GB audio for demo decks...
+    # RENDER INTERACTIVE FLASHCARDS GRID
     else:
-        anki_list = []
-        quizlet_list = []
-        coll_lbl_t = get_card_collocations_label(def_lang_option)
-        ctx_lbl_t = get_card_context_label(def_lang_option)
-        
-        for card in st.session_state.cards:
-            tr_str = get_card_transcription(card, accent_option)
-            exp_str = get_card_explanation(card, def_lang_option)
-            exp_lbl = get_card_explanation_label(def_lang_option)
-            
-            anki_back = (
-                f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-                f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-                f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
-                f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_t}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
-                f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_t}</i> {card.get('context', '')}</p>"
-                f"</div>"
-            )
-            anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
-
-            quizlet_back = f"{card.get('translation', '')} {tr_str}  •  💡 {exp_lbl} {exp_str}  •  🔗 {coll_lbl_t} {card.get('collocations', '')}  •  💬 {ctx_lbl_t} {card.get('context', '')}"
-            quizlet_list.append({"Front": card.get('word', ''), "Back": quizlet_back})
-
-        df_anki = pd.DataFrame(anki_list)
-        csv_anki = df_anki.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
-
-        df_quizlet = pd.DataFrame(quizlet_list)
-        csv_quizlet = df_quizlet.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
-
-        col_exp1, col_exp2 = st.columns(2)
-        with col_exp1:
-            st.download_button(label="📱 Скачать для Anki (с HTML)", data=csv_anki, file_name="anki_cards.txt", mime="text/plain", use_container_width=True)
-        with col_exp2:
-            st.download_button(label="🟣 Скачать для Quizlet (Чистый текст)", data=csv_quizlet, file_name="quizlet_cards.txt", mime="text/plain", use_container_width=True)
-
-        st.write("")
         cols = st.columns(3)
         current_demo_style = st.session_state.get("demo_style")
 
@@ -2444,8 +2355,8 @@ if st.session_state.cards:
                         st.rerun()
                 else:
                     audio_block_html = f"""<div style="display: flex; gap: 6px; align-items: center; justify-content: space-around; background: #f1f5f9; padding: 6px; border-radius: 8px; flex-wrap: wrap;">
-<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 11px; font-weight: bold; color: #1e293b;">🇺🇸 US</span><audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 100px; height: 26px;"></audio></div>
-<div style="display: flex; align-items: center; gap: 4px;"><span style="font-size: 11px; font-weight: bold; color: #1e293b;">🇬🇧 GB</span><audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 100px; height: 26px;"></audio></div>
+<div style="display: flex; align-items: center; gap: 4px;">{US_FLAG_SVG} <span style="font-size: 11px; font-weight: bold; color: #1e293b;">US</span><audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=2" controls style="width: 95px; height: 26px;"></audio></div>
+<div style="display: flex; align-items: center; gap: 4px;">{GB_FLAG_SVG} <span style="font-size: 11px; font-weight: bold; color: #1e293b;">GB</span><audio src="https://dict.youdao.com/dictvoice?audio={encoded_word}&type=1" controls style="width: 95px; height: 26px;"></audio></div>
 </div>"""
                     
                     back_html = f"""<div class="{back_class}">
@@ -2468,3 +2379,118 @@ if st.session_state.cards:
                     if st.button("👈 Показать слово", key=f"unflip_{i}", use_container_width=True):
                         st.session_state.flipped[i] = False
                         st.rerun()
+
+    # BOTTOM TOOLBAR: Downloads, Save Deck and Table Editor
+    st.write("---")
+    
+    # Anki and Quizlet Export Buttons
+    anki_list = []
+    quizlet_list = []
+    coll_lbl_t = get_card_collocations_label(def_lang_option)
+    ctx_lbl_t = get_card_context_label(def_lang_option)
+    
+    for card in st.session_state.cards:
+        tr_str = get_card_transcription(card, accent_option)
+        exp_str = get_card_explanation(card, def_lang_option)
+        exp_lbl = get_card_explanation_label(def_lang_option)
+        
+        anki_back = (
+            f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
+            f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
+            f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
+            f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
+            f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_t}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
+            f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_t}</i> {card.get('context', '')}</p>"
+            f"</div>"
+        )
+        anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
+
+        quizlet_back = f"{card.get('translation', '')} {tr_str}  •  💡 {exp_lbl} {exp_str}  •  🔗 {coll_lbl_t} {card.get('collocations', '')}  •  💬 {ctx_lbl_t} {card.get('context', '')}"
+        quizlet_list.append({"Front": card.get('word', ''), "Back": quizlet_back})
+
+    df_anki = pd.DataFrame(anki_list)
+    csv_anki = df_anki.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+
+    df_quizlet = pd.DataFrame(quizlet_list)
+    csv_quizlet = df_quizlet.to_csv(index=False, header=False, sep='\t').encode('utf-8-sig')
+
+    col_exp1, col_exp2 = st.columns(2)
+    with col_exp1:
+        st.download_button(label="📱 Скачать для Anki (с HTML)", data=csv_anki, file_name="anki_cards.txt", mime="text/plain", use_container_width=True)
+    with col_exp2:
+        st.download_button(label="🟣 Скачать для Quizlet (Чистый текст)", data=csv_quizlet, file_name="quizlet_cards.txt", mime="text/plain", use_container_width=True)
+
+    st.write("")
+
+    # Save Deck to Cabinet
+    st.markdown("### 💾 Сохранить колоду в личный кабинет")
+    col_save1, col_save2 = st.columns([2.5, 1], gap="medium")
+    with col_save1:
+        default_deck_title = f"Колода {student_level} — {datetime.now().strftime('%d.%m.%Y')}"
+        deck_title_input = st.text_input("Название колоды:", value=default_deck_title)
+    with col_save2:
+        st.markdown("<div style='height: 28px;'></div>", unsafe_allow_html=True)
+        if st.button("💾 Сохранить колоду", type="primary", use_container_width=True):
+            try:
+                decks_sheet = sh_global.worksheet("Decks")
+                new_deck_id = f"deck-{int(datetime.now().timestamp())}"
+                cards_json_str = json.dumps(st.session_state.cards, ensure_ascii=False)
+                now_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                
+                decks_sheet.append_row([
+                    new_deck_id,
+                    effective_email,
+                    deck_title_input.strip(),
+                    student_level,
+                    len(st.session_state.cards),
+                    cards_json_str,
+                    now_str
+                ])
+                fetch_sheet_values.clear()
+                
+                share_url = f"{APP_URL}?deck={new_deck_id}"
+                st.success(f"✅ Колода «{deck_title_input}» успешно сохранена!")
+                st.write("🔗 **Ссылка для отправки ученикам:**")
+                st.code(share_url, language=None)
+            except Exception as save_err:
+                st.error(f"Ошибка сохранения колоды: {save_err}")
+
+    # Text Table Editor Expander
+    with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
+        st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
+        
+        df_edit = pd.DataFrame(st.session_state.cards)
+        
+        if "transcription_us" not in df_edit.columns:
+            df_edit["transcription_us"] = df_edit.get("transcription", "")
+        if "transcription_uk" not in df_edit.columns:
+            df_edit["transcription_uk"] = df_edit.get("transcription", "")
+        if "explanation_en" not in df_edit.columns:
+            df_edit["explanation_en"] = df_edit.get("explanation", "")
+        if "explanation_ru" not in df_edit.columns:
+            df_edit["explanation_ru"] = df_edit.get("translation", "")
+
+        required_cols = ["word", "translation", "transcription_us", "transcription_uk", "explanation_en", "explanation_ru", "collocations", "context"]
+        for col in required_cols:
+            if col not in df_edit.columns:
+                df_edit[col] = ""
+        
+        df_edit = df_edit[required_cols]
+        
+        edited_df = st.data_editor(
+            df_edit,
+            num_rows="dynamic",
+            use_container_width=True,
+            key="cards_data_editor",
+            column_config={
+                "word": st.column_config.TextColumn("Слово / Фраза (EN)", required=True),
+                "translation": st.column_config.TextColumn("Перевод (RU)", required=True),
+                "transcription_us": st.column_config.TextColumn("Транскрипция US"),
+                "transcription_uk": st.column_config.TextColumn("Транскрипция GB"),
+                "explanation_en": st.column_config.TextColumn("Дефиниция (EN)"),
+                "explanation_ru": st.column_config.TextColumn("Дефиниция (RU)"),
+                "collocations": st.column_config.TextColumn("Коллокации"),
+                "context": st.column_config.TextColumn("Контекстное предложение"),
+            }
+        )
+        st.session_state.cards = edited_df.to_dict(orient="records")
