@@ -419,390 +419,88 @@ else:
     bg_css = "background-color: #f8fafc !important;"
 
 css_template = f"""<style>
-/* Hide standard Streamlit header */
-[data-testid="stHeader"], header {{
-    display: none !important;
-}}
+[data-testid="stHeader"], header {{ display: none !important; }}
+[data-testid="stMainBlockContainer"], .main .block-container {{ padding-top: 1.5rem !important; margin-top: 0rem !important; max-width: 1200px !important; }}
+[data-testid="stSidebarContent"], [data-testid="stSidebarUserContent"] {{ padding-top: 1.2rem !important; margin-top: 0rem !important; }}
+[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {{ display: none !important; }}
+[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{ gap: 0.4rem !important; }}
 
-[data-testid="stMainBlockContainer"],
-.main .block-container {{
-    padding-top: 1.5rem !important;
-    margin-top: 0rem !important;
-    max-width: 1200px !important;
-}}
+html, body, [data-testid="stAppViewContainer"], .stApp {{ color: #1e293b !important; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important; {bg_css} }}
 
-[data-testid="stSidebarContent"],
-[data-testid="stSidebarUserContent"] {{
-    padding-top: 1.2rem !important;
-    margin-top: 0rem !important;
-}}
+:root {{ --primary-color: #2563eb !important; --primary-hover: #1d4ed8 !important; }}
 
-[data-testid="stSidebar"] [data-testid="stSidebarHeader"] {{
-    display: none !important;
-}}
+div[data-testid="stColumn"]:has(#login-card-marker) {{ background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; border-radius: 18px !important; padding: 32px 30px !important; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important; margin-top: 20px !important; }}
 
-[data-testid="stSidebar"] [data-testid="stVerticalBlock"] {{
-    gap: 0.4rem !important;
-}}
+.user-profile-box {{ background: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 12px !important; padding: 10px 14px !important; margin-bottom: 12px !important; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important; display: flex !important; align-items: center !important; justify-content: space-between !important; }}
 
-html, body, [data-testid="stAppViewContainer"], .stApp {{
-    color: #1e293b !important;
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
-    {bg_css}
-}}
+.stButton > button[kind="primary"] {{ background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important; border: none !important; color: #ffffff !important; border-radius: 10px !important; font-weight: 600 !important; padding: 0.5rem 1.2rem !important; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important; transition: all 0.2s ease-in-out !important; }}
 
-:root {{
-    --primary-color: #2563eb !important;
-    --primary-hover: #1d4ed8 !important;
-}}
+.stButton > button[kind="primary"]:hover {{ background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important; box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3) !important; transform: translateY(-1px) !important; }}
 
-div[data-testid="stColumn"]:has(#login-card-marker) {{
-    background-color: #ffffff !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 18px !important;
-    padding: 32px 30px !important;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.08) !important;
-    margin-top: 20px !important;
-}}
+.stButton > button {{ border-radius: 8px !important; border: 1px solid #cbd5e1 !important; transition: all 0.2s ease !important; }}
+.stButton > button:hover {{ border-color: #2563eb !important; color: #2563eb !important; }}
 
-.user-profile-box {{
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 12px !important;
-    padding: 10px 14px !important;
-    margin-bottom: 12px !important;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03) !important;
-    display: flex !important;
-    align-items: center !important;
-    justify-content: space-between !important;
-}}
+div[data-baseweb="radio"] input:checked + div, div[data-baseweb="radio"] div[aria-checked="true"] {{ border-color: #2563eb !important; background-color: #2563eb !important; }}
 
-.stButton > button[kind="primary"] {{
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
-    border: none !important;
-    color: #ffffff !important;
-    border-radius: 10px !important;
-    font-weight: 600 !important;
-    padding: 0.5rem 1.2rem !important;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2) !important;
-    transition: all 0.2s ease-in-out !important;
-}}
+input, textarea, select, .stTextInput input, .stTextArea textarea, [data-baseweb="base-input"], [data-baseweb="textarea"], [data-baseweb="select"] > div {{ background-color: #ffffff !important; color: #0f172a !important; -webkit-text-fill-color: #0f172a !important; border: 1px solid #cbd5e1 !important; border-radius: 10px !important; box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important; }}
 
-.stButton > button[kind="primary"]:hover {{
-    background: linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%) !important;
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3) !important;
-    transform: translateY(-1px) !important;
-}}
+input:focus, textarea:focus {{ border-color: #2563eb !important; box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important; }}
 
-.stButton > button {{
-    border-radius: 8px !important;
-    border: 1px solid #cbd5e1 !important;
-    transition: all 0.2s ease !important;
-}}
+[data-testid="stSidebar"], .stSidebar {{ background-color: #f8fafc !important; border-right: 1px solid #e2e8f0 !important; }}
 
-.stButton > button:hover {{
-    border-color: #2563eb !important;
-    color: #2563eb !important;
-}}
+.tariff-box {{ background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 14px !important; padding: 18px !important; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important; }}
 
-div[data-baseweb="radio"] input:checked + div,
-div[data-baseweb="radio"] div[aria-checked="true"] {{
-    border-color: #2563eb !important;
-    background-color: #2563eb !important;
-}}
+.saved-deck-card {{ background: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 10px !important; padding: 10px 12px !important; margin-bottom: 8px !important; box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important; }}
 
-input, textarea, select, 
-.stTextInput input, 
-.stTextArea textarea,
-[data-baseweb="base-input"],
-[data-baseweb="textarea"],
-[data-baseweb="select"] > div {{
-    background-color: #ffffff !important;
-    color: #0f172a !important;
-    -webkit-text-fill-color: #0f172a !important;
-    border: 1px solid #cbd5e1 !important;
-    border-radius: 10px !important;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02) !important;
-}}
+.demo-deck-card {{ background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important; border: 1px solid #bae6fd !important; border-radius: 10px !important; padding: 10px 12px !important; margin-bottom: 8px !important; box-shadow: 0 2px 6px rgba(14, 165, 233, 0.06) !important; }}
 
-input:focus, textarea:focus {{
-    border-color: #2563eb !important;
-    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
-}}
+.card-front {{ background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%) !important; border: 1px solid #fca5a5 !important; border-radius: 16px !important; padding: 20px !important; text-align: center !important; min-height: 190px !important; max-height: 190px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; box-shadow: 0 8px 20px rgba(239, 68, 68, 0.08) !important; }}
 
-[data-testid="stSidebar"], 
-.stSidebar {{
-    background-color: #f8fafc !important;
-    border-right: 1px solid #e2e8f0 !important;
-}}
+.card-front-title {{ font-size: 24px !important; font-weight: 700 !important; font-family: 'Georgia', serif !important; color: #881337 !important; }}
 
-.tariff-box {{
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 14px !important;
-    padding: 18px !important;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
-}}
+.card-front-kids {{ background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%) !important; border: 2px solid #fdba74 !important; border-radius: 16px !important; padding: 20px !important; text-align: center !important; min-height: 190px !important; max-height: 190px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; box-shadow: 0 8px 20px rgba(249, 115, 22, 0.12) !important; }}
 
-.saved-deck-card {{
-    background: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 10px !important;
-    padding: 10px 12px !important;
-    margin-bottom: 8px !important;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.02) !important;
-}}
+.card-front-kids .card-front-title {{ color: #c2410c !important; }}
 
-.demo-deck-card {{
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%) !important;
-    border: 1px solid #bae6fd !important;
-    border-radius: 10px !important;
-    padding: 10px 12px !important;
-    margin-bottom: 8px !important;
-    box-shadow: 0 2px 6px rgba(14, 165, 233, 0.06) !important;
-}}
+.card-back-kids {{ background-color: #fffdf5 !important; border: 2px solid #ffb74d !important; border-radius: 16px !important; padding: 18px !important; min-height: 320px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-shadow: 0 6px 18px rgba(245, 158, 11, 0.08) !important; color: #1e293b !important; }}
 
-.card-front {{
-    background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%) !important;
-    border: 1px solid #fca5a5 !important;
-    border-radius: 16px !important;
-    padding: 20px !important;
-    text-align: center !important;
-    min-height: 190px !important;
-    max-height: 190px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.08) !important;
-}}
+.card-front-premium {{ background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%) !important; border: 2px solid #93c5fd !important; border-radius: 16px !important; padding: 20px !important; text-align: center !important; min-height: 190px !important; max-height: 190px !important; display: flex !important; flex-direction: column !important; justify-content: center !important; align-items: center !important; box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12) !important; }}
 
-.card-front-title {{
-    font-size: 24px !important;
-    font-weight: 700 !important;
-    font-family: 'Georgia', serif !important;
-    color: #881337 !important;
-}}
+.card-front-premium .card-front-title {{ color: #1e40af !important; }}
 
-.card-front-kids {{
-    background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%) !important;
-    border: 2px solid #fdba74 !important;
-    border-radius: 16px !important;
-    padding: 20px !important;
-    text-align: center !important;
-    min-height: 190px !important;
-    max-height: 190px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    box-shadow: 0 8px 20px rgba(249, 115, 22, 0.12) !important;
-}}
+.card-back-premium {{ background-color: #ffffff !important; border: 2px solid #3b82f6 !important; border-radius: 16px !important; padding: 18px !important; min-height: 320px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08) !important; color: #1e293b !important; }}
 
-.card-front-kids .card-front-title {{
-    color: #c2410c !important;
-}}
+.card-front-transcription {{ font-size: 14px !important; color: #9f1239 !important; margin-top: 6px !important; font-family: monospace !important; }}
 
-.card-back-kids {{
-    background-color: #fffdf5 !important;
-    border: 2px solid #ffb74d !important;
-    border-radius: 16px !important;
-    padding: 18px !important;
-    min-height: 320px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    box-shadow: 0 6px 18px rgba(245, 158, 11, 0.08) !important;
-    color: #1e293b !important;
-}}
+.card-front-subtitle {{ font-size: 11px !important; color: #be123c !important; margin-top: 10px !important; text-transform: uppercase !important; letter-spacing: 1.2px !important; font-weight: 700 !important; }}
 
-.card-front-premium {{
-    background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%) !important;
-    border: 2px solid #93c5fd !important;
-    border-radius: 16px !important;
-    padding: 20px !important;
-    text-align: center !important;
-    min-height: 190px !important;
-    max-height: 190px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: center !important;
-    align-items: center !important;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.12) !important;
-}}
+.card-back {{ background-color: #ffffff !important; border: 1px solid #e2e8f0 !important; border-radius: 16px !important; padding: 18px !important; min-height: 320px !important; display: flex !important; flex-direction: column !important; justify-content: space-between !important; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04) !important; color: #1e293b !important; }}
 
-.card-front-premium .card-front-title {{
-    color: #1e40af !important;
-}}
+audio::-webkit-media-controls-timeline, audio::-webkit-media-controls-current-time-display, audio::-webkit-media-controls-time-remaining-display {{ display: none !important; }}
 
-.card-back-premium {{
-    background-color: #ffffff !important;
-    border: 2px solid #3b82f6 !important;
-    border-radius: 16px !important;
-    padding: 18px !important;
-    min-height: 320px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.08) !important;
-    color: #1e293b !important;
-}}
+.print-row-bw {{ display: flex; border: 1px dashed #94a3b8; margin-bottom: 12px; page-break-inside: avoid; background-color: #ffffff; border-radius: 8px; }}
 
-.card-front-transcription {{
-    font-size: 14px !important;
-    color: #9f1239 !important;
-    margin-top: 6px !important;
-    font-family: monospace !important;
-}}
+.print-row-kids {{ display: flex; border: 2px solid #ffb74d; border-radius: 12px; margin-bottom: 12px; page-break-inside: avoid; background-color: #ffffff; overflow: hidden; box-shadow: 0 4px 10px rgba(255, 183, 77, 0.15); }}
 
-.card-front-subtitle {{
-    font-size: 11px !important;
-    color: #be123c !important;
-    margin-top: 10px !important;
-    text-transform: uppercase !important;
-    letter-spacing: 1.2px !important;
-    font-weight: 700 !important;
-}}
+.print-col-kids-left {{ width: 42%; padding: 15px; background-color: #ffe0b2; border-right: 2px dashed #ffb74d; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }}
 
-.card-back {{
-    background-color: #ffffff !important;
-    border: 1px solid #e2e8f0 !important;
-    border-radius: 16px !important;
-    padding: 18px !important;
-    min-height: 320px !important;
-    display: flex !important;
-    flex-direction: column !important;
-    justify-content: space-between !important;
-    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.04) !important;
-    color: #1e293b !important;
-}}
+.print-col-kids-right {{ width: 58%; padding: 15px; background-color: #ffffff; }}
 
-audio::-webkit-media-controls-timeline,
-audio::-webkit-media-controls-current-time-display,
-audio::-webkit-media-controls-time-remaining-display {{
-    display: none !important;
-}}
+.print-row-premium {{ display: flex; border: 1px solid #2563eb; border-left: 6px solid #2563eb; border-radius: 8px; margin-bottom: 12px; page-break-inside: avoid; background-color: #ffffff; overflow: hidden; box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08); }}
 
-.print-row-bw {{
-    display: flex;
-    border: 1px dashed #94a3b8;
-    margin-bottom: 12px;
-    page-break-inside: avoid;
-    background-color: #ffffff;
-    border-radius: 8px;
-}}
+.print-col-premium-left {{ width: 40%; padding: 15px; background-color: #eff6ff; border-right: 1px solid #dbeafe; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center; }}
 
-.print-row-kids {{
-    display: flex;
-    border: 2px solid #ffb74d;
-    border-radius: 12px;
-    margin-bottom: 12px;
-    page-break-inside: avoid;
-    background-color: #ffffff;
-    overflow: hidden;
-    box-shadow: 0 4px 10px rgba(255, 183, 77, 0.15);
-}}
-
-.print-col-kids-left {{
-    width: 42%;
-    padding: 15px;
-    background-color: #ffe0b2;
-    border-right: 2px dashed #ffb74d;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}}
-
-.print-col-kids-right {{
-    width: 58%;
-    padding: 15px;
-    background-color: #ffffff;
-}}
-
-.print-row-premium {{
-    display: flex;
-    border: 1px solid #2563eb;
-    border-left: 6px solid #2563eb;
-    border-radius: 8px;
-    margin-bottom: 12px;
-    page-break-inside: avoid;
-    background-color: #ffffff;
-    overflow: hidden;
-    box-shadow: 0 4px 12px rgba(37, 99, 235, 0.08);
-}}
-
-.print-col-premium-left {{
-    width: 40%;
-    padding: 15px;
-    background-color: #eff6ff;
-    border-right: 1px solid #dbeafe;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-}}
-
-.print-col-premium-right {{
-    width: 60%;
-    padding: 15px;
-    background-color: #ffffff;
-}}
+.print-col-premium-right {{ width: 60%; padding: 15px; background-color: #ffffff; }}
 
 .print-col {{ width: 50%; padding: 15px; box-sizing: border-box; }}
-.print-left {{
-    border-right: 1px dashed #ccc;
-    text-align: center;
-    font-weight: bold;
-    font-size: 20px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-family: 'Georgia', serif;
-    color: #1e3a8a;
-}}
+.print-left {{ border-right: 1px dashed #ccc; text-align: center; font-weight: bold; font-size: 20px; display: flex; align-items: center; justify-content: center; font-family: 'Georgia', serif; color: #1e3a8a; }}
 
 @media print {{
-    [data-testid="stSidebar"],
-    header,
-    footer,
-    [data-testid="stHeader"],
-    .stButton,
-    .stRadio,
-    .stSelectbox,
-    .stTextInput,
-    .stTextArea,
-    .stExpander,
-    .stAlert,
-    .stDataFrame,
-    [data-testid="stDataEditor"],
-    .tariff-box,
-    iframe {{
-        display: none !important;
-    }}
-
-    .main .block-container > div > div:not(:has(.printable-content)) {{
-        display: none !important;
-    }}
-
-    body, html, [data-testid="stAppViewContainer"], .stApp {{
-        background-color: #ffffff !important;
-        background-image: none !important;
-        padding: 0 !important;
-        margin: 0 !important;
-    }}
-
-    * {{
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-    }}
-
-    .printable-content {{
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }}
+    [data-testid="stSidebar"], header, footer, [data-testid="stHeader"], .stButton, .stRadio, .stSelectbox, .stTextInput, .stTextArea, .stExpander, .stAlert, .stDataFrame, [data-testid="stDataEditor"], .tariff-box, iframe {{ display: none !important; }}
+    .main .block-container > div > div:not(:has(.printable-content)) {{ display: none !important; }}
+    body, html, [data-testid="stAppViewContainer"], .stApp {{ background-color: #ffffff !important; background-image: none !important; padding: 0 !important; margin: 0 !important; }}
+    * {{ -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }}
+    .printable-content {{ page-break-inside: avoid !important; break-inside: avoid !important; }}
 }}
 </style>"""
 
@@ -1825,39 +1523,21 @@ if generate_click:
                 Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                 """
 
+            STABLE_MODELS = [
+                "gemini-2.5-flash",
+                "gemini-2.5-pro",
+                "gemini-2.0-flash",
+                "gemini-2.0-flash-lite"
+            ]
+
             success = False
             text_response = ""
             last_error_msg = ""
 
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
-                # Dynamically retrieve available generative models directly from Google AI Studio
-                dynamic_candidate_models = []
-                try:
-                    all_m = list(genai.list_models())
-                    for m in all_m:
-                        m_name = m.name.replace("models/", "")
-                        if 'generateContent' in m.supported_generation_methods:
-                            # Filter out obsolete/deprecated snapshots that return 404
-                            if not m_name.endswith("-001") and "tts" not in m_name and "embed" not in m_name:
-                                dynamic_candidate_models.append(m_name)
-                except Exception:
-                    pass
-
-                # Priority list of current models
-                primary_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
-                
-                # Combine fetched dynamic models with primary fallbacks while maintaining order and removing duplicates
-                ordered_models = []
-                for p in primary_models:
-                    if p not in ordered_models:
-                        ordered_models.append(p)
-                for d in dynamic_candidate_models:
-                    if d not in ordered_models:
-                        ordered_models.append(d)
-
-                for current_model_name in ordered_models:
+                for current_model_name in STABLE_MODELS:
                     try:
-                        model = genai.GenerativeModel(f"models/{current_model_name}" if not current_model_name.startswith("models/") else current_model_name)
+                        model = genai.GenerativeModel(current_model_name)
                         request_config = {"timeout": 30}
                         
                         if media_part:
@@ -1869,15 +1549,17 @@ if generate_click:
                             text_response = response.text.strip()
                             if text_response:
                                 success = True
-                                st.session_state.last_used_model = current_model_name.replace("models/", "")
+                                st.session_state.last_used_model = current_model_name
                                 break
                     except Exception as e:
                         last_error_msg = f"[{current_model_name}] {str(e)}"
                         time.sleep(0.5)
 
             if not success:
-                st.error(f"🛑 Не удалось сгенерировать карточки. Причина: {last_error_msg}")
-                st.info("💡 Если возникла проблема с ключом, нажмите **«🔄 Полный сброс API (Админ)»** в боковом меню или укажите обновленный API-ключ.")
+                st.error("⚙️ Проходит обновление модели нейросети. Пожалуйста, сделайте скриншот экрана и отправьте его администратору в [Telegram-чат](https://t.me/+RyIIPld1fFE1ZTVi).")
+                if last_error_msg:
+                    with st.expander("🔍 Техническая информация для администратора"):
+                        st.code(last_error_msg)
                 st.stop()
 
             try:
@@ -1942,7 +1624,10 @@ if generate_click:
                 time.sleep(0.5)
                 st.rerun()
             except Exception as parse_err:
-                st.error(f"Ошибка чтения данных от нейросети: {parse_err}")
+                st.error("⚙️ Проходит обновление модели нейросети. Пожалуйста, сделайте скриншот экрана и отправьте его администратору в [Telegram-чат](https://t.me/+RyIIPld1fFE1ZTVi).")
+                with st.expander("🔍 Техническая информация для администратора (JSON Error)"):
+                    st.code(f"Error parsing JSON: {str(parse_err)}\nRaw response:\n{text_response}")
+                st.stop()
 
 if st.session_state.cards:
     st.write("---")
