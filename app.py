@@ -1523,43 +1523,85 @@ if generate_click:
                 Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                 """
 
-            STABLE_MODELS = [
+            candidate_models = []
+            
+            try:
+                available_from_api = []
+                for m in genai.list_models():
+                    if 'generateContent' in getattr(m, 'supported_generation_methods', []):
+                        m_clean = m.name.replace("models/", "")
+                        if "tts" not in m_clean and "embed" not in m_clean and "bison" not in m_clean:
+                            available_from_api.append(m_clean)
+                            available_from_api.append(m.name)
+                
+                priority_order = [
+                    "gemini-2.5-flash",
+                    "gemini-2.0-flash",
+                    "gemini-2.5-pro",
+                    "gemini-1.5-flash",
+                    "gemini-2.0-flash-lite",
+                    "gemini-1.5-pro"
+                ]
+                
+                for p in priority_order:
+                    if p in available_from_api:
+                        candidate_models.append(p)
+                    if f"models/{p}" in available_from_api:
+                        candidate_models.append(f"models/{p}")
+                        
+                for a in available_from_api:
+                    if a not in candidate_models:
+                        candidate_models.append(a)
+            except Exception:
+                pass
+            
+            fallback_models = [
                 "gemini-2.5-flash",
-                "gemini-2.5-pro",
                 "gemini-2.0-flash",
-                "gemini-2.0-flash-lite"
+                "gemini-2.5-pro",
+                "gemini-1.5-flash",
+                "gemini-2.0-flash-lite",
+                "gemini-1.5-pro",
+                "models/gemini-2.5-flash",
+                "models/gemini-2.0-flash",
+                "models/gemini-1.5-flash"
             ]
+            for fb in fallback_models:
+                if fb not in candidate_models:
+                    candidate_models.append(fb)
 
             success = False
             text_response = ""
-            last_error_msg = ""
+            error_logs = []
 
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
-                for current_model_name in STABLE_MODELS:
+                for current_model_name in candidate_models:
                     try:
                         model = genai.GenerativeModel(current_model_name)
-                        request_config = {"timeout": 30}
+                        request_config = {"timeout": 35}
                         
                         if media_part:
-                            response = model.generate_content([prompt_text, media_part], request_options=request_config)
+                            contents = [prompt_text, media_part]
                         else:
-                            response = model.generate_content([prompt_text, final_prompt_content], request_options=request_config)
+                            contents = f"{prompt_text}\n\n--- ИСХОДНЫЙ МАТЕРИАЛ ---\n{final_prompt_content}"
+                            
+                        response = model.generate_content(contents, request_options=request_config)
                         
                         if response and response.text:
                             text_response = response.text.strip()
                             if text_response:
                                 success = True
-                                st.session_state.last_used_model = current_model_name
+                                st.session_state.last_used_model = current_model_name.replace("models/", "")
                                 break
                     except Exception as e:
-                        last_error_msg = f"[{current_model_name}] {str(e)}"
-                        time.sleep(0.5)
+                        error_logs.append(f"• {current_model_name}: {str(e)}")
+                        time.sleep(0.3)
 
             if not success:
                 st.error("⚙️ Проходит обновление модели нейросети. Пожалуйста, сделайте скриншот экрана и отправьте его администратору в [Telegram-чат](https://t.me/+RyIIPld1fFE1ZTVi).")
-                if last_error_msg:
-                    with st.expander("🔍 Техническая информация для администратора"):
-                        st.code(last_error_msg)
+                last_error_msg = "\n".join(error_logs) if error_logs else "Неизвестная ошибка генерации"
+                with st.expander("🔍 Техническая информация для администратора"):
+                    st.code(last_error_msg)
                 st.stop()
 
             try:
@@ -2007,3 +2049,4 @@ if st.session_state.cards:
             }
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
+```e-o-f
