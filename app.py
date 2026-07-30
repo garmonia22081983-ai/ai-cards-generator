@@ -2086,4 +2086,3 @@ if st.session_state.cards:
             }
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
-```e-o-f
