@@ -1825,21 +1825,39 @@ if generate_click:
                 Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                 """
 
-            # Гарантированно доступные актуальные рабочие модели Google (серии 2.5 и 2.0)
-            stable_production_models = [
-                "gemini-2.5-flash",
-                "gemini-2.0-flash",
-                "gemini-1.5-flash"
-            ]
-
             success = False
             text_response = ""
             last_error_msg = ""
 
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
-                for current_model_name in stable_production_models:
+                # Dynamically retrieve available generative models directly from Google AI Studio
+                dynamic_candidate_models = []
+                try:
+                    all_m = list(genai.list_models())
+                    for m in all_m:
+                        m_name = m.name.replace("models/", "")
+                        if 'generateContent' in m.supported_generation_methods:
+                            # Filter out obsolete/deprecated snapshots that return 404
+                            if not m_name.endswith("-001") and "tts" not in m_name and "embed" not in m_name:
+                                dynamic_candidate_models.append(m_name)
+                except Exception:
+                    pass
+
+                # Priority list of current models
+                primary_models = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash"]
+                
+                # Combine fetched dynamic models with primary fallbacks while maintaining order and removing duplicates
+                ordered_models = []
+                for p in primary_models:
+                    if p not in ordered_models:
+                        ordered_models.append(p)
+                for d in dynamic_candidate_models:
+                    if d not in ordered_models:
+                        ordered_models.append(d)
+
+                for current_model_name in ordered_models:
                     try:
-                        model = genai.GenerativeModel(current_model_name)
+                        model = genai.GenerativeModel(f"models/{current_model_name}" if not current_model_name.startswith("models/") else current_model_name)
                         request_config = {"timeout": 30}
                         
                         if media_part:
@@ -1847,14 +1865,15 @@ if generate_click:
                         else:
                             response = model.generate_content([prompt_text, final_prompt_content], request_options=request_config)
                         
-                        text_response = response.text.strip()
-                        if text_response:
-                            success = True
-                            st.session_state.last_used_model = current_model_name
-                            break
+                        if response and response.text:
+                            text_response = response.text.strip()
+                            if text_response:
+                                success = True
+                                st.session_state.last_used_model = current_model_name.replace("models/", "")
+                                break
                     except Exception as e:
-                        last_error_msg = str(e)
-                        time.sleep(1)
+                        last_error_msg = f"[{current_model_name}] {str(e)}"
+                        time.sleep(0.5)
 
             if not success:
                 st.error(f"🛑 Не удалось сгенерировать карточки. Причина: {last_error_msg}")
@@ -2194,7 +2213,7 @@ if st.session_state.cards:
                         st.rerun()
 
     st.write("---")
-    
+
     anki_list = []
     quizlet_list = []
     coll_lbl_t = get_card_collocations_label(def_lang_option)
