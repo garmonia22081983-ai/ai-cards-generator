@@ -35,8 +35,10 @@ cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 US_FLAG_SVG = '<svg width="18" height="12" viewBox="0 0 640 480" style="vertical-align: middle; border-radius: 2px; display: inline-block;"><path fill="#bd3d44" d="M0 0h640v480H0z"/><path stroke="#fff" stroke-width="37" d="M0 55.4h640M0 129.2h640M0 203h640M0 276.9h640M0 350.7h640M0 424.6h640"/><path fill="#192f5d" d="M0 0h285.7v258.5H0z"/></svg>'
 GB_FLAG_SVG = '<svg width="18" height="12" viewBox="0 0 640 480" style="vertical-align: middle; border-radius: 2px; display: inline-block;"><path fill="#012169" d="M0 0h640v480H0z"/><path stroke="#fff" stroke-width="60" d="m0 0 640 480M640 0 0 480"/><path stroke="#C8102E" stroke-width="40" d="m0 0 640 480M640 0 0 480"/><path stroke="#fff" stroke-width="100" d="M320 0v480M0 240h640"/><path stroke="#C8102E" stroke-width="60" d="M320 0v480M0 240h640"/></svg>'
 
+# Auto-cleaning and initializing Gemini API Key safely
 if "GEMINI_API_KEY" in st.secrets:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    clean_key = str(st.secrets["GEMINI_API_KEY"]).replace("\n", "").replace("\r", "").strip()
+    genai.configure(api_key=clean_key)
 else:
     st.error("Ключ API не найден в настройках Secrets!")
 
@@ -1700,7 +1702,7 @@ if "flipped" not in st.session_state:
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    # Кнопка сброса API только для администраторов
+    # Кнопка сброса API строго для администраторов
     if is_real_admin:
         if st.button("🔄 Полный сброс API (Админ)", help="Очищает кэш сервера и сбрасывает зависшие соединения API"):
             st.cache_data.clear()
@@ -1708,9 +1710,6 @@ with st.sidebar:
             st.session_state.clear()
             st.rerun()
 
-    # Фиксация модели gemini-1.5-flash
-    model_option = "gemini-1.5-flash"
-    
     source_type = st.radio(
         "Что берем за основу?", 
         [
@@ -1840,7 +1839,6 @@ with col_stats:
 
     st.write("")
 
-    # EXPANDER 1: Мои сохраненные колоды
     with st.expander("📂 Мои сохраненные колоды", expanded=False):
         try:
             d_rows = fetch_sheet_values(sh_global, "Decks")
@@ -1916,7 +1914,6 @@ with col_stats:
         except Exception:
             st.caption("Не удалось загрузить список колод.")
 
-    # EXPANDER 2: Готовые Демо-Колоды
     with st.expander("🎁 Готовые демо-колоды", expanded=False):
         st.caption("Попробуйте интерактивные карточки без списания лимита:")
 
@@ -2043,14 +2040,17 @@ if generate_click:
                 """
 
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
+                models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
                 max_retries = 3
                 backoff_time = 2
                 success = False
                 text_response = ""
+                last_error_msg = ""
                 
                 for attempt in range(max_retries):
+                    current_model_name = models_to_try[attempt % len(models_to_try)]
                     try:
-                        model = genai.GenerativeModel("gemini-1.5-flash")
+                        model = genai.GenerativeModel(current_model_name)
                         request_config = {"timeout": 30}
                         
                         if media_part:
@@ -2062,11 +2062,12 @@ if generate_click:
                         success = True
                         break
                     except Exception as e:
+                        last_error_msg = str(e)
                         if attempt < max_retries - 1:
                             time.sleep(backoff_time)
                             backoff_time *= 2
                         else:
-                            st.error(f"🛑 Не удалось сгенерировать карточки после {max_retries} попыток. Причина: {str(e)}")
+                            st.error(f"🛑 Не удалось сгенерировать карточки после {max_retries} попыток. Причина: {last_error_msg}")
                             st.stop()
 
                 if success:
