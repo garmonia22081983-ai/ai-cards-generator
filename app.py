@@ -1700,12 +1700,13 @@ if "flipped" not in st.session_state:
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    # Кнопка сброса API для администраторов и отладки
-    if st.button("🔄 Полный сброс API", help="Очищает кэш сервера и сбрасывает зависшие соединения API"):
-        st.cache_data.clear()
-        st.cache_resource.clear()
-        st.session_state.clear()
-        st.rerun()
+    # Кнопка сброса API только для администраторов
+    if is_real_admin:
+        if st.button("🔄 Полный сброс API (Админ)", help="Очищает кэш сервера и сбрасывает зависшие соединения API"):
+            st.cache_data.clear()
+            st.cache_resource.clear()
+            st.session_state.clear()
+            st.rerun()
 
     # Фиксация модели gemini-1.5-flash
     model_option = "gemini-1.5-flash"
