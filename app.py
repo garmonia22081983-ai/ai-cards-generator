@@ -1362,6 +1362,8 @@ if "impersonated_email" not in st.session_state:
     st.session_state.impersonated_email = None
 if "demo_style" not in st.session_state:
     st.session_state.demo_style = None
+if "last_used_model" not in st.session_state:
+    st.session_state.last_used_model = None
 
 saved_email = cookie_manager.get(cookie="auth_email")
 
@@ -2025,6 +2027,7 @@ if generate_click:
                 """
 
             # Dynamic API Model Discovery
+            @st.cache_data(ttl=600)
             def get_active_gemini_models():
                 # Список основных и гарантированно рабочих версий
                 preferred_models = [
@@ -2072,6 +2075,7 @@ if generate_click:
                         text_response = response.text.strip()
                         if text_response:
                             success = True
+                            st.session_state.last_used_model = current_model_name
                             break
                     except Exception as e:
                         last_error_msg = str(e)
@@ -2142,7 +2146,8 @@ if generate_click:
                 except Exception as sheets_err:
                     st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
 
-                st.success(f"Успешно! Создано карточек: {len(cards_data)}")
+                model_used_label = st.session_state.get("last_used_model", "Gemini AI")
+                st.success(f"Успешно! Создано карточек: {len(cards_data)} (Использована модель: {model_used_label})")
                 time.sleep(0.5)
                 st.rerun()
             except Exception as parse_err:
