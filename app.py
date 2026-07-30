@@ -177,6 +177,207 @@ DEMO_DECKS = {
                 "context": "Flexible working hours help employees maintain a healthy work-life balance."
             }
         ]
+    },
+    "demo-animals": {
+        "title": "🦁 Animals & Nature (Kids Style)",
+        "level": "A1-A2 (Beginner)",
+        "style": "kids",
+        "cards": [
+            {
+                "word": "butterfly",
+                "transcription_us": "/ˈbʌtərflaɪ/",
+                "transcription_uk": "/ˈbʌtəflaɪ/",
+                "translation": "бабочка",
+                "explanation_en": "A colorful insect with four large wings.",
+                "explanation_ru": "Яркое насекомое с четырьмя красивыми крыльями.",
+                "collocations": "colorful butterfly, butterfly wings, catch a butterfly",
+                "context": "Look at that bright yellow butterfly sitting on the flower!"
+            },
+            {
+                "word": "dolphin",
+                "transcription_us": "/ˈdɑːlfɪn/",
+                "transcription_uk": "/ˈdɒlfɪn/",
+                "translation": "дельфин",
+                "explanation_en": "A smart sea animal that breathes air and swims fast.",
+                "explanation_ru": "Умное морское животное, которое быстро плавает и прыгает.",
+                "collocations": "friendly dolphin, swim with dolphins, dolphin show",
+                "context": "Dolphins are very intelligent animals that love playing in water."
+            },
+            {
+                "word": "hedgehog",
+                "transcription_us": "/ˈhedʒhɔːɡ/",
+                "transcription_uk": "/ˈhedʒhɒɡ/",
+                "translation": "ёжик",
+                "explanation_en": "A small animal covered with sharp spines on its back.",
+                "explanation_ru": "Маленькое лесное животное с острыми иголками на спине.",
+                "collocations": "little hedgehog, sharp spines, hedgehog in the garden",
+                "context": "The little hedgehog rolled into a ball when it felt scared."
+            },
+            {
+                "word": "squirrel",
+                "transcription_us": "/ˈskwɜːrəl/",
+                "transcription_uk": "/ˈskwɪrəl/",
+                "translation": "белка",
+                "explanation_en": "A small animal with a bushy tail that climbs trees and eats nuts.",
+                "explanation_ru": "Пушистый зверёк с пушистым хвостом, который прыгает по деревьям.",
+                "collocations": "bushy tail, squirrel collects nuts, red squirrel",
+                "context": "A red squirrel ran up the tree trunk with an acorn in its mouth."
+            },
+            {
+                "word": "feather",
+                "transcription_us": "/ˈfeðər/",
+                "transcription_uk": "/ˈfeðə/",
+                "translation": "перо (птичье)",
+                "explanation_en": "One of the soft light things that cover a bird's body.",
+                "explanation_ru": "Легкая и мягкая частичка оперения птицы.",
+                "collocations": "bird feather, light as a feather, soft feather",
+                "context": "The child found a beautiful blue feather on the grass in the park."
+            },
+            {
+                "word": "forest",
+                "transcription_us": "/ˈfɔːrɪst/",
+                "transcription_uk": "/ˈfɒrɪst/",
+                "translation": "лес",
+                "explanation_en": "A large area of land covered with many trees and plants.",
+                "explanation_ru": "Большой участок земли, на котором растет много деревьев.",
+                "collocations": "deep forest, walk in the forest, forest animals",
+                "context": "Many wild animals and birds live together in the green forest."
+            }
+        ]
+    },
+    "demo-phrasal": {
+        "title": "🔥 Top Phrasal Verbs",
+        "level": "B1-B2 (Intermediate)",
+        "style": "premium",
+        "cards": [
+            {
+                "word": "figure out",
+                "transcription_us": "/ˈfɪɡjər aʊt/",
+                "transcription_uk": "/ˈfɪɡər aʊt/",
+                "translation": "разобраться / понять",
+                "explanation_en": "To understand or solve something after thinking about it.",
+                "explanation_ru": "Понять или найти решение проблемы после размышлений.",
+                "collocations": "figure out a problem, figure out how to, try to figure out",
+                "context": "It took me thirty minutes to figure out how to install this program."
+            },
+            {
+                "word": "give up",
+                "transcription_us": "/ɡɪv ʌp/",
+                "transcription_uk": "/ɡɪv ʌp/",
+                "translation": "сдаваться / бросать",
+                "explanation_en": "To stop trying to do something or stop a habit.",
+                "explanation_ru": "Перестать пытаться делать что-то или отказаться от привычки.",
+                "collocations": "never give up, give up smoking, give up hope",
+                "context": "Don't give up on learning English even if grammar seems difficult at first."
+            },
+            {
+                "word": "turn out",
+                "transcription_us": "/tɜːrn aʊt/",
+                "transcription_uk": "/tɜːn aʊt/",
+                "translation": "оказаться / выясниться",
+                "explanation_en": "To prove to be or happen in a particular way in the end.",
+                "explanation_ru": "Оказаться в результате или произойти неожиданным образом.",
+                "collocations": "turn out well, as it turns out, turn out to be true",
+                "context": "The test turned out to be much easier than we expected."
+            },
+            {
+                "word": "run out of",
+                "transcription_us": "/rʌn aʊt ʌv/",
+                "transcription_uk": "/rʌn aʊt ɒv/",
+                "translation": "заканчиваться (о ресурсах)",
+                "explanation_en": "To use all of something so that there is none left.",
+                "explanation_ru": "Израсходовать всё без остатка (время, деньги, память).",
+                "collocations": "run out of time, run out of money, run out of coffee",
+                "context": "We need to hurry because we are running out of time before the deadline."
+            },
+            {
+                "word": "look forward to",
+                "transcription_us": "/lʊk ˈfɔːrwərd tuː/",
+                "transcription_uk": "/lʊk ˈfɔːwəd tuː/",
+                "translation": "ждать с нетерпением",
+                "explanation_en": "To feel excited and happy about something that is going to happen.",
+                "explanation_ru": "Радовать и с нетерпением ожидать предстоящего события.",
+                "collocations": "look forward to meeting, look forward to vacation, eagerly look forward",
+                "context": "I am really looking forward to our upcoming trip to Italy."
+            },
+            {
+                "word": "carry on",
+                "transcription_us": "/ˈkæri ɑːn/",
+                "transcription_uk": "/ˈkæri ɒn/",
+                "translation": "продолжать делать",
+                "explanation_en": "To continue doing something without stopping.",
+                "explanation_ru": "Продолжать начатое действие несмотря на препятствия.",
+                "collocations": "carry on working, carry on with the lesson, carry on as usual",
+                "context": "Please carry on reading the text while I write on the board."
+            }
+        ]
+    },
+    "demo-c1": {
+        "title": "🧠 Smart Vocabulary (Debates & Essay)",
+        "level": "C1 (Advanced)",
+        "style": "premium",
+        "cards": [
+            {
+                "word": "ambiguous",
+                "transcription_us": "/æmˈbɪɡjuəs/",
+                "transcription_uk": "/æmˈbɪɡjuəs/",
+                "translation": "двусмысленный / неоднозначный",
+                "explanation_en": "Open to more than one interpretation; not having one clear meaning.",
+                "explanation_ru": "Имеющий несколько возможных толкований, нечеткий.",
+                "collocations": "ambiguous statement, highly ambiguous, avoid ambiguous wording",
+                "context": "The wording of the law was ambiguous and led to heated debates."
+            },
+            {
+                "word": "inevitable",
+                "transcription_us": "/ɪnˈevɪtəbl/",
+                "transcription_uk": "/ɪnˈevɪtəbl/",
+                "translation": "неизбежный / неминуемый",
+                "explanation_en": "Certain to happen and impossible to avoid or prevent.",
+                "explanation_ru": "То, что обязательно произойдет и чего нельзя избежать.",
+                "collocations": "inevitable consequence, feel inevitable, almost inevitable",
+                "context": "Changes in the global climate have made economic adaptation inevitable."
+            },
+            {
+                "word": "compelling",
+                "transcription_us": "/kəmˈpelɪŋ/",
+                "transcription_uk": "/kəmˈpelɪŋ/",
+                "translation": "убедительный / веский",
+                "explanation_en": "Evoking interest, attention, or admiration in a powerful way.",
+                "explanation_ru": "Очень сильный и логичный аргумент, вызывает доверие.",
+                "collocations": "compelling evidence, compelling argument, compelling reason",
+                "context": "The researcher presented compelling evidence to support her scientific theory."
+            },
+            {
+                "word": "detrimental",
+                "transcription_us": "/ˌdetrɪˈmentl/",
+                "transcription_uk": "/ˌdetrɪˈmentl/",
+                "translation": "пагубный / вредный",
+                "explanation_en": "Tending to cause harm or damage to someone or something.",
+                "explanation_ru": "Наносящий существенный вред или ущерб здоровью/развитию.",
+                "collocations": "detrimental impact, detrimental to health, highly detrimental",
+                "context": "Lack of sleep can have a detrimental effect on cognitive performance."
+            },
+            {
+                "word": "feasible",
+                "transcription_us": "/ˈfiːzəbl/",
+                "transcription_uk": "/ˈfiːzəbl/",
+                "translation": "осуществимый / реальный",
+                "explanation_en": "Possible to do easily or conveniently in practice.",
+                "explanation_ru": "Задача или план, который реально реализовать на практике.",
+                "collocations": "economically feasible, highly feasible, feasible solution",
+                "context": "It is not economically feasible to build a bridge across this wide bay."
+            },
+            {
+                "word": "counterproductive",
+                "transcription_us": "/ˌkaʊntərprəˈdʌktɪv/",
+                "transcription_uk": "/ˌkaʊntəprəˈdʌktɪv/",
+                "translation": "контрпродуктивный",
+                "explanation_en": "Having the opposite effect to the one that is intended.",
+                "explanation_ru": "Действие, дающее результат, противоположный желаемой цели.",
+                "collocations": "highly counterproductive, prove counterproductive, counterproductive strategy",
+                "context": "Strict punishment can often be counterproductive in motivating students."
+            }
+        ]
     }
 }
 
@@ -1405,7 +1606,7 @@ with col_stats:
             st.markdown(f"<div class='demo-deck-card'><b>{d_info['title']}</b><br/><span style='font-size:11px; color:#0369a1;'>Уровень: {d_info['level']}</span></div>", unsafe_allow_html=True)
             if st.button("👁️ Попробовать", key=f"try_{d_key}", use_container_width=True):
                 st.session_state.cards = d_info["cards"]
-                st.session_state.demo_style = d_info["style"]
+                st.session_state.demo_style = d_info.get("style", "premium")
                 st.session_state.flipped = {i: False for i in range(len(d_info["cards"]))}
                 st.session_state.trigger_scroll = True
                 st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
@@ -1423,7 +1624,7 @@ def discover_available_models():
                 if not clean_name.endswith("-001") and "tts" not in clean_name and "embed" not in clean_name and "imagen" not in clean_name:
                     available.append(clean_name)
         
-        priority = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-1.5-pro"]
+        priority = ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.5-pro", "gemini-2.0-flash-lite"]
         ordered = []
         for p in priority:
             if p in available:
@@ -1432,9 +1633,9 @@ def discover_available_models():
             if a not in ordered:
                 ordered.append(a)
                 
-        return ordered if ordered else ["gemini-2.0-flash", "gemini-1.5-flash"]
+        return ordered if ordered else ["gemini-2.5-flash", "gemini-2.0-flash"]
     except Exception:
-        return ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"]
+        return ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-2.0-flash-lite"]
 
 if generate_click:
     is_valid_input = False
@@ -1550,7 +1751,6 @@ if generate_click:
 
             discovered_models = discover_available_models()
             
-            # Ставим ранее подтвержденную рабочую модель первой в очереди
             if "preferred_model" in st.session_state and st.session_state.preferred_model in discovered_models:
                 models_to_try = [st.session_state.preferred_model] + [m for m in discovered_models if m != st.session_state.preferred_model]
             else:
@@ -1563,7 +1763,6 @@ if generate_click:
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
                 for current_model_name in models_to_try:
                     try:
-                        # Задаем жесткую системную инструкцию против вывода chain-of-thought рассуждений
                         model = genai.GenerativeModel(
                             model_name=current_model_name,
                             system_instruction="You are a professional English methodologist. Output STRICTLY ONE valid JSON array of card objects. Do NOT include any reasoning, checklist, thinking process, markdown formatting, or multiple JSON arrays."
@@ -1609,13 +1808,11 @@ if generate_click:
                     text_clean = re.sub(r"\s*```$", "", text_clean).strip()
                 
                 cards_data = None
-                # Попытка 1: Прямой парсинг всей очищенной строки
                 try:
                     cards_data = json.loads(text_clean)
                 except Exception:
                     pass
 
-                # Попытка 2: Извлечение массива через нежадное регулярное выражение (если модель добавила текст/рассуждения)
                 if not cards_data:
                     array_matches = re.findall(r'\[\s*\{[\s\S]*?\}\s*\]', text_response, re.DOTALL)
                     if not array_matches:
@@ -1631,7 +1828,6 @@ if generate_click:
                         except Exception:
                             continue
 
-                # Попытка 3: Извлечение одиночного объекта JSON
                 if not cards_data:
                     obj_matches = re.findall(r'\{[\s\S]*?\}', text_response)
                     for match in reversed(obj_matches):
@@ -1647,7 +1843,6 @@ if generate_click:
                 if not cards_data:
                     raise ValueError("Не найден валидный JSON-массив в ответе модели")
 
-                # Если модель вернула словарь {"cards": [...]}, распаковываем список
                 if isinstance(cards_data, dict):
                     for k in ["cards", "items", "data"]:
                         if k in cards_data and isinstance(cards_data[k], list):
