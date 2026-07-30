@@ -1563,15 +1563,27 @@ if generate_click:
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
                 for current_model_name in models_to_try:
                     try:
-                        model = genai.GenerativeModel(current_model_name)
+                        # Задаем жесткую системную инструкцию против вывода chain-of-thought рассуждений
+                        model = genai.GenerativeModel(
+                            model_name=current_model_name,
+                            system_instruction="You are a professional English methodologist. Output STRICTLY ONE valid JSON array of card objects. Do NOT include any reasoning, checklist, thinking process, markdown formatting, or multiple JSON arrays."
+                        )
                         request_config = {"timeout": 25}
+                        gen_config = {
+                            "response_mime_type": "application/json",
+                            "temperature": 0.1
+                        }
                         
                         if media_part:
                             contents = [prompt_text, media_part]
                         else:
                             contents = f"{prompt_text}\n\n--- ИСХОДНЫЙ МАТЕРИАЛ ---\n{final_prompt_content}"
                             
-                        response = model.generate_content(contents, request_options=request_config)
+                        response = model.generate_content(
+                            contents, 
+                            generation_config=gen_config, 
+                            request_options=request_config
+                        )
                         
                         if response and response.text:
                             text_response = response.text.strip()
@@ -1591,20 +1603,59 @@ if generate_click:
                 st.stop()
 
             try:
-                backtick_triple = chr(96) * 3
-                if backtick_triple in text_response:
-                    chunks = text_response.split(backtick_triple)
-                    for chunk in chunks:
-                        clean_chunk = chunk.strip()
-                        if clean_chunk.startswith("json"):
-                            clean_chunk = clean_chunk[4:].strip()
-                        if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
-                            text_response = clean_chunk
-                            break
-
-                text_response = text_response.strip()
-                cards_data = json.loads(text_response)
+                text_clean = text_response.strip()
+                if text_clean.startswith("```"):
+                    text_clean = re.sub(r"^```(?:json)?\s*", "", text_clean)
+                    text_clean = re.sub(r"\s*```$", "", text_clean).strip()
                 
+                cards_data = None
+                # Попытка 1: Прямой парсинг всей очищенной строки
+                try:
+                    cards_data = json.loads(text_clean)
+                except Exception:
+                    pass
+
+                # Попытка 2: Извлечение массива через нежадное регулярное выражение (если модель добавила текст/рассуждения)
+                if not cards_data:
+                    array_matches = re.findall(r'\[\s*\{[\s\S]*?\}\s*\]', text_response, re.DOTALL)
+                    if not array_matches:
+                        array_matches = re.findall(r'\[[\s\S]*?\]', text_response)
+                    
+                    for match in reversed(array_matches):
+                        try:
+                            fixed_json = re.sub(r',\s*([\]\}])', r'\1', match)
+                            parsed_cand = json.loads(fixed_json)
+                            if parsed_cand and isinstance(parsed_cand, list):
+                                cards_data = parsed_cand
+                                break
+                        except Exception:
+                            continue
+
+                # Попытка 3: Извлечение одиночного объекта JSON
+                if not cards_data:
+                    obj_matches = re.findall(r'\{[\s\S]*?\}', text_response)
+                    for match in reversed(obj_matches):
+                        try:
+                            fixed_json = re.sub(r',\s*([\]\}])', r'\1', match)
+                            parsed_cand = json.loads(fixed_json)
+                            if parsed_cand and isinstance(parsed_cand, dict):
+                                cards_data = [parsed_cand]
+                                break
+                        except Exception:
+                            continue
+
+                if not cards_data:
+                    raise ValueError("Не найден валидный JSON-массив в ответе модели")
+
+                # Если модель вернула словарь {"cards": [...]}, распаковываем список
+                if isinstance(cards_data, dict):
+                    for k in ["cards", "items", "data"]:
+                        if k in cards_data and isinstance(cards_data[k], list):
+                            cards_data = cards_data[k]
+                            break
+                    else:
+                        cards_data = [cards_data]
+
                 st.session_state.cards = cards_data
                 st.session_state.demo_style = None
                 st.session_state.flipped = {i: False for i in range(len(cards_data))}
@@ -2035,3 +2086,4 @@ if st.session_state.cards:
             }
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
+```e-o-f
