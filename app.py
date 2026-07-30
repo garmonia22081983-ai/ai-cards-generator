@@ -35,7 +35,6 @@ cookie_manager = stx.CookieManager(key="auth_cookie_manager")
 US_FLAG_SVG = '<svg width="18" height="12" viewBox="0 0 640 480" style="vertical-align: middle; border-radius: 2px; display: inline-block;"><path fill="#bd3d44" d="M0 0h640v480H0z"/><path stroke="#fff" stroke-width="37" d="M0 55.4h640M0 129.2h640M0 203h640M0 276.9h640M0 350.7h640M0 424.6h640"/><path fill="#192f5d" d="M0 0h285.7v258.5H0z"/></svg>'
 GB_FLAG_SVG = '<svg width="18" height="12" viewBox="0 0 640 480" style="vertical-align: middle; border-radius: 2px; display: inline-block;"><path fill="#012169" d="M0 0h640v480H0z"/><path stroke="#fff" stroke-width="60" d="m0 0 640 480M640 0 0 480"/><path stroke="#C8102E" stroke-width="40" d="m0 0 640 480M640 0 0 480"/><path stroke="#fff" stroke-width="100" d="M320 0v480M0 240h640"/><path stroke="#C8102E" stroke-width="60" d="M320 0v480M0 240h640"/></svg>'
 
-# Auto-cleaning and initializing Gemini API Key safely
 if "GEMINI_API_KEY" in st.secrets:
     clean_key = str(st.secrets["GEMINI_API_KEY"]).replace("\n", "").replace("\r", "").strip()
     genai.configure(api_key=clean_key)
@@ -658,7 +657,6 @@ html, body, [data-testid="stAppViewContainer"], .stApp {{
     --primary-hover: #1d4ed8 !important;
 }}
 
-/* Login White Card Styling */
 div[data-testid="stColumn"]:has(#login-card-marker) {{
     background-color: #ffffff !important;
     border: 1px solid #cbd5e1 !important;
@@ -668,7 +666,6 @@ div[data-testid="stColumn"]:has(#login-card-marker) {{
     margin-top: 20px !important;
 }}
 
-/* Custom User Card in Sidebar */
 .user-profile-box {{
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -681,7 +678,6 @@ div[data-testid="stColumn"]:has(#login-card-marker) {{
     justify-content: space-between !important;
 }}
 
-/* Primary Buttons styling */
 .stButton > button[kind="primary"] {{
     background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%) !important;
     border: none !important;
@@ -699,7 +695,6 @@ div[data-testid="stColumn"]:has(#login-card-marker) {{
     transform: translateY(-1px) !important;
 }}
 
-/* Secondary Buttons */
 .stButton > button {{
     border-radius: 8px !important;
     border: 1px solid #cbd5e1 !important;
@@ -711,7 +706,6 @@ div[data-testid="stColumn"]:has(#login-card-marker) {{
     color: #2563eb !important;
 }}
 
-/* Radio and Input Styling */
 div[data-baseweb="radio"] input:checked + div,
 div[data-baseweb="radio"] div[aria-checked="true"] {{
     border-color: #2563eb !important;
@@ -743,7 +737,6 @@ input:focus, textarea:focus {{
     border-right: 1px solid #e2e8f0 !important;
 }}
 
-/* Tariff Box Styling */
 .tariff-box {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -752,7 +745,6 @@ input:focus, textarea:focus {{
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03) !important;
 }}
 
-/* Saved Deck Card in Sidebar */
 .saved-deck-card {{
     background: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -771,7 +763,6 @@ input:focus, textarea:focus {{
     box-shadow: 0 2px 6px rgba(14, 165, 233, 0.06) !important;
 }}
 
-/* Standard Interactive Flashcard Front */
 .card-front {{
     background: linear-gradient(145deg, #fef2f2 0%, #fee2e2 100%) !important;
     border: 1px solid #fca5a5 !important;
@@ -794,7 +785,6 @@ input:focus, textarea:focus {{
     color: #881337 !important;
 }}
 
-/* Kids Style Interactive Flashcard Front & Back */
 .card-front-kids {{
     background: linear-gradient(145deg, #fff7ed 0%, #ffedd5 100%) !important;
     border: 2px solid #fdba74 !important;
@@ -827,7 +817,6 @@ input:focus, textarea:focus {{
     color: #1e293b !important;
 }}
 
-/* Premium Style Interactive Flashcard Front & Back */
 .card-front-premium {{
     background: linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%) !important;
     border: 2px solid #93c5fd !important;
@@ -876,7 +865,6 @@ input:focus, textarea:focus {{
     font-weight: 700 !important;
 }}
 
-/* Interactive Flashcard Back Standard */
 .card-back {{
     background-color: #ffffff !important;
     border: 1px solid #e2e8f0 !important;
@@ -890,14 +878,12 @@ input:focus, textarea:focus {{
     color: #1e293b !important;
 }}
 
-/* Hide time display and progress timeline in audio players */
 audio::-webkit-media-controls-timeline,
 audio::-webkit-media-controls-current-time-display,
 audio::-webkit-media-controls-time-remaining-display {{
     display: none !important;
 }}
 
-/* Print styles */
 .print-row-bw {{
     display: flex;
     border: 1px dashed #94a3b8;
@@ -1586,7 +1572,7 @@ effective_email = st.session_state.impersonated_email if (is_real_admin and st.s
 with st.sidebar:
     st.markdown(
         f"""<div class="user-profile-box">
-<div style="font-size: 13px; font-weight: 600; color: #1e293b; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="{effective_email}">
+<div style="font-size: 13px; font-weight: 600; color: #1e3a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="{effective_email}">
 👤 {effective_email}
 </div>
 </div>""",
@@ -1702,7 +1688,6 @@ if "flipped" not in st.session_state:
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    # Кнопка сброса API строго для администраторов
     if is_real_admin:
         if st.button("🔄 Полный сброс API (Админ)", help="Очищает кэш сервера и сбрасывает зависшие соединения API"):
             st.cache_data.clear()
@@ -2039,16 +2024,34 @@ if generate_click:
                 Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                 """
 
+            # Dynamic API Model Discovery
+            def get_active_gemini_models():
+                try:
+                    active_models = []
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            clean_m = m.name.replace("models/", "")
+                            active_models.append(clean_m)
+                    if active_models:
+                        # Put fast/flash models first
+                        flash_m = [m for m in active_models if "flash" in m.lower()]
+                        other_m = [m for m in active_models if "flash" not in m.lower()]
+                        return flash_m + other_m
+                except Exception:
+                    pass
+                return ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"]
+
+            available_models = get_active_gemini_models()
+            success = False
+            text_response = ""
+            last_error_msg = ""
+
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
-                models_to_try = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-pro"]
-                max_retries = 3
+                max_retries = min(3, len(available_models))
                 backoff_time = 2
-                success = False
-                text_response = ""
-                last_error_msg = ""
                 
                 for attempt in range(max_retries):
-                    current_model_name = models_to_try[attempt % len(models_to_try)]
+                    current_model_name = available_models[attempt % len(available_models)]
                     try:
                         model = genai.GenerativeModel(current_model_name)
                         request_config = {"timeout": 30}
@@ -2066,73 +2069,74 @@ if generate_click:
                         if attempt < max_retries - 1:
                             time.sleep(backoff_time)
                             backoff_time *= 2
-                        else:
-                            st.error(f"🛑 Не удалось сгенерировать карточки после {max_retries} попыток. Причина: {last_error_msg}")
-                            st.stop()
 
-                if success:
-                    try:
-                        backtick_triple = chr(96) * 3
-                        if backtick_triple in text_response:
-                            chunks = text_response.split(backtick_triple)
-                            for chunk in chunks:
-                                clean_chunk = chunk.strip()
-                                if clean_chunk.startswith("json"):
-                                    clean_chunk = clean_chunk[4:].strip()
-                                if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
-                                    text_response = clean_chunk
-                                    break
+            if not success:
+                st.error(f"🛑 Не удалось сгенерировать карточки. Причина: {last_error_msg}")
+                st.info("💡 Если возникла проблема с ключом, нажмите **«🔄 Полный сброс API (Админ)»** в боковом меню или укажите обновленный API-ключ.")
+                st.stop()
 
-                        text_response = text_response.strip()
-                        cards_data = json.loads(text_response)
-                        
-                        st.session_state.cards = cards_data
-                        st.session_state.demo_style = None
-                        st.session_state.flipped = {i: False for i in range(len(cards_data))}
-                        
-                        st.session_state.trigger_scroll = True
-                        st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
-                        
-                        try:
-                            now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                            request_id = f"req-{int(datetime.now().timestamp())}"
-                            
-                            requests_sheet = sh_global.worksheet("Requests")
-                            requests_sheet.append_row([
-                                request_id, 
-                                effective_email, 
-                                source_url_to_save[:250], 
-                                student_level, 
-                                len(cards_data), 
-                                "Completed", 
-                                now_gen_str,
-                                source_type,
-                                source_url_to_save[:250]
-                            ])
-                            
-                            cards_sheet = sh_global.worksheet("Cards")
-                            for card in cards_data:
-                                card_id = str(uuid.uuid4())
-                                encoded_w = urllib.parse.quote(card['word'])
-                                audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
-                                audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
-                                tr_val = card.get('transcription_us', card.get('transcription', ''))
-                                exp_val = card.get('explanation_en', card.get('explanation', ''))
-                                
-                                cards_sheet.append_row([
-                                    card_id, request_id, card['word'], tr_val,
-                                    card['translation'], exp_val, card.get('collocations', ''),
-                                    card['context'], audio_us, audio_uk, effective_email
-                                ])
-                            fetch_sheet_values.clear()
-                        except Exception as sheets_err:
-                            st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
+            try:
+                backtick_triple = chr(96) * 3
+                if backtick_triple in text_response:
+                    chunks = text_response.split(backtick_triple)
+                    for chunk in chunks:
+                        clean_chunk = chunk.strip()
+                        if clean_chunk.startswith("json"):
+                            clean_chunk = clean_chunk[4:].strip()
+                        if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
+                            text_response = clean_chunk
+                            break
 
-                        st.success(f"Успешно! Создано карточек: {len(cards_data)}")
-                        time.sleep(0.5)
-                        st.rerun()
-                    except Exception as parse_err:
-                        st.error(f"Ошибка чтения данных от нейросети: {parse_err}")
+                text_response = text_response.strip()
+                cards_data = json.loads(text_response)
+                
+                st.session_state.cards = cards_data
+                st.session_state.demo_style = None
+                st.session_state.flipped = {i: False for i in range(len(cards_data))}
+                
+                st.session_state.trigger_scroll = True
+                st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
+                
+                try:
+                    now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                    request_id = f"req-{int(datetime.now().timestamp())}"
+                    
+                    requests_sheet = sh_global.worksheet("Requests")
+                    requests_sheet.append_row([
+                        request_id, 
+                        effective_email, 
+                        source_url_to_save[:250], 
+                        student_level, 
+                        len(cards_data), 
+                        "Completed", 
+                        now_gen_str,
+                        source_type,
+                        source_url_to_save[:250]
+                    ])
+                    
+                    cards_sheet = sh_global.worksheet("Cards")
+                    for card in cards_data:
+                        card_id = str(uuid.uuid4())
+                        encoded_w = urllib.parse.quote(card['word'])
+                        audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
+                        audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
+                        tr_val = card.get('transcription_us', card.get('transcription', ''))
+                        exp_val = card.get('explanation_en', card.get('explanation', ''))
+                        
+                        cards_sheet.append_row([
+                            card_id, request_id, card['word'], tr_val,
+                            card['translation'], exp_val, card.get('collocations', ''),
+                            card['context'], audio_us, audio_uk, effective_email
+                        ])
+                    fetch_sheet_values.clear()
+                except Exception as sheets_err:
+                    st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
+
+                st.success(f"Успешно! Создано карточек: {len(cards_data)}")
+                time.sleep(0.5)
+                st.rerun()
+            except Exception as parse_err:
+                st.error(f"Ошибка чтения данных от нейросети: {parse_err}")
 
 if st.session_state.cards:
     st.write("---")
@@ -2403,7 +2407,6 @@ if st.session_state.cards:
 
     st.write("---")
     
-    # Anki and Quizlet Export Buttons
     anki_list = []
     quizlet_list = []
     coll_lbl_t = get_card_collocations_label(def_lang_option)
@@ -2442,7 +2445,6 @@ if st.session_state.cards:
 
     st.write("")
 
-    # Save Deck to Cabinet
     st.markdown("### 💾 Сохранить колоду в личный кабинет")
     col_save1, col_save2 = st.columns([2.5, 1], gap="medium")
     with col_save1:
@@ -2475,7 +2477,6 @@ if st.session_state.cards:
             except Exception as save_err:
                 st.error(f"Ошибка сохранения колоды: {save_err}")
 
-    # Text Table Editor Expander
     with st.expander("✏️ Отредактировать текст карточек (нажмите, чтобы изменить перевод или контекст)", expanded=False):
         st.caption("Все правки в таблице ниже мгновенно обновят интерактивные карточки, Anki-файл и версию для печати:")
         
