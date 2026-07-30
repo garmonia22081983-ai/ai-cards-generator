@@ -1825,11 +1825,11 @@ if generate_click:
                 Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                 """
 
-            # Гарантированно доступные официальные производственные модели Google
+            # Гарантированно доступные актуальные рабочие модели Google (серии 2.5 и 2.0)
             stable_production_models = [
-                "gemini-1.5-flash",
                 "gemini-2.5-flash",
-                "gemini-1.5-pro"
+                "gemini-2.0-flash",
+                "gemini-1.5-flash"
             ]
 
             success = False
