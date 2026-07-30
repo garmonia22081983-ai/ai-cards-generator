@@ -1411,6 +1411,31 @@ with col_stats:
                 st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
                 st.rerun()
 
+@st.cache_data(ttl=3600)
+def discover_available_models():
+    """Запрашивает актуальный список доступных моделей Google AI Studio."""
+    try:
+        available = []
+        all_m = list(genai.list_models())
+        for m in all_m:
+            if 'generateContent' in m.supported_generation_methods:
+                clean_name = m.name.replace("models/", "")
+                if not clean_name.endswith("-001") and "tts" not in clean_name and "embed" not in clean_name and "imagen" not in clean_name:
+                    available.append(clean_name)
+        
+        priority = ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite", "gemini-2.5-flash", "gemini-1.5-pro"]
+        ordered = []
+        for p in priority:
+            if p in available:
+                ordered.append(p)
+        for a in available:
+            if a not in ordered:
+                ordered.append(a)
+                
+        return ordered if ordered else ["gemini-2.0-flash", "gemini-1.5-flash"]
+    except Exception:
+        return ["gemini-2.0-flash", "gemini-1.5-flash", "gemini-2.0-flash-lite"]
+
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -1523,62 +1548,23 @@ if generate_click:
                 Верни ТОЛЬКО чистый JSON без маркдаун оберток.
                 """
 
-            candidate_models = []
+            discovered_models = discover_available_models()
             
-            try:
-                available_from_api = []
-                for m in genai.list_models():
-                    if 'generateContent' in getattr(m, 'supported_generation_methods', []):
-                        m_clean = m.name.replace("models/", "")
-                        if "tts" not in m_clean and "embed" not in m_clean and "bison" not in m_clean:
-                            available_from_api.append(m_clean)
-                            available_from_api.append(m.name)
-                
-                priority_order = [
-                    "gemini-2.5-flash",
-                    "gemini-2.0-flash",
-                    "gemini-2.5-pro",
-                    "gemini-1.5-flash",
-                    "gemini-2.0-flash-lite",
-                    "gemini-1.5-pro"
-                ]
-                
-                for p in priority_order:
-                    if p in available_from_api:
-                        candidate_models.append(p)
-                    if f"models/{p}" in available_from_api:
-                        candidate_models.append(f"models/{p}")
-                        
-                for a in available_from_api:
-                    if a not in candidate_models:
-                        candidate_models.append(a)
-            except Exception:
-                pass
-            
-            fallback_models = [
-                "gemini-2.5-flash",
-                "gemini-2.0-flash",
-                "gemini-2.5-pro",
-                "gemini-1.5-flash",
-                "gemini-2.0-flash-lite",
-                "gemini-1.5-pro",
-                "models/gemini-2.5-flash",
-                "models/gemini-2.0-flash",
-                "models/gemini-1.5-flash"
-            ]
-            for fb in fallback_models:
-                if fb not in candidate_models:
-                    candidate_models.append(fb)
+            # Ставим ранее подтвержденную рабочую модель первой в очереди
+            if "preferred_model" in st.session_state and st.session_state.preferred_model in discovered_models:
+                models_to_try = [st.session_state.preferred_model] + [m for m in discovered_models if m != st.session_state.preferred_model]
+            else:
+                models_to_try = discovered_models
 
             success = False
             text_response = ""
             error_logs = []
 
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
-                for current_model_name in candidate_models:
+                for current_model_name in models_to_try:
                     try:
                         model = genai.GenerativeModel(current_model_name)
-                        request_config = {"timeout": 35}
+                        request_config = {"timeout": 25}
                         
                         if media_part:
                             contents = [prompt_text, media_part]
@@ -1591,11 +1577,11 @@ if generate_click:
                             text_response = response.text.strip()
                             if text_response:
                                 success = True
-                                st.session_state.last_used_model = current_model_name.replace("models/", "")
+                                st.session_state.last_used_model = current_model_name
+                                st.session_state.preferred_model = current_model_name
                                 break
                     except Exception as e:
                         error_logs.append(f"• {current_model_name}: {str(e)}")
-                        time.sleep(0.3)
 
             if not success:
                 st.error("⚙️ Проходит обновление модели нейросети. Пожалуйста, сделайте скриншот экрана и отправьте его администратору в [Telegram-чат](https://t.me/+RyIIPld1fFE1ZTVi).")
