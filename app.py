@@ -1,4 +1,3 @@
-# STREAMING_CHUNK:Loading foundational Python libraries...
 import streamlit as st
 import google.generativeai as genai
 import json
@@ -25,7 +24,6 @@ import html
 import wave
 import streamlit.components.v1 as components
 
-# STREAMING_CHUNK:Configuring system constants, admin list and SVG flags...
 APP_URL = "https://ai-cards-generator.streamlit.app"
 
 ADMIN_EMAILS = [
@@ -44,7 +42,6 @@ else:
 
 st.set_page_config(page_title="Генератор карточек", layout="wide")
 
-# STREAMING_CHUNK:Embedding static pre-built Demo Decks dictionary...
 DEMO_DECKS = {
     "demo-airport": {
         "title": "✈️ At the Airport & Travel",
@@ -383,7 +380,6 @@ DEMO_DECKS = {
     }
 }
 
-# STREAMING_CHUNK:Initializing Google Sheets authentication connection...
 @st.cache_resource
 def get_gsheets_client():
     scopes = [
@@ -420,7 +416,6 @@ def get_gsheets_client():
     st.error("🔴 Ошибка авторизации: Не найдены ключи доступа к Google Таблицам!")
     st.stop()
 
-# STREAMING_CHUNK:Defining Google Sheets reader and OTP mail sender...
 @st.cache_data(ttl=30)
 def fetch_sheet_values(_sh, sheet_name):
     try:
@@ -458,7 +453,6 @@ def send_otp_email(target_email, otp_code):
         st.error(f"Ошибка отправки письма: {e}")
         return False
 
-# STREAMING_CHUNK:Calculating user subscription limits and usages...
 def get_user_tariff_and_usage(email, sh):
     clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
     if email.lower() in clean_admin_emails:
@@ -565,7 +559,6 @@ def get_user_tariff_and_usage(email, sh):
     except Exception:
         return tariff_name, max_cards, 0, period_start, False
 
-# STREAMING_CHUNK:Defining website scraping and media length parser...
 def extract_text_from_url(url):
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64)'}
@@ -615,7 +608,6 @@ def get_base64_of_bin_file(bin_file):
         data = f.read()
     return base64.b64encode(data).decode()
 
-# STREAMING_CHUNK:Injecting custom page styles including Kids & Premium card themes...
 bg_css = ""
 if os.path.exists("background.jpg"):
     try:
@@ -1029,7 +1021,6 @@ audio::-webkit-media-controls-time-remaining-display {{
 
 st.markdown(css_template, unsafe_allow_html=True)
 
-# STREAMING_CHUNK:Defining localized text formatting helpers...
 def get_card_transcription(card, accent_choice):
     if "US" in str(accent_choice):
         return card.get('transcription_us', card.get('transcription', ''))
@@ -1057,7 +1048,6 @@ def get_card_context_label(def_lang_choice):
         return "Контекст:"
     return "Context:"
 
-# STREAMING_CHUNK:Rendering interactive quiz section...
 def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺🇸 US (Американский)"):
     st.markdown("### 🧪 Интерактивный тест по колоде")
     st.caption("Выберите один из вариантов перевода для каждого слова:")
@@ -1160,7 +1150,6 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
             st.session_state[user_ans_key] = {}
             st.rerun()
 
-# STREAMING_CHUNK:Handling public shared student link view with dual export...
 student_deck_id = None
 try:
     if hasattr(st, "query_params"):
@@ -1367,7 +1356,6 @@ if student_deck_id:
 
     st.stop()
 
-# STREAMING_CHUNK:Initializing user authentication session...
 if "user_email" not in st.session_state:
     st.session_state.user_email = None
 if "user_name" not in st.session_state:
@@ -1426,7 +1414,6 @@ if saved_email and not st.session_state.user_email and not st.session_state.logo
         except Exception:
             pass
 
-# STREAMING_CHUNK:Rendering login form container with white card UI...
 if not st.session_state.user_email:
     col_a1, col_a2, col_a3 = st.columns([1, 1.8, 1])
     with col_a2:
@@ -1589,7 +1576,6 @@ if not st.session_state.user_email:
         )
         st.stop()
 
-# STREAMING_CHUNK:Rendering user profile sidebar section...
 clean_admin_emails = [a.strip().lower() for a in ADMIN_EMAILS]
 is_real_admin = st.session_state.user_email and (st.session_state.user_email.strip().lower() in clean_admin_emails)
 
@@ -1669,7 +1655,6 @@ with st.sidebar:
 
 st.sidebar.markdown("<hr style='margin: 8px 0;'>", unsafe_allow_html=True)
 
-# STREAMING_CHUNK:Rendering main app title and greeting banner...
 st.markdown(
     """<div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
 <span style="font-size: 32px;">🎓</span>
@@ -1712,14 +1697,18 @@ if "cards" not in st.session_state:
 if "flipped" not in st.session_state:
     st.session_state.flipped = {}
 
-# STREAMING_CHUNK:Configuring generation parameters and model options...
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    if effective_email.lower() in clean_admin_emails:
-        model_option = st.selectbox("Нейросеть:", ["gemini-3.5-flash", "gemini-2.5-flash", "gemini-3-flash"])
-    else:
-        model_option = "gemini-3.5-flash"
+    # Кнопка сброса API для администраторов и отладки
+    if st.button("🔄 Полный сброс API", help="Очищает кэш сервера и сбрасывает зависшие соединения API"):
+        st.cache_data.clear()
+        st.cache_resource.clear()
+        st.session_state.clear()
+        st.rerun()
+
+    # Фиксация модели gemini-1.5-flash
+    model_option = "gemini-1.5-flash"
     
     source_type = st.radio(
         "Что берем за основу?", 
@@ -1771,7 +1760,6 @@ elif is_limit_reached:
     st.info("Вы можете изучать или экспортировать ранее созданные карточки. Чтобы увеличить лимит или перейти на следующий тариф, нажмите кнопку ниже.")
     st.link_button("💳 Повысить тариф / Продлить", "https://flashcards-ai.ru/#tarifs", type="primary")
 
-# STREAMING_CHUNK:Rendering main input controls and saved deck list with Expandable Sections...
 col_main, col_stats = st.columns([1.6, 1], gap="medium")
 
 user_input = ""
@@ -1941,7 +1929,6 @@ with col_stats:
                 st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
                 st.rerun()
 
-# STREAMING_CHUNK:Executing generation request via Gemini Generative AI...
 if generate_click:
     is_valid_input = False
     if source_type == "📁 Видео или аудио файл (до 5 мин)":
@@ -2022,125 +2009,129 @@ if generate_click:
             else:
                 final_prompt_content = user_input.strip()
 
+            if source_type == "✍️ Готовый список слов":
+                prompt_text = f"""
+                Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
+                Создай обучающие карточки для следующих слов/фраз: {final_prompt_content}.
+                Верни строго валидный JSON-массив объектов со следующими ключами:
+                - "word": оригинальное слово на английском
+                - "transcription_us": американская фонетическая транскрипция в IPA
+                - "transcription_uk": британская фонетическая транскрипция в IPA
+                - "translation": точный и красивый перевод на русский
+                - "explanation_en": простое объяснение (дефиниция) на английском языке под уровень {student_level}
+                - "explanation_ru": простое понятное объяснение (дефиниция) на русском языке для детей/начинающих
+                - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую
+                - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
+                Верни ТОЛЬКО чистый JSON без маркдаун оберток.
+                """
+            else:
+                prompt_text = f"""
+                Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
+                Проанализируй предоставленный материал и выбери из него ровно {num_cards} самых важных полезных фраз или слов под уровень {student_level}.
+                
+                Верни строго валидный JSON-массив объектов со следующими ключами:
+                - "word": оригинальное слово на английском
+                - "transcription_us": американская фонетическая транскрипция в IPA
+                - "transcription_uk": британская фонетическая транскрипция в IPA
+                - "translation": точный и красивый перевод на русский
+                - "explanation_en": простое объяснение (дефиниция) на английском языке под уровень {student_level}
+                - "explanation_ru": простое понятное объяснение (дефиниция) на русском языке для детей/начинающих
+                - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую
+                - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
+                Верни ТОЛЬКО чистый JSON без маркдаун оберток.
+                """
+
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
-                try:
+                max_retries = 3
+                backoff_time = 2
+                success = False
+                text_response = ""
+                
+                for attempt in range(max_retries):
                     try:
-                        model = genai.GenerativeModel(model_option)
-                    except Exception:
-                        model = genai.GenerativeModel("gemini-3.5-flash")
-                    
-                    if source_type == "✍️ Готовый список слов":
-                        prompt_text = f"""
-                        Ты профессиональный методист английского языка. Твой student имеет уровень {student_level}.
-                        Создай обучающие карточки для следующих слов/фраз: {final_prompt_content}.
-                        Верни строго валидный JSON-массив объектов со следующими ключами:
-                        - "word": оригинальное слово на английском
-                        - "transcription_us": американская фонетическая транскрипция в IPA
-                        - "transcription_uk": британская фонетическая транскрипция в IPA
-                        - "translation": точный и красивый перевод на русский
-                        - "explanation_en": простое объяснение (дефиниция) на английском языке под уровень {student_level}
-                        - "explanation_ru": простое понятное объяснение (дефиниция) на русском языке для детей/начинающих
-                        - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую
-                        - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                        Верни ТОЛЬКО чистый JSON без маркдаун оберток.
-                        """
-                    else:
-                        prompt_text = f"""
-                        Ты профессиональный методист английского языка. Твой студент имеет уровень {student_level}.
-                        Проанализируй предоставленный материал и выбери из него ровно {num_cards} самых важных полезных фраз или слов под уровень {student_level}.
+                        model = genai.GenerativeModel("gemini-1.5-flash")
+                        request_config = {"timeout": 30}
                         
-                        Верни строго валидный JSON-массив объектов со следующими ключами:
-                        - "word": оригинальное слово на английском
-                        - "transcription_us": американская фонетическая транскрипция в IPA
-                        - "transcription_uk": британская фонетическая транскрипция в IPA
-                        - "translation": точный и красивый перевод на русский
-                        - "explanation_en": простое объяснение (дефиниция) на английском языке под уровень {student_level}
-                        - "explanation_ru": простое понятное объяснение (дефиниция) на русском языке для детей/начинающих
-                        - "collocations": 2-3 самых популярных словосочетания с этим словом на английском языке через запятую
-                        - "context": ОДНО контекстное предложение на английском под уровень {student_level}.
-                        Верни ТОЛЬКО чистый JSON без маркдаун оберток.
-                        """
-
-                    try:
                         if media_part:
-                            response = model.generate_content([prompt_text, media_part])
+                            response = model.generate_content([prompt_text, media_part], request_options=request_config)
                         else:
-                            response = model.generate_content([prompt_text, final_prompt_content])
-                    except Exception as first_err:
-                        if model_option != "gemini-3.5-flash":
-                            st.info(f"💡 Модель {model_option} временно недоступна. Автоматически переключаемся на основную gemini-3.5-flash...")
-                            fallback_model = genai.GenerativeModel("gemini-3.5-flash")
-                            if media_part:
-                                response = fallback_model.generate_content([prompt_text, media_part])
-                            else:
-                                response = fallback_model.generate_content([prompt_text, final_prompt_content])
+                            response = model.generate_content([prompt_text, final_prompt_content], request_options=request_config)
+                        
+                        text_response = response.text.strip()
+                        success = True
+                        break
+                    except Exception as e:
+                        if attempt < max_retries - 1:
+                            time.sleep(backoff_time)
+                            backoff_time *= 2
                         else:
-                            raise first_err
+                            st.error(f"🛑 Не удалось сгенерировать карточки после {max_retries} попыток. Причина: {str(e)}")
+                            st.stop()
 
-                    text_response = response.text.strip()
-                    
-                    backtick_triple = chr(96) * 3
-                    if backtick_triple in text_response:
-                        chunks = text_response.split(backtick_triple)
-                        for chunk in chunks:
-                            clean_chunk = chunk.strip()
-                            if clean_chunk.startswith("json"):
-                                clean_chunk = clean_chunk[4:].strip()
-                            if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
-                                text_response = clean_chunk
-                                break
-
-                    text_response = text_response.strip()
-                    cards_data = json.loads(text_response)
-                    
-                    st.session_state.cards = cards_data
-                    st.session_state.demo_style = None
-                    st.session_state.flipped = {i: False for i in range(len(cards_data))}
-                    st.session_state.trigger_scroll = True
-                    st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
-                    
+                if success:
                     try:
-                        now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-                        request_id = f"req-{int(datetime.now().timestamp())}"
+                        backtick_triple = chr(96) * 3
+                        if backtick_triple in text_response:
+                            chunks = text_response.split(backtick_triple)
+                            for chunk in chunks:
+                                clean_chunk = chunk.strip()
+                                if clean_chunk.startswith("json"):
+                                    clean_chunk = clean_chunk[4:].strip()
+                                if (clean_chunk.startswith("[") and clean_chunk.endswith("]")) or (clean_chunk.startswith("{") and clean_chunk.endswith("}")):
+                                    text_response = clean_chunk
+                                    break
+
+                        text_response = text_response.strip()
+                        cards_data = json.loads(text_response)
                         
-                        requests_sheet = sh_global.worksheet("Requests")
-                        requests_sheet.append_row([
-                            request_id, 
-                            effective_email, 
-                            source_url_to_save[:250], 
-                            student_level, 
-                            len(cards_data), 
-                            "Completed", 
-                            now_gen_str,
-                            source_type,
-                            source_url_to_save[:250]
-                        ])
+                        st.session_state.cards = cards_data
+                        st.session_state.demo_style = None
+                        st.session_state.flipped = {i: False for i in range(len(cards_data))}
                         
-                        cards_sheet = sh_global.worksheet("Cards")
-                        for card in cards_data:
-                            card_id = str(uuid.uuid4())
-                            encoded_w = urllib.parse.quote(card['word'])
-                            audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
-                            audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
-                            tr_val = card.get('transcription_us', card.get('transcription', ''))
-                            exp_val = card.get('explanation_en', card.get('explanation', ''))
+                        st.session_state.trigger_scroll = True
+                        st.session_state.scroll_counter = st.session_state.get("scroll_counter", 0) + 1
+                        
+                        try:
+                            now_gen_str = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+                            request_id = f"req-{int(datetime.now().timestamp())}"
                             
-                            cards_sheet.append_row([
-                                card_id, request_id, card['word'], tr_val,
-                                card['translation'], exp_val, card.get('collocations', ''),
-                                card['context'], audio_us, audio_uk, effective_email
+                            requests_sheet = sh_global.worksheet("Requests")
+                            requests_sheet.append_row([
+                                request_id, 
+                                effective_email, 
+                                source_url_to_save[:250], 
+                                student_level, 
+                                len(cards_data), 
+                                "Completed", 
+                                now_gen_str,
+                                source_type,
+                                source_url_to_save[:250]
                             ])
-                        fetch_sheet_values.clear()
-                    except Exception as sheets_err:
-                        st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
+                            
+                            cards_sheet = sh_global.worksheet("Cards")
+                            for card in cards_data:
+                                card_id = str(uuid.uuid4())
+                                encoded_w = urllib.parse.quote(card['word'])
+                                audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
+                                audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
+                                tr_val = card.get('transcription_us', card.get('transcription', ''))
+                                exp_val = card.get('explanation_en', card.get('explanation', ''))
+                                
+                                cards_sheet.append_row([
+                                    card_id, request_id, card['word'], tr_val,
+                                    card['translation'], exp_val, card.get('collocations', ''),
+                                    card['context'], audio_us, audio_uk, effective_email
+                                ])
+                            fetch_sheet_values.clear()
+                        except Exception as sheets_err:
+                            st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
 
-                    st.success(f"Успешно! Создано карточек: {len(cards_data)}")
-                    time.sleep(0.5)
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Произошла ошибка при генерации: {e}.")
+                        st.success(f"Успешно! Создано карточек: {len(cards_data)}")
+                        time.sleep(0.5)
+                        st.rerun()
+                    except Exception as parse_err:
+                        st.error(f"Ошибка чтения данных от нейросети: {parse_err}")
 
-# STREAMING_CHUNK:Rendering main cards view first with auto-scroll and toolbar...
 if st.session_state.cards:
     st.write("---")
     st.markdown('<div id="cards-anchor"></div>', unsafe_allow_html=True)
@@ -2150,7 +2141,6 @@ if st.session_state.cards:
         sc_cnt = st.session_state.get("scroll_counter", int(time.time()))
         components.html(
             f"""<script>
-            // Scroll Trigger ID: {sc_cnt}
             setTimeout(function() {{
                 var el = window.parent.document.getElementById("cards-anchor");
                 if (el) {{
@@ -2327,7 +2317,6 @@ if st.session_state.cards:
     elif teacher_view_mode == "🧪 Пройти тест":
         render_quiz_section(st.session_state.cards, quiz_key_prefix="teacher_preview_quiz", accent_choice=accent_option)
 
-    # RENDER INTERACTIVE FLASHCARDS GRID
     else:
         cols = st.columns(3)
         current_demo_style = st.session_state.get("demo_style")
@@ -2368,7 +2357,6 @@ if st.session_state.cards:
                         st.rerun()
                 else:
                     if current_demo_style:
-                        # Двойная озвучка US + GB ТОЛЬКО для демо-колод
                         audio_block_html = f"""<div style="display: flex; flex-direction: column; gap: 4px; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
 <div style="display: flex; align-items: center; gap: 6px;">
 <div style="min-width: 48px; display: flex; align-items: center; gap: 3px;">{US_FLAG_SVG} <span style="font-size: 11px; font-weight: bold; color: #1e293b;">US</span></div>
@@ -2380,7 +2368,6 @@ if st.session_state.cards:
 </div>
 </div>"""
                     else:
-                        # Единоличный плеер по выбранному преподавателем акценту
                         audio_type = "2" if "US" in str(accent_option) else "1"
                         flag_svg = US_FLAG_SVG if "US" in str(accent_option) else GB_FLAG_SVG
                         flag_lbl = "US" if "US" in str(accent_option) else "GB"
@@ -2412,7 +2399,6 @@ if st.session_state.cards:
                         st.session_state.flipped[i] = False
                         st.rerun()
 
-    # BOTTOM TOOLBAR: Downloads, Save Deck and Table Editor
     st.write("---")
     
     # Anki and Quizlet Export Buttons
@@ -2526,4 +2512,3 @@ if st.session_state.cards:
             }
         )
         st.session_state.cards = edited_df.to_dict(orient="records")
-
