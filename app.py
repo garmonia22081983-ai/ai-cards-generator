@@ -2026,20 +2026,32 @@ if generate_click:
 
             # Dynamic API Model Discovery
             def get_active_gemini_models():
+                # Список основных и гарантированно рабочих версий
+                preferred_models = [
+                    "gemini-1.5-flash",
+                    "gemini-2.5-flash",
+                    "gemini-1.5-pro",
+                    "gemini-2.5-pro",
+                    "gemini-2.0-flash"
+                ]
                 try:
-                    active_models = []
+                    dynamic_models = []
                     for m in genai.list_models():
                         if 'generateContent' in m.supported_generation_methods:
                             clean_m = m.name.replace("models/", "")
-                            active_models.append(clean_m)
-                    if active_models:
-                        # Put fast/flash models first
-                        flash_m = [m for m in active_models if "flash" in m.lower()]
-                        other_m = [m for m in active_models if "flash" not in m.lower()]
-                        return flash_m + other_m
+                            # Исключаем отключенные снапшоты (например, -001)
+                            if "-001" not in clean_m:
+                                dynamic_models.append(clean_m)
+                    
+                    ordered = [m for m in preferred_models if m in dynamic_models]
+                    for m in dynamic_models:
+                        if m not in ordered:
+                            ordered.append(m)
+                    if ordered:
+                        return ordered
                 except Exception:
                     pass
-                return ["gemini-2.0-flash", "gemini-2.5-flash", "gemini-1.5-flash"]
+                return preferred_models
 
             available_models = get_active_gemini_models()
             success = False
@@ -2047,11 +2059,7 @@ if generate_click:
             last_error_msg = ""
 
             with st.spinner("Методист Gemini обрабатывает материал и собирает карточки..."):
-                max_retries = min(3, len(available_models))
-                backoff_time = 2
-                
-                for attempt in range(max_retries):
-                    current_model_name = available_models[attempt % len(available_models)]
+                for current_model_name in available_models:
                     try:
                         model = genai.GenerativeModel(current_model_name)
                         request_config = {"timeout": 30}
@@ -2062,13 +2070,15 @@ if generate_click:
                             response = model.generate_content([prompt_text, final_prompt_content], request_options=request_config)
                         
                         text_response = response.text.strip()
-                        success = True
-                        break
+                        if text_response:
+                            success = True
+                            break
                     except Exception as e:
                         last_error_msg = str(e)
-                        if attempt < max_retries - 1:
-                            time.sleep(backoff_time)
-                            backoff_time *= 2
+                        # Если модель выдает 404 или отключена, мгновенно переходим к следующей модели
+                        if "404" in str(e) or "not found" in str(e).lower() or "no longer available" in str(e).lower():
+                            continue
+                        time.sleep(1)
 
             if not success:
                 st.error(f"🛑 Не удалось сгенерировать карточки. Причина: {last_error_msg}")
