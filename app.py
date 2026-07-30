@@ -784,13 +784,15 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
     with st.form(key=f"{quiz_key_prefix}_form"):
         user_choices = {}
         for q in quiz_questions:
-            st.markdown(f"#### **{q['id'] + 1}. {q['word']}** <span style='font-size:14px; color:#64748b;'>{q['transcription']}</span>", unsafe_allow_html=True)
+            clean_q_word = html.escape(str(q['word']))
+            clean_q_tr = html.escape(str(q['transcription']))
+            st.markdown(f"#### **{q['id'] + 1}. {clean_q_word}** <span style='font-size:14px; color:#64748b;'>{clean_q_tr}</span>", unsafe_allow_html=True)
             if q['explanation']:
                 st.caption(f"💡 *Definition:* {q['explanation']}")
             
             default_val = st.session_state[user_ans_key].get(q['id'], None)
             choice = st.radio(
-                f"Выберите перевод для «{q['word']}»:",
+                f"Выберите перевод для «{clean_q_word}»:",
                 q['options'],
                 key=f"{quiz_key_prefix}_radio_{q['id']}",
                 index=q['options'].index(default_val) if default_val in q['options'] else 0
@@ -813,11 +815,15 @@ def render_quiz_section(cards_data, quiz_key_prefix="quiz", accent_choice="🇺�
         st.markdown("### 📊 Результаты вашего теста")
         for q in quiz_questions:
             user_choice = saved_choices.get(q['id'])
+            c_word = html.escape(str(q['word']))
+            c_correct = html.escape(str(q['correct']))
+            c_choice = html.escape(str(user_choice))
+            
             if user_choice == q['correct']:
                 score += 1
-                st.success(f"<b>{q['id'] + 1}. {q['word']}</b> — Верно! 🎉 ({q['correct']})", icon="✅")
+                st.success(f"<b>{q['id'] + 1}. {c_word}</b> — Верно! 🎉 ({c_correct})", icon="✅")
             else:
-                st.error(f"<b>{q['id'] + 1}. {q['word']}</b> — Ошибка. Ваш ответ: <i>{user_choice}</i>. Правильный ответ: <b>{q['correct']}</b>", icon="❌")
+                st.error(f"<b>{q['id'] + 1}. {c_word}</b> — Ошибка. Ваш ответ: <i>{c_choice}</i>. Правильный ответ: <b>{c_correct}</b>", icon="❌")
 
         percent = int((score / total) * 100) if total > 0 else 0
         st.progress(score / total if total > 0 else 0)
@@ -888,7 +894,7 @@ if student_deck_id:
                         except ValueError:
                             continue
         
-        st.subheader(f"📚 {deck_name} (Уровень: {deck_level})")
+        st.subheader(f"📚 {html.escape(deck_name)} (Уровень: {html.escape(deck_level)})")
         st.caption(f"Всего карточек: {len(cards_data)}")
         
         col_s_opt1, col_s_opt2 = st.columns(2)
@@ -919,26 +925,31 @@ if student_deck_id:
             st.markdown(
                 f"""<div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
 <div style="display: flex; justify-content: space-between; align-items: flex-end;">
-<div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet: {deck_name}</div>
-<span style="font-size: 12px; color: #718096;">Level: {deck_level}</span>
+<div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet: {html.escape(deck_name)}</div>
+<span style="font-size: 12px; color: #718096;">Level: {html.escape(deck_level)}</span>
 </div>
 </div>""",
                 unsafe_allow_html=True
             )
 
             for card in cards_data:
-                tr_str = get_card_transcription(card, s_accent)
-                exp_str = get_card_explanation(card, s_def_lang)
-                exp_lbl = get_card_explanation_label(s_def_lang)
-                coll_lbl = get_card_collocations_label(s_def_lang)
-                ctx_lbl = get_card_context_label(s_def_lang)
+                tr_str = html.escape(str(get_card_transcription(card, s_accent)))
+                exp_str = html.escape(str(get_card_explanation(card, s_def_lang)))
+                exp_lbl = html.escape(str(get_card_explanation_label(s_def_lang)))
+                coll_lbl = html.escape(str(get_card_collocations_label(s_def_lang)))
+                ctx_lbl = html.escape(str(get_card_context_label(s_def_lang)))
+                c_word = html.escape(str(card.get('word', '')))
+                c_trans = html.escape(str(card.get('translation', '')))
+                c_coll = html.escape(str(card.get('collocations', '')))
+                c_ctx = html.escape(str(card.get('context', '')))
+
                 print_html = f"""<div class="printable-content print-row-bw">
-<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#64748b;">{tr_str}</span></div>
+<div class="print-col print-left">{c_word}<br/><span style="font-size:14px; font-weight:normal; color:#64748b;">{tr_str}</span></div>
 <div class="print-col">
-<h4 style="color:#2563eb; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
+<h4 style="color:#2563eb; margin-top:0; margin-bottom:5px;">{c_trans}</h4>
 <p style="font-size: 12px; color:#475569; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
-<p style="font-size: 12px; color:#1e293b; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {card.get('collocations', '')}</p>
-<p style="font-size: 12px; color:#475569; margin:0;"><strong>{ctx_lbl}</strong> {card.get('context', '')}</p>
+<p style="font-size: 12px; color:#1e293b; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {c_coll}</p>
+<p style="font-size: 12px; color:#475569; margin:0;"><strong>{ctx_lbl}</strong> {c_ctx}</p>
 </div>
 </div>"""
                 st.markdown(print_html, unsafe_allow_html=True)
@@ -958,11 +969,11 @@ if student_deck_id:
                 
                 anki_back = (
                     f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-                    f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-                    f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-                    f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
-                    f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_s}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
-                    f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_s}</i> {card.get('context', '')}</p>"
+                    f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{html.escape(card.get('translation', ''))}</h2>"
+                    f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{html.escape(tr_str)}</p>"
+                    f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{html.escape(exp_lbl)}</b> {html.escape(exp_str)}</p>"
+                    f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{html.escape(coll_lbl_s)}</b> <span style='color:#2563eb;'>{html.escape(card.get('collocations', ''))}</span></p>"
+                    f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{html.escape(ctx_lbl_s)}</i> {html.escape(card.get('context', ''))}</p>"
                     f"</div>"
                 )
                 anki_list_student.append({"Front": card.get('word', ''), "Back": anki_back})
@@ -987,11 +998,16 @@ if student_deck_id:
             cols = st.columns(3)
             for i, card in enumerate(cards_data):
                 col_idx = i % 3
-                tr_str = get_card_transcription(card, s_accent)
-                exp_str = get_card_explanation(card, s_def_lang)
-                exp_lbl = get_card_explanation_label(s_def_lang)
-                coll_lbl = get_card_collocations_label(s_def_lang)
-                ctx_lbl = get_card_context_label(s_def_lang)
+                tr_str = html.escape(str(get_card_transcription(card, s_accent)))
+                exp_str = html.escape(str(get_card_explanation(card, s_def_lang)))
+                exp_lbl = html.escape(str(get_card_explanation_label(s_def_lang)))
+                coll_lbl = html.escape(str(get_card_collocations_label(s_def_lang)))
+                ctx_lbl = html.escape(str(get_card_context_label(s_def_lang)))
+                c_word = html.escape(str(card.get('word', '')))
+                c_trans = html.escape(str(card.get('translation', '')))
+                c_coll = html.escape(str(card.get('collocations', '')))
+                c_ctx = html.escape(str(card.get('context', '')))
+
                 audio_type = "2" if "US" in s_accent else "1"
                 flag_svg = US_FLAG_SVG if "US" in s_accent else GB_FLAG_SVG
                 flag_lbl = "US" if "US" in s_accent else "GB"
@@ -1002,7 +1018,7 @@ if student_deck_id:
                     
                     if not is_flipped:
                         front_html = f"""<div class="card-front">
-<span class="card-front-title">{card.get('word', '')}</span>
+<span class="card-front-title">{c_word}</span>
 <span class="card-front-transcription">{tr_str}</span>
 <span class="card-front-subtitle">{s_accent.split()[0]} English</span>
 </div>"""
@@ -1013,16 +1029,16 @@ if student_deck_id:
                     else:
                         back_html = f"""<div class="card-back">
 <div style="text-align: center; margin-bottom: 5px;">
-<span style="font-size: 14px; font-weight: bold; color: #881337 !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
+<span style="font-size: 14px; font-weight: bold; color: #881337 !important; text-transform: uppercase;">{c_word}</span><br/>
 <span style="color: #64748b; font-size: 11px;">{tr_str}</span>
 </div>
 <div style="font-size: 12px; margin-bottom: 5px;"><b>{exp_lbl}</b> {exp_str}</div>
-<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2563eb;">{card.get('collocations', '')}</span></div>
-<div style="font-size: 12px; margin-bottom: 10px;"><b>{ctx_lbl}</b> <i>{card.get('context', '')}</i></div>
+<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2563eb;">{c_coll}</span></div>
+<div style="font-size: 12px; margin-bottom: 10px;"><b>{ctx_lbl}</b> <i>{c_ctx}</i></div>
 <details style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; background: #f8fafc; margin-bottom: 10px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1e3a8a; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
 <div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2563eb; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
-{card.get('translation', '')}
+{c_trans}
 </div>
 </details>
 <div style="display: flex; gap: 8px; align-items: center; justify-content: center; background: #f1f5f9; padding: 6px 10px; border-radius: 8px;">
@@ -1193,7 +1209,6 @@ if not st.session_state.user_email:
                         st.session_state.user_name = "Администратор"
                         st.session_state.trial_expired = False
                         st.success("Успешный вход!")
-                        time.sleep(0.4)
                         st.rerun()
                     
                     try:
@@ -1242,7 +1257,6 @@ if not st.session_state.user_email:
                             except Exception: pass
                                     
                         st.success("Успешный вход!")
-                        time.sleep(0.4)
                         st.rerun()
                     except Exception as e:
                         st.error(f"Ошибка авторизации: {e}")
@@ -1272,8 +1286,8 @@ effective_email = st.session_state.impersonated_email if (is_real_admin and st.s
 with st.sidebar:
     st.markdown(
         f"""<div class="user-profile-box">
-<div style="font-size: 13px; font-weight: 600; color: #1e3a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="{effective_email}">
-👤 {effective_email}
+<div style="font-size: 13px; font-weight: 600; color: #1e3a8a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 150px;" title="{html.escape(effective_email)}">
+👤 {html.escape(effective_email)}
 </div>
 </div>""",
         unsafe_allow_html=True
@@ -1304,7 +1318,6 @@ with st.sidebar:
             st.session_state.generated_otp = None
             st.session_state.trial_expired = False
             st.session_state.logout_requested = True
-            time.sleep(0.4)
             st.rerun()
 
     if is_real_admin:
@@ -1375,7 +1388,7 @@ else:
 
 st.markdown(
     f"""<div style="display: inline-block; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 20px; padding: 4px 14px; font-size: 13px; font-weight: 600; color: #1e40af; margin-bottom: 20px;">
-👋 Рада видеть вас, {display_user_name}!
+👋 Рада видеть вас, {html.escape(display_user_name)}!
 </div>""",
     unsafe_allow_html=True
 )
@@ -1388,7 +1401,7 @@ if "flipped" not in st.session_state:
 with st.sidebar:
     st.header("⚙️ Настройки генерации")
     
-    if is_real_admin:
+    if is_real_admin and not st.session_state.impersonated_email:
         if st.button("🔄 Полный сброс API (Админ)", help="Очищает кэш сервера и сбрасывает зависшие соединения API"):
             st.cache_data.clear()
             st.cache_resource.clear()
@@ -1573,11 +1586,11 @@ with col_stats:
                                 continue
 
                     if is_frozen:
-                        st.markdown(f"<div class='saved-deck-card'>❄️ <b>{d_name}</b> ({d_level}) — <i>Заморожена</i></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='saved-deck-card'>❄️ <b>{html.escape(d_name)}</b> ({html.escape(d_level)}) — <i>Заморожена</i></div>", unsafe_allow_html=True)
                         st.warning(f"❄️ **Колода заморожена**\nСрок хранения колоды истёк (прошло {max_freeze_days} дн.). Продлите тариф или перейдите на тариф «Максимум», чтобы разблокировать вечный доступ.")
                         st.link_button("💳 Продлить тариф", "https://flashcards-ai.ru/#tarifs", key=f"freeze_renew_{d_id}")
                     else:
-                        st.markdown(f"<div class='saved-deck-card'><b>{d_name}</b> <span style='font-size:12px; color:#64748b;'>({d_level})</span></div>", unsafe_allow_html=True)
+                        st.markdown(f"<div class='saved-deck-card'><b>{html.escape(d_name)}</b> <span style='font-size:12px; color:#64748b;'>({html.escape(d_level)})</span></div>", unsafe_allow_html=True)
                         c1, c2 = st.columns(2)
                         with c1:
                             if st.button("👁️ Открыть", key=f"open_{d_id}", use_container_width=True):
@@ -1603,7 +1616,7 @@ with col_stats:
         st.caption("Попробуйте интерактивные карточки без списания лимита:")
 
         for d_key, d_info in DEMO_DECKS.items():
-            st.markdown(f"<div class='demo-deck-card'><b>{d_info['title']}</b><br/><span style='font-size:11px; color:#0369a1;'>Уровень: {d_info['level']}</span></div>", unsafe_allow_html=True)
+            st.markdown(f"<div class='demo-deck-card'><b>{html.escape(d_info['title'])}</b><br/><span style='font-size:11px; color:#0369a1;'>Уровень: {html.escape(d_info['level'])}</span></div>", unsafe_allow_html=True)
             if st.button("👁️ Попробовать", key=f"try_{d_key}", use_container_width=True):
                 st.session_state.cards = d_info["cards"]
                 st.session_state.demo_style = d_info.get("style", "premium")
@@ -1614,7 +1627,6 @@ with col_stats:
 
 @st.cache_data(ttl=3600)
 def discover_available_models():
-    """Запрашивает актуальный список доступных моделей Google AI Studio."""
     try:
         available = []
         all_m = list(genai.list_models())
@@ -1876,26 +1888,30 @@ if generate_click:
                     ])
                     
                     cards_sheet = sh_global.worksheet("Cards")
+                    rows_to_append = []
                     for card in cards_data:
                         card_id = str(uuid.uuid4())
-                        encoded_w = urllib.parse.quote(card['word'])
+                        encoded_w = urllib.parse.quote(str(card.get('word', '')))
                         audio_us = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=2"
                         audio_uk = f"https://dict.youdao.com/dictvoice?audio={encoded_w}&type=1"
                         tr_val = card.get('transcription_us', card.get('transcription', ''))
                         exp_val = card.get('explanation_en', card.get('explanation', ''))
                         
-                        cards_sheet.append_row([
-                            card_id, request_id, card['word'], tr_val,
-                            card['translation'], exp_val, card.get('collocations', ''),
-                            card['context'], audio_us, audio_uk, effective_email
+                        rows_to_append.append([
+                            card_id, request_id, card.get('word', ''), tr_val,
+                            card.get('translation', ''), exp_val, card.get('collocations', ''),
+                            card.get('context', ''), audio_us, audio_uk, effective_email
                         ])
+                    
+                    if rows_to_append:
+                        cards_sheet.append_rows(rows_to_append)
+                        
                     fetch_sheet_values.clear()
                 except Exception as sheets_err:
                     st.warning(f"⚠️ Карточки созданы, но произошел сбой сохранения в историю: {sheets_err}")
 
                 model_used_label = st.session_state.get("last_used_model", "Gemini AI")
                 st.success(f"Успешно! Создано карточек: {len(cards_data)} (Использована модель: {model_used_label})")
-                time.sleep(0.5)
                 st.rerun()
             except Exception as parse_err:
                 st.error("⚙️ Проходит обновление модели нейросети. Пожалуйста, сделайте скриншот экрана и отправьте его администратору в [Telegram-чат](https://t.me/+RyIIPld1fFE1ZTVi).")
@@ -1999,41 +2015,43 @@ if st.session_state.cards:
             height=65
         )
 
-        name_display = student_name_input if student_name_input else "_________________"
-        
+        name_display = html.escape(student_name_input) if student_name_input else "_________________"
+        clean_date_str = html.escape(date_input_str)
+        clean_note_str = html.escape(custom_print_note)
+
         if "детская" in print_style.lower() and is_max_tariff:
-            note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {custom_print_note}</p>" if custom_print_note else ""
+            note_str = f"<p style='margin:6px 0 0 0; color:#5d4037; font-size:12px;'><b>Задание:</b> {clean_note_str}</p>" if clean_note_str else ""
             st.markdown(
                 f"""<div class="printable-content" style="background: #fff3e0; border: 2px dashed #ffb74d; border-radius: 12px; padding: 12px 18px; margin-bottom: 20px;">
 <div style="display: flex; justify-content: space-between; align-items: center;">
 <span style="font-size: 16px; font-weight: bold; color: #d84315; display: flex; align-items: center; gap: 6px;">
 <span>🎨 🦁</span> <span>English Worksheet</span>
 </span>
-<span style="font-size: 12px; color: #666; font-weight: 500;">Name: {name_display} | Date: {date_input_str}</span>
+<span style="font-size: 12px; color: #666; font-weight: 500;">Name: {name_display} | Date: {clean_date_str}</span>
 </div>
 {note_str}
 </div>""",
                 unsafe_allow_html=True
             )
         elif "взрослый" in print_style.lower() and is_max_tariff:
-            note_str = f"<p style='margin:4px 0 0 0; color:#2b6cb0; font-size:12px;'><b>Task:</b> {custom_print_note}</p>" if custom_print_note else ""
+            note_str = f"<p style='margin:4px 0 0 0; color:#2b6cb0; font-size:12px;'><b>Task:</b> {clean_note_str}</p>" if clean_note_str else ""
             st.markdown(
                 f"""<div class="printable-content" style="border-bottom: 2px solid #2b6cb0; padding: 10px 12px; margin-bottom: 20px; background: #ffffff; border-radius: 6px;">
 <div style="display: flex; justify-content: space-between; align-items: flex-end;">
 <div style="margin:0; color:#2b6cb0; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
-<span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
+<span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {clean_date_str}</span>
 </div>
 {note_str}
 </div>""",
                 unsafe_allow_html=True
             )
         else:
-            note_str = f"<p style='margin:4px 0 0 0; color:#2d3748; font-size:12px;'><b>Task:</b> {custom_print_note}</p>" if custom_print_note else ""
+            note_str = f"<p style='margin:4px 0 0 0; color:#2d3748; font-size:12px;'><b>Task:</b> {clean_note_str}</p>" if clean_note_str else ""
             st.markdown(
                 f"""<div class="printable-content" style="border-bottom: 1px solid #718096; padding: 8px 10px; margin-bottom: 20px; background: #ffffff;">
 <div style="display: flex; justify-content: space-between; align-items: flex-end;">
 <div style="margin:0; color:#2d3748; font-family:'Georgia', serif; font-size:20px; font-weight:bold;">Worksheet</div>
-<span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {date_input_str}</span>
+<span style="font-size: 12px; color: #718096;">Name: {name_display} | Date: {clean_date_str}</span>
 </div>
 {note_str}
 </div>""",
@@ -2041,46 +2059,50 @@ if st.session_state.cards:
             )
 
         for card in st.session_state.cards:
-            tr_str = get_card_transcription(card, accent_option)
-            exp_str = get_card_explanation(card, def_lang_option)
-            exp_lbl = get_card_explanation_label(def_lang_option)
-            coll_lbl = get_card_collocations_label(def_lang_option)
-            ctx_lbl = get_card_context_label(def_lang_option)
+            tr_str = html.escape(str(get_card_transcription(card, accent_option)))
+            exp_str = html.escape(str(get_card_explanation(card, def_lang_option)))
+            exp_lbl = html.escape(str(get_card_explanation_label(def_lang_option)))
+            coll_lbl = html.escape(str(get_card_collocations_label(def_lang_option)))
+            ctx_lbl = html.escape(str(get_card_context_label(def_lang_option)))
+            c_word = html.escape(str(card.get('word', '')))
+            c_trans = html.escape(str(card.get('translation', '')))
+            c_coll = html.escape(str(card.get('collocations', '')))
+            c_ctx = html.escape(str(card.get('context', '')))
 
             if "детская" in print_style.lower() and is_max_tariff:
                 print_html = f"""<div class="printable-content print-row-kids">
 <div class="print-col-kids-left">
-    <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{card.get('word', '')}</span>
+    <span style="font-size:20px; font-weight:bold; font-family:'Georgia', serif; color:#5d4037;">{c_word}</span>
     <span style="font-size:12px; color:#8d6e63; margin-top:4px;">{tr_str}</span>
 </div>
 <div class="print-col-kids-right">
-    <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
+    <h4 style="color:#2e7d32; margin-top:0; margin-bottom:4px;">{c_trans}</h4>
     <p style="font-size: 12px; color:#333; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
-    <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {card.get('collocations', '')}</p>
-    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>{ctx_lbl}</strong> {card.get('context', '')}</p>
+    <p style="font-size: 12px; color:#1b5e20; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {c_coll}</p>
+    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>{ctx_lbl}</strong> {c_ctx}</p>
 </div>
 </div>"""
             elif "взрослый" in print_style.lower() and is_max_tariff:
                 print_html = f"""<div class="printable-content print-row-premium">
 <div class="print-col-premium-left">
-    <span style="font-size:19px; font-weight:bold; font-family:'Georgia', serif; color:#1a365d;">{card.get('word', '')}</span>
+    <span style="font-size:19px; font-weight:bold; font-family:'Georgia', serif; color:#1a365d;">{c_word}</span>
     <span style="font-size:12px; color:#4a5568; margin-top:4px;">{tr_str}</span>
 </div>
 <div class="print-col-premium-right">
-    <h4 style="color:#2b6cb0; margin-top:0; margin-bottom:4px;">{card.get('translation', '')}</h4>
+    <h4 style="color:#2b6cb0; margin-top:0; margin-bottom:4px;">{c_trans}</h4>
     <p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
-    <p style="font-size: 12px; color:#2b6cb0; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {card.get('collocations', '')}</p>
-    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>{ctx_lbl}</strong> {card.get('context', '')}</p>
+    <p style="font-size: 12px; color:#2b6cb0; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {c_coll}</p>
+    <p style="font-size: 12px; color:#4a5568; margin:0;"><strong>{ctx_lbl}</strong> {c_ctx}</p>
 </div>
 </div>"""
             else:
                 print_html = f"""<div class="printable-content print-row-bw">
-<div class="print-col print-left">{card.get('word', '')}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{tr_str}</span></div>
+<div class="print-col print-left">{c_word}<br/><span style="font-size:14px; font-weight:normal; color:#718096;">{tr_str}</span></div>
 <div class="print-col">
-<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{card.get('translation', '')}</h4>
+<h4 style="color:#2e6c9e; margin-top:0; margin-bottom:5px;">{c_trans}</h4>
 <p style="font-size: 12px; color:#4a5568; margin:0 0 4px 0;"><strong>{exp_lbl}</strong> {exp_str}</p>
-<p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {card.get('collocations', '')}</p>
-<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>{ctx_lbl}</strong> {card.get('context', '')}</p>
+<p style="font-size: 12px; color:#2d3748; margin:0 0 4px 0;"><strong>{coll_lbl}</strong> {c_coll}</p>
+<p style="font-size: 12px; color:#4a5568; margin:0;"><strong>{ctx_lbl}</strong> {c_ctx}</p>
 </div>
 </div>"""
             st.markdown(print_html, unsafe_allow_html=True)
@@ -2096,12 +2118,16 @@ if st.session_state.cards:
             col_idx = i % 3
             tr_us = card.get('transcription_us', card.get('transcription', ''))
             tr_gb = card.get('transcription_uk', card.get('transcription', ''))
-            tr_str = get_card_transcription(card, accent_option)
-            exp_str = get_card_explanation(card, def_lang_option)
-            exp_lbl = get_card_explanation_label(def_lang_option)
-            coll_lbl = get_card_collocations_label(def_lang_option)
-            ctx_lbl = get_card_context_label(def_lang_option)
-            
+            tr_str = html.escape(str(get_card_transcription(card, accent_option)))
+            exp_str = html.escape(str(get_card_explanation(card, def_lang_option)))
+            exp_lbl = html.escape(str(get_card_explanation_label(def_lang_option)))
+            coll_lbl = html.escape(str(get_card_collocations_label(def_lang_option)))
+            ctx_lbl = html.escape(str(get_card_context_label(def_lang_option)))
+            c_word = html.escape(str(card.get('word', '')))
+            c_trans = html.escape(str(card.get('translation', '')))
+            c_coll = html.escape(str(card.get('collocations', '')))
+            c_ctx = html.escape(str(card.get('context', '')))
+
             encoded_word = urllib.parse.quote(str(card.get('word', '')))
 
             front_class = "card-front"
@@ -2118,7 +2144,7 @@ if st.session_state.cards:
                 
                 if not is_flipped:
                     front_html = f"""<div class="{front_class}">
-<span class="card-front-title">{card.get('word', '')}</span>
+<span class="card-front-title">{c_word}</span>
 <span class="card-front-transcription">{tr_str}</span>
 <span class="card-front-subtitle">English Flashcard</span>
 </div>"""
@@ -2152,16 +2178,16 @@ if st.session_state.cards:
                     accent_lbl = "US" if "US" in str(accent_option) else "GB"
                     back_html = f"""<div class="{back_class}">
 <div style="text-align: center; margin-bottom: 5px;">
-<span style="font-size: 14px; font-weight: bold; color: #881337 !important; text-transform: uppercase;">{card.get('word', '')}</span><br/>
+<span style="font-size: 14px; font-weight: bold; color: #881337 !important; text-transform: uppercase;">{c_word}</span><br/>
 <span style="color: #64748b; font-size: 11px;">{accent_lbl}: {tr_str}</span>
 </div>
 <div style="font-size: 12px; margin-bottom: 5px;"><b>{exp_lbl}</b> {exp_str}</div>
-<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2563eb;">{card.get('collocations', '')}</span></div>
-<div style="font-size: 12px; margin-bottom: 10px;"><b>{ctx_lbl}</b> <i>{card.get('context', '')}</i></div>
+<div style="font-size: 12px; margin-bottom: 6px;"><b>{coll_lbl}</b> <span style="color: #2563eb;">{c_coll}</span></div>
+<div style="font-size: 12px; margin-bottom: 10px;"><b>{ctx_lbl}</b> <i>{c_ctx}</i></div>
 <details style="border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 10px; background: #f8fafc; margin-bottom: 8px;">
 <summary style="font-size: 12px; font-weight: bold; color: #1e3a8a; cursor: pointer; text-align: center;">💬 Показать перевод</summary>
 <div style="margin-top: 5px; font-size: 13.5px; font-weight: bold; color: #2563eb; text-align: center; border-top: 1px dashed #cbd5e1; padding-top: 4px;">
-{card.get('translation', '')}
+{c_trans}
 </div>
 </details>
 {audio_block_html}
@@ -2185,11 +2211,11 @@ if st.session_state.cards:
         
         anki_back = (
             f"<div style='text-align:left; font-family:Arial,sans-serif; max-width:400px; margin:auto;'>"
-            f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{card.get('translation', '')}</h2>"
-            f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{tr_str}</p>"
-            f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{exp_lbl}</b> {exp_str}</p>"
-            f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{coll_lbl_t}</b> <span style='color:#2563eb;'>{card.get('collocations', '')}</span></p>"
-            f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{ctx_lbl_t}</i> {card.get('context', '')}</p>"
+            f"<h2 style='color:#2563eb; margin-bottom:2px; margin-top:0;'>{html.escape(card.get('translation', ''))}</h2>"
+            f"<p style='font-size:13px; color:#94a3b8; margin-top:0; margin-bottom:10px;'>{html.escape(tr_str)}</p>"
+            f"<p style='font-size:14px; color:#475569; margin-bottom:8px;'><b>{html.escape(exp_lbl)}</b> {html.escape(exp_str)}</p>"
+            f"<p style='font-size:14px; color:#1e293b; margin-bottom:8px;'><b>{html.escape(coll_lbl_t)}</b> <span style='color:#2563eb;'>{html.escape(card.get('collocations', ''))}</span></p>"
+            f"<p style='font-size:14px; color:#64748b; margin-bottom:12px;'><i>{html.escape(ctx_lbl_t)}</i> {html.escape(card.get('context', ''))}</p>"
             f"</div>"
         )
         anki_list.append({"Front": card.get('word', ''), "Back": anki_back})
